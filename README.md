@@ -1,0 +1,4 @@
+### TODO:
+- rpc errors
+- makefile
+- 

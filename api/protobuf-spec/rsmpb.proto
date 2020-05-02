@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package slicer;
+
+import "api/protobuf-spec/error.proto";
+
+service Slicer {
+    // Sends a greeting
+    rpc SplitPartition (PartArray) returns (dstk.Ex);
+    rpc MergePartition (PartArray) returns (dstk.Ex);
+    rpc Find (FindArgs) returns (FindRes);
+}
+
+
+message FindArgs {
+    string key = 1;
+}
+
+message FindRes {
+    dstk.Ex ex = 1;
+    Partition par = 2;
+}
+
+message PartArray {
+    repeated string markers = 1;
+}
+
+message Partition {
+    int64 id = 1;
+    string start = 2;
+    string end = 3;
+    map<string, string> tags = 4;
+}
+
+message Request {
+    string key = 1;
+    bytes value_str = 2;
+}
+
+message Response {
+    bytes value_str = 1;
+}
+
+message RaftPayload {
+    uint64 session_id = 1;
+    bytes payload = 2;
+}
+
+
