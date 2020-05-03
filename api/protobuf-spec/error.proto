@@ -1,7 +1,5 @@
-//const int64 kErrOk = 0;
 syntax = "proto3";
 package dstk;
-
 
 message Ex {
     int64 id = 1;

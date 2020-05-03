@@ -1,47 +1,20 @@
-.PHONY: compile assets
+GO_FILES := $(shell find . -type f -name '*.go' -print)
+PROTO_FILES := $(shell find . -type f -name '*.proto' -print)
+PROTO_PATH := api/protobuf-spec/
+PROTO_OUT_DIR := pkg/api/proto/
 
-PROTOC_GEN_GO := $(GOPATH)/bin/protoc-gen-go
+.PHONY: test
+test: $(GO_FILES) | protobuf
+	go test ./...
 
-PROTOC := $(shell which protoc)
-# If protoc isn't on the path, set it to a target that's never up to date, so
-# the install command always runs.
-ifeq ($(PROTOC),)
-    PROTOC = must-rebuild
-endif
+.PHONY: protobuf
+protobuf: $(PROTO_FILES)
+	protoc $(PROTO_FILES) --proto_path=$(PROTO_PATH) --go_out=plugins=grpc:$(PROTO_OUT_DIR)
 
-# Figure out which machine we're running on.
-UNAME := $(shell uname)
+.PHONY: clean
+clean:
+	rm -rf $(PROTO_OUT_DIR)/*
 
-$(PROTOC):
-# Run the right installation command for the operating system.
-ifeq ($(UNAME), Darwin)
-	brew install protobuf
-endif
-ifeq ($(UNAME), Linux)
-	sudo apt-get install protobuf-compiler
-endif
-
-# You can add instructions for other operating systems here, or use different
-# branching logic as appropriate.
-
-# If $GOPATH/bin/protoc-gen-go does not exist, we'll run this command to install
-# it.
-$(PROTOC_GEN_GO):
-	go get -u github.com/golang/protobuf/protoc-gen-go
-
-error.pb.go: api/protobuf-spec/error.proto | $(PROTOC_GEN_GO) $(PROTOC)
-	protoc --go_out=plugins=grpc:. \
-	api/protobuf-spec/error.proto
-
-# This is a "phony" target - an alias for the above command, so "make compile"
-# still works.
-compile: error.pb.go
-
-# $(GOPATH)/bin/proto-make-example: $(shell find . -name '*.go')
-# 	go install .
-#
-#
-# serve: $(GOPATH)/bin/proto-make-example compile assets
-# 	$(GOPATH)/bin/proto-make-example
-
-all: compile
+.PHONY: fmt
+fmt:
+	go fmt ./...

@@ -1,0 +1,49 @@
+syntax = "proto3";
+package dstk;
+
+import "error.proto";
+
+service ShardStorage {
+    rpc CreatePartition (CreateReq) returns (ChangeRes);
+    rpc SplitPartition (SplitReq) returns (ChangeRes);
+    rpc MergePartition (MergeReq) returns (ChangeRes);
+    rpc FindPartition (Find.Req) returns (Find.Res);
+}
+
+message ChangeRes {
+    Ex ex = 1;
+    bool success = 2;
+}
+
+message CreateReq {
+    Partition c = 1;
+}
+
+message SplitReq {
+    Partition c = 1;
+    Partition n1 = 2;
+    Partition n2 = 3;
+}
+
+message MergeReq {
+    Partition c1 = 1;
+    Partition c2 = 2;
+    Partition n = 3;
+}
+
+message Find {
+    message Req {
+        string key = 1;
+    }
+    message Res {
+        Ex ex = 1;
+        Partition par = 2;
+    }
+}
+
+message Partition {
+    int64 id = 1;
+    string start = 2;
+    string end = 3;
+    map<string, string> tags = 4;
+}
