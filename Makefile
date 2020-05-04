@@ -29,9 +29,12 @@ endif
 $(PROTOC_GEN_GO):
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
-error.pb.go: api/protobuf-spec/error.proto | $(PROTOC_GEN_GO) $(PROTOC)
-	protoc --go_out=plugins=grpc:. \
-	api/protobuf-spec/error.proto
+%.pb.go: %.proto | $(PROTOC_GEN_GO) $(PROTOC)
+	protoc 	--go_out=plugins=grpc:. $<
+
+
+mkv: api/protobuf-spec/error.pb.go api/protobuf-spec/mkv.pb.go
+	go build -o bin/mkv ./cmd/mkv
 
 # This is a "phony" target - an alias for the above command, so "make compile"
 # still works.

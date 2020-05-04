@@ -4,7 +4,27 @@ package dstk;
 
 
 message Ex {
-    int64 id = 1;
+
+    //bulk of these msgs are copied from http and
+    //https://cloud.google.com/apis/design/errors#generating_errors
+    //incase there is an overlap with grpc codes, please remove them
+    enum ExCode {
+        ERR_UNSPECIFIED = 0;
+        SUCCESS = 200;
+
+        UNAUTHENTICATED = 401;
+        PERMISSION_DENIED = 403;
+        NOT_FOUND = 404;
+        CONFLICT = 409;
+        RESOURCE_EXHAUSTED = 429;
+
+        NOT_IMPLEMENTED = 501;
+
+        INVALID_ARGUMENT = 600;
+        BAD_PARTITION = 601;
+    }
+
+    ExCode id = 1;
     string msg = 2;
     map<string, string> tags = 3;
 }
