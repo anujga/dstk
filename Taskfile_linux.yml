@@ -1,0 +1,6 @@
+version: '2'
+
+tasks:
+  os-deps:
+    cmds:
+      - apt-get install protobuf-compiler

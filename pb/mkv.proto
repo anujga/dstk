@@ -1,10 +1,11 @@
 syntax = "proto3";
 
-import "api/protobuf-spec/error.proto";
-package dstk;
+import "pb/error.proto";
+package pb;
+option go_package = "build/gen";
 
 
-message Partition {
+message MkvPartition {
     message Entry {
         bytes key = 1;
         bytes value = 2;

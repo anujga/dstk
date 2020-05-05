@@ -2,7 +2,7 @@ package mkv
 
 import (
 	"context"
-	pb "github.com/anujga/dstk/api/protobuf-spec"
+	pb "github.com/anujga/dstk/build/gen"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
@@ -63,7 +63,7 @@ func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) (*pb.Ex, er
 		return &pb.Ex{Id: pb.Ex_INVALID_ARGUMENT}, err
 	}
 
-	p := &pb.Partition{}
+	p := &pb.MkvPartition{}
 	if err := proto.Unmarshal(fin, p); err != nil {
 		s.slog.Errorw("Failed to parse partition file:",
 			"uri", uri,
@@ -77,7 +77,7 @@ func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) (*pb.Ex, er
 	}
 
 	i := 0
-	var e *pb.Partition_Entry
+	var e *pb.MkvPartition_Entry
 	for i, e = range p.Entries {
 		s.mu.Lock()
 		s.data[string(e.Key)] = MapEntry{

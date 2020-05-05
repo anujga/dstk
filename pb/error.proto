@@ -1,6 +1,7 @@
 //const int64 kErrOk = 0;
 syntax = "proto3";
-package dstk;
+package pb;
+option go_package = "build/gen";
 
 
 message Ex {

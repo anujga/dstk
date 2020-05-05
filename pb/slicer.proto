@@ -1,13 +1,14 @@
 syntax = "proto3";
 
-package slicer;
+package pb;
+option go_package = "build/gen";
 
-import "api/protobuf-spec/error.proto";
+import "pb/error.proto";
 
 service Slicer {
     // Sends a greeting
-    rpc SplitPartition (PartArray) returns (dstk.Ex);
-    rpc MergePartition (PartArray) returns (dstk.Ex);
+    rpc SplitPartition (PartArray) returns (pb.Ex);
+    rpc MergePartition (PartArray) returns (pb.Ex);
     rpc Find (FindArgs) returns (FindRes);
 }
 
@@ -17,7 +18,7 @@ message FindArgs {
 }
 
 message FindRes {
-    dstk.Ex ex = 1;
+    pb.Ex ex = 1;
     Partition par = 2;
 }
 

@@ -33,7 +33,12 @@ $(PROTOC_GEN_GO):
 	protoc 	--go_out=plugins=grpc:. $<
 
 
-mkv: api/protobuf-spec/error.pb.go api/protobuf-spec/mkv.pb.go
+#proto_files := $(patsubst %.proto,%.pb.go,$(wildcard *.proto))
+#
+#allproto: $(proto_files)
+
+
+mkv: pb pb
 	go build -o bin/mkv ./cmd/mkv
 
 # This is a "phony" target - an alias for the above command, so "make compile"

@@ -1,7 +1,7 @@
 package core
 
 import (
-	pb "github.com/anujga/dstk/api/protobuf-spec"
+	pb "github.com/anujga/dstk/build/gen"
 )
 
 const (

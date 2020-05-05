@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	pb "github.com/anujga/dstk/api/protobuf-spec"
+	pb "github.com/anujga/dstk/build/gen"
 	"github.com/anujga/dstk/pkg/mkv"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
