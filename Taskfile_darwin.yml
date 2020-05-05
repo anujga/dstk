@@ -1,0 +1,6 @@
+version: '2'
+
+tasks:
+  os-deps:
+    cmds:
+      - brew install protobuf

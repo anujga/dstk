@@ -24,9 +24,9 @@ func (s *shardStoreUpdater) CreatePartition(_ context.Context, in *dstk.CreateRe
 	logger := zap.L()
 	logger.Info("To Create: ", zap.Any("partition", partition))
 	if partition == nil {
-		ex := core.NewErr(core.ErrInvalidPartition, "Invalid Input Partition")
+		ex := core.NewErr(dstk.Ex_BAD_PARTITION, "Invalid Input Partition")
 		logger.Error("Invalid Input Partition: ", zap.Any("Error", ex))
-		res := dstk.ChangeRes{Ex: &ex.Ex, Success: false}
+		res := dstk.ChangeRes{Ex: ex.Ex, Success: false}
 		return &res, nil
 	}
 	s.store.Create(partition)
@@ -42,7 +42,7 @@ func (s *shardStoreUpdater) SplitPartition(_ context.Context, in *dstk.SplitReq)
 	if c == nil || n1 == nil || n2 == nil {
 		ex := core.NewErr(core.ErrInvalidPartition, "Invalid Input Partition")
 		logger.Error("Invalid Input Partition: ", zap.Any("Error", ex))
-		res := dstk.ChangeRes{Ex: &ex.Ex, Success: false}
+		res := dstk.ChangeRes{Ex: ex.Ex, Success: false}
 		return &res, nil
 	}
 	s.store.Split(c, n1, n2)
@@ -58,7 +58,7 @@ func (s *shardStoreUpdater) MergePartition(_ context.Context, in *dstk.MergeReq)
 	if c1 == nil || c2 == nil || n == nil {
 		ex := core.NewErr(core.ErrInvalidPartition, "Invalid Input Partition")
 		logger.Error("Invalid Input Partition: ", zap.Any("Error", ex))
-		res := dstk.ChangeRes{Ex: &ex.Ex, Success: false}
+		res := dstk.ChangeRes{Ex: ex.Ex, Success: false}
 		return &res, nil
 	}
 	s.store.Merge(c1, c2, n)

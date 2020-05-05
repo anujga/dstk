@@ -1,0 +1,35 @@
+syntax = "proto3";
+package dstk;
+
+import "error.proto";
+
+message MkvPartition {
+    message Entry {
+        bytes key = 1;
+        bytes value = 2;
+    }
+
+    int64 id = 1;
+    repeated Entry entries = 2;
+}
+
+message AddParReq {
+    //todo: this should be httpUri
+    string uri = 1;
+}
+
+message GetReq {
+    bytes key = 1;
+    int64 partition_id = 2;
+}
+message GetRes {
+    Ex ex = 1;
+    int64 partition_id = 2;
+    bytes payload = 3;
+}
+
+service Mkv {
+    rpc AddPart (AddParReq) returns (Ex);
+    rpc Get (GetReq) returns (GetRes);
+}
+

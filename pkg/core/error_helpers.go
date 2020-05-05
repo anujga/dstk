@@ -17,21 +17,20 @@ const (
 )
 
 type Errr struct {
-	dstk.Ex
+	*dstk.Ex
 }
 
-func NewErr(id int64, msg string) *Errr {
-	return &Errr{dstk.Ex{Id: id, Msg: msg}}
+func NewErr(id dstk.Ex_ExCode, msg string) *Errr {
+	return &Errr{&dstk.Ex{Id: id, Msg: msg}}
 }
 
-func FromErr(err error) *Errr {
-	return NewErr(ErrUnknown, err.Error())
-}
-
-func FromRErr(err dstk.Ex) *Errr {
+func WrapEx(err *dstk.Ex) *Errr {
 	return &Errr{err}
 }
 
 func (m *Errr) Error() string {
 	return m.Msg
 }
+
+var ExOK = &dstk.Ex{Id: dstk.Ex_SUCCESS}
+
