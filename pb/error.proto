@@ -13,6 +13,7 @@ message Ex {
         ERR_UNSPECIFIED = 0;
         SUCCESS = 200;
 
+        RPC_FAILED = 400;
         UNAUTHENTICATED = 401;
         PERMISSION_DENIED = 403;
         NOT_FOUND = 404;

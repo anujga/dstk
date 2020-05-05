@@ -18,7 +18,7 @@ const (
 )
 
 type Errr struct {
-	pb.Ex
+	*pb.Ex
 }
 
 //func NewErr(id int64, msg string) *Errr {
@@ -29,12 +29,13 @@ type Errr struct {
 //	return NewErr(ErrUnknown, err.Error())
 //}
 //
-//func FromRErr(err common.Ex) *Errr {
-//	return &Errr{err}
-//}
+
+func WrapEx(err *pb.Ex) *Errr {
+	return &Errr{err}
+}
 
 func (m *Errr) Error() string {
 	return m.Msg
 }
 
-var ExOK = &pb.Ex{Id: pb.Ex_NOT_FOUND}
+var ExOK = &pb.Ex{Id: pb.Ex_SUCCESS}
