@@ -1,4 +1,2 @@
-### TODO:
-- rpc errors
-- makefile
-- 
+# dstk
+Distributed System Toolkit

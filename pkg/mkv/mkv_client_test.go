@@ -2,7 +2,7 @@ package mkv_test
 
 import (
 	"context"
-	pb "github.com/anujga/dstk/build/gen"
+	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/mkv"
 	"github.com/golang/protobuf/proto"

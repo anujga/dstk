@@ -2,7 +2,7 @@ package mkv
 
 import (
 	"context"
-	pb "github.com/anujga/dstk/build/gen"
+	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"google.golang.org/grpc"
 )

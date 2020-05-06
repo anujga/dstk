@@ -1,9 +1,7 @@
 syntax = "proto3";
+package dstk;
 
-import "pb/error.proto";
-package pb;
-option go_package = "build/gen";
-
+import "error.proto";
 
 message MkvPartition {
     message Entry {

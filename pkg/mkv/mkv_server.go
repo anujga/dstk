@@ -3,7 +3,7 @@ package mkv
 import (
 	"context"
 	"fmt"
-	pb "github.com/anujga/dstk/build/gen"
+	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
