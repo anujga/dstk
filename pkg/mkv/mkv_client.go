@@ -4,15 +4,14 @@ import (
 	"context"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/slicer"
 	"google.golang.org/grpc"
-	"io"
 )
 
 //todo: explore the usage of envoy instead of manually creating grpc connections
 //for stats, rate limiting, retry, round robin / local zone, auth ...
 
 type Client interface {
-	io.Closer
 	Get(key []byte) ([]byte, error)
 }
 
@@ -21,7 +20,7 @@ type staticClient struct {
 	client pb.MkvClient
 }
 
-func MakeClient(serverUrl string) (Client, error) {
+func newRpcClient(serverUrl string) (*staticClient, error) {
 	conn, err := grpc.Dial(serverUrl)
 	if err != nil {
 		return nil, err
@@ -51,15 +50,48 @@ func (s *staticClient) Close() error {
 	return s.conn.Close()
 }
 
-type mkvClientFactory struct {
-	auth string
+type mkvClient struct {
+	slice slicer.SliceRdr
+	pool  core.ConnPool
 }
 
-func (c *mkvClientFactory) Open(url string) (interface{}, error) {
-	return MakeClient(url)
+func (m *mkvClient) Get(key []byte) ([]byte, error) {
+	part, err := m.slice.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	url := part.Url()
+	o, err := m.pool.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	conn := o.(*staticClient)
+	value, err := conn.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
 }
 
-func (c *mkvClientFactory) Close(conn interface{}) error {
-	conn2 := conn.(Client)
+func UsingSlicer(slice slicer.SliceRdr) Client {
+	return &mkvClient{
+		slice: slice,
+		pool:  core.NonExpiryPool(&rpcConnFactory{}),
+	}
+}
+
+type rpcConnFactory struct {
+	//auth string
+}
+
+func (c *rpcConnFactory) Open(url string) (interface{}, error) {
+	return newRpcClient(url)
+}
+
+func (c *rpcConnFactory) Close(conn interface{}) error {
+	conn2 := conn.(*staticClient)
 	return conn2.Close()
 }

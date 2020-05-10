@@ -13,6 +13,7 @@ type ConnectionFactory interface {
 //Due to multiple factors in play, it is possible that the application
 //ends up connecting to a subset of the partitions. Hence this pool
 //should create connections lazily
+// todo: instead of taking locks on table. move to a volatile immutable map
 type nonExpiryPool struct {
 	table      map[string]interface{}
 	mu, connMu sync.Mutex

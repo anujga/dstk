@@ -12,7 +12,7 @@ type rbtHolder struct {
 	lastPart Partition
 }
 
-func StaticHolder(parts []Partition, lastPart Partition) SliceReader {
+func StaticHolder(parts []Partition, lastPart Partition) SliceRdr {
 	r := &rbtHolder{
 		t:        rbt.NewWithStringComparator(),
 		lastPart: lastPart,
@@ -21,10 +21,13 @@ func StaticHolder(parts []Partition, lastPart Partition) SliceReader {
 	for _, p := range parts {
 		k := string(p.End())
 		r.t.Put(k, p)
-
 	}
 
 	return r
+}
+
+func ReadPartsFrom(filename string) []Partition {
+	return nil
 }
 
 func (r *rbtHolder) Get(key []byte) (Partition, error) {
