@@ -4,10 +4,11 @@ package dstk;
 import "error.proto";
 
 service ShardStorage {
-    rpc CreatePartition (CreateReq) returns (ChangeRes);
+    rpc CreateJobPartition (CreateJobPartReq) returns (ChangeRes);
     rpc SplitPartition (SplitReq) returns (ChangeRes);
     rpc MergePartition (MergeReq) returns (ChangeRes);
     rpc FindPartition (Find.Req) returns (Find.Res);
+    rpc GetDelta (Delta.Req) returns (Delta.Res);
 }
 
 message ChangeRes {
@@ -15,25 +16,27 @@ message ChangeRes {
     bool success = 2;
 }
 
-message CreateReq {
-    Partition c = 1;
+message CreateJobPartReq {
+    int64 jobId = 1;
+    repeated bytes markings = 2;
 }
 
 message SplitReq {
-    Partition c = 1;
-    Partition n1 = 2;
-    Partition n2 = 3;
+    int64 jobId = 1;
+    bytes marking = 2;
 }
 
 message MergeReq {
-    Partition c1 = 1;
-    Partition c2 = 2;
-    Partition n = 3;
+    int64 jobId = 1;
+    Partition c1 = 2;
+    Partition c2 = 3;
+    Partition n = 4;
 }
 
 message Find {
     message Req {
-        string key = 1;
+        int64 jobId = 1;
+        bytes key = 2;
     }
     message Res {
         Ex ex = 1;
@@ -41,9 +44,22 @@ message Find {
     }
 }
 
+message Delta {
+    message Req {
+        int64 jobId = 1;
+        int64 fromTime = 2;
+    }
+    message Res {
+        Ex ex = 1;
+        repeated Partition added = 2;
+        repeated Partition removed = 3;
+    }
+}
+
+// Defines a partition (start, end]
 message Partition {
     int64 id = 1;
-    string start = 2;
-    string end = 3;
-    map<string, string> tags = 4;
+    bytes start = 2;
+    bytes end = 3;
+    string url = 4;
 }

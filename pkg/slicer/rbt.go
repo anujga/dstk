@@ -30,7 +30,7 @@ func StaticHolder(parts []Partition, lastPart Partition) SliceReader {
 func (r *rbtHolder) Get(key []byte) (Partition, error) {
 	k := string(key)
 	r.mu.Lock()
-	v, found := r.t.Floor(k)
+	v, found := r.t.Ceiling(k)
 	r.mu.Unlock()
 	if !found {
 		return r.lastPart, nil

@@ -1,86 +1,102 @@
 package main
 
 import (
+	"errors"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
-	"go.uber.org/zap"
-	"sort"
+	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"sync"
 )
 
-// TODO. Change current naive implementation to an efficient one
 type ShardStore struct {
-	m map[string]dstk.Partition
-	s []string
-	mux sync.Mutex
+	m map[int64]*JobPartitionHolder
+}
+
+/*
+	For the first partition start = nil
+	For the last partition end = nil
+*/
+type JobPartitionHolder struct {
+	t        *rbt.Tree
+	mux      sync.Mutex
+	lastPart *dstk.Partition
+}
+
+func NewJobPartitionHolder(last *dstk.Partition) *JobPartitionHolder {
+	jph := JobPartitionHolder{t: rbt.NewWithStringComparator(), lastPart: last}
+	return &jph
 }
 
 func NewShardStore() *ShardStore {
-	ss := ShardStore{m: map[string]dstk.Partition{}, s: []string{}}
+	ss := ShardStore{m: map[int64]*JobPartitionHolder{}}
 	return &ss
 }
 
-func (ss *ShardStore) Create(p *dstk.Partition) {
-	ss.mux.Lock()
-	defer ss.mux.Unlock()
-	ss.store((*p).GetStart(), *p)
-	ss.store((*p).GetEnd(), *p)
+func (ss *ShardStore) Create(jobId int64, partitions []*dstk.Partition, last *dstk.Partition) error {
+	if _, ok := ss.m[jobId]; ok {
+		return errors.New("partition for this Job already exist")
+	}
+	jph := NewJobPartitionHolder(last)
+	for _, p := range partitions {
+		k := string(p.GetEnd())
+		jph.t.Put(k, p)
+	}
+	ss.m[jobId] = jph
+	return nil
 }
 
-func (ss *ShardStore) Split(c *dstk.Partition, n1 *dstk.Partition, n2 *dstk.Partition) {
-	ss.mux.Lock()
-	defer ss.mux.Unlock()
-	ss.remove(c.Start)
-	ss.store((*n1).GetStart(), *n1)
-	ss.store((*n2).GetStart(), *n2)
+func (ss *ShardStore) Find(jobId int64, key []byte) (*dstk.Partition, error) {
+	if jph, ok := ss.m[jobId]; ok {
+		return jph.find(key), nil
+	}
+	return nil, errors.New("invalid job id")
+}
+
+func (ss *ShardStore) Split(jobId int64, marking []byte) error {
+	if jph, ok := ss.m[jobId]; ok {
+		return jph.split(marking)
+	}
+	return errors.New("invalid job id")
 }
 
 func (ss *ShardStore) Merge(c1 *dstk.Partition, c2 *dstk.Partition, n *dstk.Partition) {
-	ss.mux.Lock()
-	defer ss.mux.Unlock()
-	ss.remove(c1.Start)
-	ss.remove(c2.Start)
-	ss.store((*n).GetStart(), *n)
+	// TODO
 }
 
-func (ss *ShardStore) Find(key string) dstk.Partition {
-	ss.mux.Lock()
-	defer ss.mux.Unlock()
-	resKey := ""
-	if key == "rccd" {
-		zap.L().Info("key = ", zap.String("key", key))
+func (jph *JobPartitionHolder) find(key []byte) *dstk.Partition {
+	k := string(key)
+	jph.mux.Lock()
+	v, found := jph.t.Ceiling(k)
+	jph.mux.Unlock()
+	if !found {
+		return jph.lastPart
 	}
-	for i := 0; i < len(ss.s) - 1; i++ {
-		start := ss.s[i]
-		end := ss.s[i+1]
-		if start <= key && key <= end {
-			resKey = ss.s[i]
-			break
-		}
-	}
-	res :=  dstk.Partition{}
-	if resKey != "" {
-		res = ss.m[resKey]
-	}
-	return res
+	res := v.Value.(dstk.Partition)
+	return &res
 }
 
-func (ss *ShardStore) store(key string, partition dstk.Partition) {
-	ss.m[key] = partition
-	ss.s = append(ss.s, key)
-	sort.Strings(ss.s)
-}
-
-func (ss *ShardStore) remove(key string) {
-	delete(ss.m, key)
-	for i := range ss.s {
-		if ss.s[i] == key {
-			if i == len(ss.s) - 1 {
-				ss.s = ss.s[:i]
-			} else {
-				ss.s = append(ss.s[:i], ss.s[i+1:]...)
-			}
-			break
-		}
+func (jph *JobPartitionHolder) split(marking []byte) error {
+	m := string(marking)
+	jph.mux.Lock()
+	defer jph.mux.Unlock()
+	v, found := jph.t.Ceiling(m)
+	partition := jph.lastPart
+	if found {
+		r := v.Value.(dstk.Partition)
+		partition = &r
 	}
-	sort.Strings(ss.s)
+	s := string(partition.GetStart())
+	e := string(partition.GetEnd())
+	if m == e || m == s {
+		return errors.New("invalid marking, partition already exist")
+	}
+	if s == string(jph.lastPart.GetStart()) {
+		part := dstk.Partition{Id: generatePartitionId(), Start: jph.lastPart.Start, End: marking, Url: getUrl()}
+		jph.t.Put(marking, &part)
+		jph.lastPart.Start = marking
+	} else {
+		part := dstk.Partition{Id: generatePartitionId(), Start: partition.Start, End: marking, Url: getUrl()}
+		jph.t.Put(marking, part)
+		partition.Start = marking
+	}
+	return nil
 }
