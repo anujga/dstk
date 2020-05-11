@@ -8,7 +8,7 @@ service ShardStorage {
     rpc SplitPartition (SplitReq) returns (ChangeRes);
     rpc MergePartition (MergeReq) returns (ChangeRes);
     rpc FindPartition (Find.Req) returns (Find.Res);
-    rpc GetDelta (Delta.Req) returns (Delta.Res);
+    rpc GetDeltaPartitions (Delta.Req) returns (Delta.Res);
 }
 
 message ChangeRes {
@@ -30,7 +30,6 @@ message MergeReq {
     int64 jobId = 1;
     Partition c1 = 2;
     Partition c2 = 3;
-    Partition n = 4;
 }
 
 message Find {
@@ -59,7 +58,9 @@ message Delta {
 // Defines a partition (start, end]
 message Partition {
     int64 id = 1;
-    bytes start = 2;
-    bytes end = 3;
-    string url = 4;
+    int64 modifiedOn = 2;
+    bool active = 3;
+    bytes start = 4;
+    bytes end = 5;
+    string url = 6;
 }
