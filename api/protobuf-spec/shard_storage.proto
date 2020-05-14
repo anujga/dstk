@@ -47,6 +47,7 @@ message Delta {
     message Req {
         int64 jobId = 1;
         int64 fromTime = 2;
+        bool activeOnly = 3;
     }
     message Res {
         Ex ex = 1;

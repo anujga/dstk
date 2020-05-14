@@ -5,6 +5,7 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
+	"github.com/emirpasic/gods/utils"
 	"math/rand"
 	"sync"
 	"time"
@@ -31,8 +32,8 @@ func NewJobPartitionHolder(jobId int64) *JobPartitionHolder {
 	jph := JobPartitionHolder{
 		id:      jobId,
 		t:       rbt.NewWithStringComparator(),
-		index:   rbt.NewWithIntComparator(),
-		deleted: rbt.NewWithIntComparator(),
+		index:   rbt.NewWith(utils.Int64Comparator),
+		deleted: rbt.NewWith(utils.Int64Comparator),
 	}
 	return &jph
 }
@@ -47,16 +48,15 @@ func (ss *ShardStore) Create(jobId int64, markings [][]byte) error {
 		return errors.New("partition for this Job already exist")
 	}
 	jph := NewJobPartitionHolder(jobId)
-	modifiedOn := time.Now().UnixNano()
 	old := []byte(nil)
 	for _, cur := range markings {
 		partId := jph.generatePartitionId()
-		part := dstk.Partition{Id: partId, ModifiedOn: modifiedOn, Start: old, End: cur, Url: jph.getUrl(partId)}
+		part := dstk.Partition{Id: partId, Start: old, End: cur, Url: jph.getUrl(partId)}
 		jph.createPartition(&part)
 		old = cur
 	}
 	partId := jph.generatePartitionId()
-	lastPart := dstk.Partition{Id: partId, ModifiedOn: modifiedOn, Start: markings[len(markings)-1], Url: jph.getUrl(partId)}
+	lastPart := dstk.Partition{Id: partId, Start: markings[len(markings)-1], Url: jph.getUrl(partId)}
 	jph.createLastPartition(&lastPart)
 	ss.m[jobId] = jph
 	return nil
@@ -83,9 +83,9 @@ func (ss *ShardStore) Merge(jobId int64, c1 *dstk.Partition, c2 *dstk.Partition)
 	return errors.New("invalid job id")
 }
 
-func (ss *ShardStore) GetDelta(jobId int64, time int64) ([]*dstk.Partition, error) {
+func (ss *ShardStore) GetDelta(jobId int64, time int64, activeOnly bool) ([]*dstk.Partition, error) {
 	if jph, ok := ss.m[jobId]; ok {
-		return jph.getDelta(time)
+		return jph.getDelta(time, activeOnly)
 	}
 	return nil, errors.New("invalid job id")
 }
@@ -98,8 +98,8 @@ func (jph *JobPartitionHolder) find(key []byte) *dstk.Partition {
 	if !found {
 		return jph.lastPart
 	}
-	res := v.Value.(dstk.Partition)
-	return &res
+	res := v.Value.(*dstk.Partition)
+	return res
 }
 
 func (jph *JobPartitionHolder) split(marking []byte) error {
@@ -109,33 +109,33 @@ func (jph *JobPartitionHolder) split(marking []byte) error {
 	v, found := jph.t.Ceiling(m)
 	partition := jph.lastPart
 	if found {
-		r := v.Value.(dstk.Partition)
-		partition = &r
+		r := v.Value.(*dstk.Partition)
+		partition = r
 	}
 	s := string(partition.GetStart())
 	e := string(partition.GetEnd())
 	if m == e || m == s {
 		return errors.New("invalid marking, partition already exist")
 	}
-	modifiedOn := time.Now().UnixNano()
 	p1Id := jph.generatePartitionId()
 	p2Id := jph.generatePartitionId()
 	if s == string(jph.lastPart.GetStart()) {
-		p1 := dstk.Partition{Id: p1Id, ModifiedOn: modifiedOn, Start: jph.lastPart.GetStart(), End: marking, Url: jph.getUrl(p1Id)}
-		p2 := dstk.Partition{Id: p2Id, ModifiedOn: modifiedOn, Start: marking, Url: jph.getUrl(p2Id)}
+		p1 := dstk.Partition{Id: p1Id, Start: jph.lastPart.GetStart(), End: marking, Url: jph.getUrl(p1Id)}
+		p2 := dstk.Partition{Id: p2Id, Start: marking, Url: jph.getUrl(p2Id)}
 		jph.createPartition(&p1)
 		jph.replaceLastPartition(&p2)
 	} else {
-		p1 := dstk.Partition{Id: p1Id, ModifiedOn: modifiedOn, Start: partition.GetStart(), End: marking, Url: jph.getUrl(p1Id)}
-		p2 := dstk.Partition{Id: p2Id, ModifiedOn: modifiedOn, Start: marking, End: partition.GetEnd(), Url: jph.getUrl(p2Id)}
+		p1 := dstk.Partition{Id: p1Id, Start: partition.GetStart(), End: marking, Url: jph.getUrl(p1Id)}
+		p2 := dstk.Partition{Id: p2Id, Start: marking, End: partition.GetEnd(), Url: jph.getUrl(p2Id)}
+		jph.removePartition(partition)
 		jph.createPartition(&p1)
 		jph.createPartition(&p2)
-		jph.removePartition(partition)
 	}
 	return nil
 }
 
 func (jph *JobPartitionHolder) merge(c1 *dstk.Partition, c2 *dstk.Partition) error {
+	c1s := string(c1.GetStart())
 	c1e := string(c1.GetEnd())
 	c2s := string(c2.GetStart())
 	c2e := string(c2.GetEnd())
@@ -148,32 +148,34 @@ func (jph *JobPartitionHolder) merge(c1 *dstk.Partition, c2 *dstk.Partition) err
 	if c2e == last {
 		// New partition is the last partition
 		p1, f1 := jph.t.Ceiling(c1e)
-		if !f1 || string(p1.Value.(*dstk.Partition).GetEnd()) != last {
+		if !f1 || string(p1.Value.(*dstk.Partition).GetStart()) != c1s ||
+			string(p1.Value.(*dstk.Partition).GetEnd()) != c1e {
 			return errors.New("invalid partitions")
 		}
-		modifiedOn := time.Now().UnixNano()
 		partId := jph.generatePartitionId()
 		np := dstk.Partition{
-			Id:         partId,
-			ModifiedOn: modifiedOn,
-			Start:      p1.Value.(*dstk.Partition).GetStart(),
-			Url:        jph.getUrl(partId),
+			Id:    partId,
+			Start: p1.Value.(*dstk.Partition).GetStart(),
+			Url:   jph.getUrl(partId),
 		}
+		jph.removePartition(p1.Value.(*dstk.Partition))
 		jph.replaceLastPartition(&np)
 	} else {
 		p1, f1 := jph.t.Ceiling(c1e)
 		p2, f2 := jph.t.Ceiling(c2e)
-		if !f1 || !f2 || string(p1.Value.(*dstk.Partition).GetEnd()) != string(p2.Value.(*dstk.Partition).GetStart()) {
+		if !f1 || !f2 ||
+			string(p1.Value.(*dstk.Partition).GetStart()) != c1s ||
+			string(p1.Value.(*dstk.Partition).GetEnd()) != c1e ||
+			string(p2.Value.(*dstk.Partition).GetStart()) != c2s ||
+			string(p2.Value.(*dstk.Partition).GetEnd()) != c2e {
 			return errors.New("invalid partitions")
 		}
-		modifiedOn := time.Now().UnixNano()
 		partId := jph.generatePartitionId()
 		part := dstk.Partition{
-			Id:         partId,
-			ModifiedOn: modifiedOn,
-			Start:      p1.Value.(*dstk.Partition).GetStart(),
-			End:        p2.Value.(*dstk.Partition).GetEnd(),
-			Url:        jph.getUrl(partId),
+			Id:    partId,
+			Start: p1.Value.(*dstk.Partition).GetStart(),
+			End:   p2.Value.(*dstk.Partition).GetEnd(),
+			Url:   jph.getUrl(partId),
 		}
 		jph.removePartition(p1.Value.(*dstk.Partition))
 		jph.removePartition(p2.Value.(*dstk.Partition))
@@ -182,31 +184,52 @@ func (jph *JobPartitionHolder) merge(c1 *dstk.Partition, c2 *dstk.Partition) err
 	return nil
 }
 
-func (jph *JobPartitionHolder) getDelta(time int64) ([]*dstk.Partition, error) {
+func (jph *JobPartitionHolder) getDelta(time int64, activeOnly bool) ([]*dstk.Partition, error) {
 	jph.mux.Lock()
 	defer jph.mux.Unlock()
 	partitions := ([]*dstk.Partition)(nil)
-	v, ok := jph.index.Ceiling(time)
+	node, ok := jph.index.Ceiling(time)
 	if ok {
-		updatePartitions(partitions, v, false)
+		partitions = getUpdatedPartitionsFrom(partitions, node)
+	}
+	if !activeOnly {
+		node, ok = jph.deleted.Ceiling(time)
+		if ok {
+			partitions = getUpdatedPartitionsFrom(partitions, node)
+		}
 	}
 	return partitions, nil
 }
 
-func updatePartitions(partitions []*dstk.Partition, node *rbt.Node, goLeft bool) {
-	if node == nil {
-		return
+func getUpdatedPartitionsFrom(partitions []*dstk.Partition, node *rbt.Node) []*dstk.Partition {
+	partitions = append(partitions, node.Value.(*dstk.Partition))
+	val := node.Value.(*dstk.Partition).GetModifiedOn()
+	next := (*rbt.Node)(nil)
+	if node.Right != nil {
+		next = node.Right
+	} else if node.Parent != nil && node.Parent.Key.(int64) >= val {
+		next = node.Parent
+	} else {
+		return partitions
 	}
-	if goLeft && node.Left != nil {
-		updatePartitions(partitions, node.Left, true)
+	return updatePartitions(partitions, node, next, val)
+}
+
+func updatePartitions(partitions []*dstk.Partition, prev *rbt.Node, node *rbt.Node, val int64) []*dstk.Partition {
+	if node == nil {
+		return partitions
+	}
+	if node.Left != nil && prev != node.Left && node.Left.Key.(int64) >= val {
+		partitions = updatePartitions(partitions, node, node.Left, val)
 	}
 	partitions = append(partitions, node.Value.(*dstk.Partition))
-	if node.Right != nil {
-		updatePartitions(partitions, node.Right, true)
+	if node.Right != nil && prev != node.Right {
+		partitions = updatePartitions(partitions, node, node.Right, val)
 	}
-	if !goLeft && node.Parent != nil {
-		updatePartitions(partitions, node.Parent, false)
+	if node.Parent != nil && prev != node.Parent && node.Parent.Key.(int64) >= val {
+		partitions = updatePartitions(partitions, node, node.Parent, val)
 	}
+	return partitions
 }
 
 func (jph *JobPartitionHolder) generatePartitionId() int64 {
@@ -218,11 +241,15 @@ func (jph *JobPartitionHolder) getUrl(partId int64) string {
 }
 
 func (jph *JobPartitionHolder) createPartition(part *dstk.Partition) {
+	part.Active = true
+	part.ModifiedOn = curTime()
 	jph.t.Put(string(part.GetEnd()), part)
 	jph.index.Put(part.GetModifiedOn(), part)
 }
 
 func (jph *JobPartitionHolder) createLastPartition(part *dstk.Partition) {
+	part.Active = true
+	part.ModifiedOn = curTime()
 	jph.lastPart = part
 	jph.index.Put(part.GetModifiedOn(), part)
 }
@@ -230,12 +257,24 @@ func (jph *JobPartitionHolder) createLastPartition(part *dstk.Partition) {
 func (jph *JobPartitionHolder) removePartition(part *dstk.Partition) {
 	jph.t.Remove(string(part.GetEnd()))
 	jph.index.Remove(part.GetModifiedOn())
+
+	part.Active = false
+	part.ModifiedOn = curTime()
 	jph.deleted.Put(time.Now().UnixNano(), part)
 }
 
 func (jph *JobPartitionHolder) replaceLastPartition(part *dstk.Partition) {
 	jph.index.Remove(jph.lastPart.GetModifiedOn())
-	jph.deleted.Put(time.Now().UnixNano(), jph.lastPart)
+	jph.lastPart.Active = false
+	jph.lastPart.ModifiedOn = curTime()
+	jph.deleted.Put(jph.lastPart.GetModifiedOn(), jph.lastPart)
+
+	part.Active = true
+	part.ModifiedOn = curTime()
 	jph.lastPart = part
 	jph.index.Put(part.GetModifiedOn(), part)
+}
+
+func curTime() int64 {
+	return time.Now().UnixNano()
 }

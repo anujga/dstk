@@ -30,7 +30,7 @@ func (s *shardStoreUpdater) CreatePartition(_ context.Context, in *dstk.CreateJo
 		return &res, nil
 	}
 	err := s.store.Create(jobId, markings)
- 	if err != nil {
+	if err != nil {
 		ex := core.NewErr(dstk.Ex_CONFLICT, err.Error())
 		logger.Error("CreatePartition Error: ", zap.Any("Error", ex))
 		res := dstk.ChangeRes{Ex: ex.Ex, Success: false}
@@ -113,7 +113,7 @@ func (s *shardStoreUpdater) GetDeltaPartitions(_ context.Context, in *dstk.Delta
 		res := dstk.Delta_Res{Ex: ex.Ex}
 		return &res, nil
 	}
-	partitions, err := s.store.GetDelta(in.GetJobId(), in.GetFromTime())
+	partitions, err := s.store.GetDelta(in.GetJobId(), in.GetFromTime(), in.GetActiveOnly())
 	if err != nil {
 		ex := core.NewErr(dstk.Ex_NOT_FOUND, err.Error())
 		logger.Error("GetDeltaPartitions Error: ", zap.Any("Error", ex))
@@ -130,7 +130,7 @@ func (s *shardStoreUpdater) GetDeltaPartitions(_ context.Context, in *dstk.Delta
 		}
 	}
 	res := dstk.Delta_Res{
-		Added: added,
+		Added:   added,
 		Removed: removed,
 	}
 	return &res, nil
