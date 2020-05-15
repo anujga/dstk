@@ -1,17 +1,14 @@
-package main
+package sharder
 
 import (
 	"context"
+	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"log"
 	"net"
-)
-
-const (
-	port = ":50000"
 )
 
 type shardStoreUpdater struct {
@@ -141,9 +138,9 @@ func initLogger() {
 	zap.ReplaceGlobals(logger)
 }
 
-func createServer() {
+func createServer(port int32) {
 	logger := zap.L()
-	lis, err := net.Listen("tcp", port)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		logger.Error("failed to listen: ", zap.Error(err))
 	}
@@ -157,18 +154,18 @@ func createServer() {
 	}
 }
 
-func main() {
-	initLogger()
-	logger := zap.L()
-	defer syncLogs(logger)
-	// will return only when there is an error serving or graceful shutdown happens
-	createServer()
-	logger.Info("Shutting down the gRPC shardStoreUpdater")
-}
-
 func syncLogs(logger *zap.Logger) {
 	err := logger.Sync()
 	if err != nil {
 		log.Fatal("Error syncing log!", err)
 	}
+}
+
+func StartShardStorageServer(port int32) {
+	initLogger()
+	logger := zap.L()
+	defer syncLogs(logger)
+	// will return only when there is an error serving or graceful shutdown happens
+	createServer(port)
+	logger.Info("Shutting down the gRPC shardStoreUpdater")
 }

@@ -1,13 +1,12 @@
 syntax = "proto3";
 package dstk;
 
-import "error.proto";
+import "common.proto";
 
 service ShardStorage {
     rpc CreateJobPartition (CreateJobPartReq) returns (ChangeRes);
     rpc SplitPartition (SplitReq) returns (ChangeRes);
     rpc MergePartition (MergeReq) returns (ChangeRes);
-    rpc FindPartition (Find.Req) returns (Find.Res);
     rpc GetDeltaPartitions (Delta.Req) returns (Delta.Res);
 }
 
@@ -32,17 +31,6 @@ message MergeReq {
     Partition c2 = 3;
 }
 
-message Find {
-    message Req {
-        int64 jobId = 1;
-        bytes key = 2;
-    }
-    message Res {
-        Ex ex = 1;
-        Partition par = 2;
-    }
-}
-
 message Delta {
     message Req {
         int64 jobId = 1;
@@ -54,14 +42,4 @@ message Delta {
         repeated Partition added = 2;
         repeated Partition removed = 3;
     }
-}
-
-// Defines a partition (start, end]
-message Partition {
-    int64 id = 1;
-    int64 modifiedOn = 2;
-    bool active = 3;
-    bytes start = 4;
-    bytes end = 5;
-    string url = 6;
 }

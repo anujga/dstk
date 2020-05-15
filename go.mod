@@ -8,4 +8,5 @@ require (
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.15.0
 	google.golang.org/grpc v1.28.1
+	github.com/spf13/viper v1.7.0
 )
