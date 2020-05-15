@@ -1,0 +1,10 @@
+sharder_storage:
+  port: &sharder_storage_port 50000
+sharder_lookup:
+  port: &sharder_lookup_port 60000
+  jobs: [100, 101, 102]
+  server:
+    ip: 127.0.0.1
+    port: *sharder_storage_port
+sharder_test_app:
+  port: *sharder_lookup_port

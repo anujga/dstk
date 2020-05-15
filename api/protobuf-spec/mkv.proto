@@ -1,7 +1,7 @@
 syntax = "proto3";
 package dstk;
 
-import "error.proto";
+import "common.proto";
 
 message MkvPartition {
     message Entry {

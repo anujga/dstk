@@ -33,4 +33,3 @@ func (m *Errr) Error() string {
 }
 
 var ExOK = &dstk.Ex{Id: dstk.Ex_SUCCESS}
-

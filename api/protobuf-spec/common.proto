@@ -1,8 +1,17 @@
 syntax = "proto3";
 package dstk;
 
-message Ex {
+// Defines a partition (start, end]
+message Partition {
+    int64 id = 1;
+    int64 modifiedOn = 2;
+    bool active = 3;
+    bytes start = 4;
+    bytes end = 5;
+    string url = 6;
+}
 
+message Ex {
     //bulk of these msgs are copied from http and
     //https://cloud.google.com/apis/design/errors#generating_errors
     //incase there is an overlap with grpc codes, please remove them
