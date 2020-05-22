@@ -6,6 +6,12 @@ import (
 	"github.com/emirpasic/gods/utils"
 )
 
+// secondary index exists primarily to quickly answer
+// modified on or after query. whenever the there is
+// a change in slicer, the clients will get notified
+// (or they will pool every few seconds) and they will
+// query for all partitions modified since the last
+// time they updated
 type TimeIndex struct {
 	t *rbt.Tree
 }

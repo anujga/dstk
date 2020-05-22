@@ -1,4 +1,4 @@
-usecases:
+## Use cases:
 
 - envoy plugin
 - memory+disk cache
