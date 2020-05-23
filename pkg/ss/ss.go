@@ -2,12 +2,14 @@ package ss
 
 import dstk "github.com/anujga/dstk/pkg/api/proto"
 
-type MsgTrait interface {
+type KeyT []byte
+
+type Msg interface {
 	ReadOnly() bool
+	Key() KeyT
 }
 
-
 type Consumer interface {
-	Process(msg MsgTrait) bool
-	Meta() dstk.Partition
+	Process(msg Msg) bool
+	Meta() *dstk.Partition
 }
