@@ -24,7 +24,7 @@ func (p *PartItem) Less(than btree.Item) bool {
 	return bytes.Compare(e1, e2) < 0
 }
 
-// this is the 4rth implementation of the range map.
+// todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
 type PartitionMgr struct {
 	consumer ConsumerFactory
@@ -32,6 +32,16 @@ type PartitionMgr struct {
 	lastPart *PartItem
 	log      *zap.Logger
 	slog     *zap.SugaredLogger
+}
+
+func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
+	return &PartitionMgr{
+		consumer: consumer,
+		partMap:  btree.New(10),
+		lastPart: nil,
+		log:      log,
+		slog:     log.Sugar(),
+	}
 }
 
 // path=data
@@ -53,8 +63,8 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	end := p.GetEnd()
 	var err error
 
-	m.slog.Info("AddPartition Start", "end", end)
-	defer m.slog.Info("AddPartition Status", "end", end, "err", err)
+	m.slog.Info("AddPartition Start", "part", p)
+	defer m.slog.Info("AddPartition Status", "part", p, "err", err)
 
 	if end == nil {
 		if m.lastPart != nil {
