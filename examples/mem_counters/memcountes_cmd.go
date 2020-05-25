@@ -98,23 +98,29 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 	return pm, nil
 }
 
+type handler func(*Request) (string, error)
+
 // 5. server for partitions
-func server(log *zap.Logger, machine ss.Router) chan error {
+func server(log *zap.Logger, callback handler) chan error {
 	var err error
 
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		var req Request
+		var err error
+
 		if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		if err = machine.OnMsg(&req); err != nil {
+		payload, err := callback(&req)
+		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		w.Write([]byte("ok"))
+
+		w.Write([]byte(payload))
 	})
 
 	ch := make(chan error, 1)
@@ -142,6 +148,12 @@ func main() {
 		panic(err)
 	}
 
-	servingFuture := server(log, router)
+	servingFuture := server(log, func(msg *Request) (string, error) {
+		if err := router.OnMsg(msg); err != nil {
+			return "", err
+		}
+		return "ok", nil
+	})
+
 	<-servingFuture
 }
