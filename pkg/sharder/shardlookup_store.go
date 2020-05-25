@@ -64,6 +64,7 @@ func (store *ClientShardStore) Update(jobId int64, added []*dstk.Partition, remo
 	for _, part := range removed {
 		cjph.t.Remove(part.GetEnd())
 	}
+	lastModified := store.lastModified
 	for _, part := range added {
 		if part.GetEnd() == nil {
 			cjph.lastPart = part
@@ -71,7 +72,11 @@ func (store *ClientShardStore) Update(jobId int64, added []*dstk.Partition, remo
 			cjph.t.Put(part.GetEnd(), part.GetEnd())
 		}
 		cjph.t.Put(part.GetEnd(), part)
+		if part.GetModifiedOn() > lastModified {
+			lastModified = part.GetModifiedOn()
+		}
 	}
+	store.lastModified = lastModified
 	cjph.mux.Unlock()
 }
 
