@@ -75,7 +75,7 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	defer m.slog.Info("AddPartition Status", "part", p, "err", err)
 
 	c, maxOutstanding := m.consumer.Make(p)
-	i := PartItem{
+	part := PartItem{
 		k:        end,
 		consumer: c,
 		mailBox:  make(chan Msg, maxOutstanding),
@@ -86,15 +86,15 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 			err = errors.New("duplicate last partition")
 			return err
 		}
-		m.lastPart = &i
-	} else if nil != m.partMap.ReplaceOrInsert(&i) {
+		m.lastPart = &part
+	} else if nil != m.partMap.ReplaceOrInsert(&part) {
 		err = errors.New("duplicate partition")
 		return err
 	}
 
 	//todo: also check for valid start and other constraints
 
-	go i.Run()
+	go part.Run()
 
 	return nil
 }
