@@ -1,0 +1,5 @@
+max-outstanding: 1024
+parts:
+  - k
+  - r
+  -
