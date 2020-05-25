@@ -98,20 +98,9 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 	return pm, nil
 }
 
-func main() {
-	var conf = flag.String(
-		"conf", "config.yaml", "config file")
-	flag.Parse()
-
-	log, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-
-	machine, err := glue(log, *conf)
-	if err != nil {
-		panic(err)
-	}
+// 5. server for partitions
+func server(log *zap.Logger, machine ss.Router) chan error {
+	var err error
 
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		var req Request
@@ -128,6 +117,31 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	err = http.ListenAndServe(":8080", nil)
-	log.Sugar().Fatalw("stopped", "err", err)
+	ch := make(chan error, 1)
+	go func() {
+		err = http.ListenAndServe(":8080", nil)
+		log.Sugar().Infow("stopped", "err", err)
+		ch <- err
+	}()
+
+	return ch
+}
+
+func main() {
+	var conf = flag.String(
+		"conf", "config.yaml", "config file")
+	flag.Parse()
+
+	log, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+
+	router, err := glue(log, *conf)
+	if err != nil {
+		panic(err)
+	}
+
+	servingFuture := server(log, router)
+	<-servingFuture
 }
