@@ -12,5 +12,17 @@ type Msg interface {
 type Consumer interface {
 	Process(msg Msg) bool
 	Meta() *dstk.Partition
-	MaxOutstanding() int
+}
+
+type ConsumerFactory interface {
+	Make(p *dstk.Partition) (Consumer, int)
+}
+
+type Router interface {
+	OnMsg(m Msg) error
+}
+
+type PartMgr interface {
+	Find(key KeyT) *PartItem
+	Add(p *dstk.Partition) error
 }

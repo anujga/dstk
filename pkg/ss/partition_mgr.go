@@ -2,15 +2,11 @@ package ss
 
 import (
 	"bytes"
-	"errors"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/google/btree"
 	"go.uber.org/zap"
+	"gopkg.in/errgo.v2/fmt/errors"
 )
-
-type ConsumerFactory interface {
-	Make(p *dstk.Partition) Consumer
-}
 
 type PartItem struct {
 	k        KeyT
@@ -24,6 +20,8 @@ func (p *PartItem) Less(than btree.Item) bool {
 	return bytes.Compare(e1, e2) < 0
 }
 
+//---
+
 // todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
 type PartitionMgr struct {
@@ -34,17 +32,20 @@ type PartitionMgr struct {
 	slog     *zap.SugaredLogger
 }
 
+//todo: ensure there is at least 1 partition during construction
 func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
 	return &PartitionMgr{
 		consumer: consumer,
-		partMap:  btree.New(10),
+		partMap:  btree.New(32),
 		lastPart: nil,
 		log:      log,
 		slog:     log.Sugar(),
 	}
 }
 
-// path=data
+// Path = data
+// Time = O(log N/ log 32), N ~ MAX_PARTITIONS ~ 1M
+// Return value can only be nil if there are 0 partitions
 func (m *PartitionMgr) Find(key KeyT) *PartItem {
 	k := PartItem{k: key}
 
@@ -58,7 +59,7 @@ func (m *PartitionMgr) Find(key KeyT) *PartItem {
 	return q
 }
 
-// path=control. performance not so critical
+// path=control
 func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	end := p.GetEnd()
 	var err error
@@ -73,11 +74,11 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 		}
 
 	}
-	c := m.consumer.Make(p)
+	c, maxOutstanding := m.consumer.Make(p)
 	i := PartItem{
 		k:        end,
 		consumer: c,
-		mailBox:  make(chan Msg, c.MaxOutstanding()),
+		mailBox:  make(chan Msg, maxOutstanding),
 	}
 	if nil != m.partMap.ReplaceOrInsert(&i) {
 		err = errors.New("duplicate partition")
@@ -89,11 +90,16 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 }
 
 // Single threaded router. 1 channel per partition
-type STRouter struct {
-	parts *PartitionMgr
-}
+// path=data
+func (m *PartitionMgr) OnMsg(msg Msg) error {
+	p := m.Find(msg.Key())
+	select {
+	case p.mailBox <- msg:
+		return nil
+	default:
+		return errors.Newf(
+			"code=429. Partition Busy. Max outstanding allowed %s",
+			cap(p.mailBox))
+	}
 
-func (s *STRouter) OnMsg(m Msg) {
-	p := s.parts.Find(m.Key())
-	p.mailBox <- m
 }
