@@ -246,9 +246,5 @@ func (jph *JobPartitionHolder) replaceLastPartition(part *dstk.Partition) {
 }
 
 func (jph *JobPartitionHolder) timeCounter() int64 {
-	jph.countMux.Lock()
-	jph.cyclicCount = (jph.cyclicCount + 1) % 1000
-	count := time.Now().UnixNano() + int64(jph.cyclicCount)
-	jph.countMux.Unlock()
-	return count
+	return time.Now().UnixNano()
 }
