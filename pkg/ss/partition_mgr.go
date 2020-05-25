@@ -108,7 +108,7 @@ func (m *PartitionMgr) OnMsg(msg Msg) error {
 		return nil
 	default:
 		return errors.Newf(
-			"code=429. Partition Busy. Max outstanding allowed %s",
+			"code=429. Partition Busy. Max outstanding allowed %d",
 			cap(p.mailBox))
 	}
 

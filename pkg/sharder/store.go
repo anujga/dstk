@@ -25,8 +25,6 @@ type JobPartitionHolder struct {
 	deleted     *TimeIndex // TODO. How to cleanup deleted ?
 	lastPart    *dstk.Partition
 	mux         sync.Mutex
-	countMux    sync.Mutex
-	cyclicCount int16
 }
 
 func NewJobPartitionHolder(jobId int64) *JobPartitionHolder {
@@ -246,9 +244,5 @@ func (jph *JobPartitionHolder) replaceLastPartition(part *dstk.Partition) {
 }
 
 func (jph *JobPartitionHolder) timeCounter() int64 {
-	jph.countMux.Lock()
-	jph.cyclicCount = (jph.cyclicCount + 1) % 1000
-	count := time.Now().UnixNano() + int64(jph.cyclicCount)
-	jph.countMux.Unlock()
-	return count
+	return time.Now().UnixNano()
 }
