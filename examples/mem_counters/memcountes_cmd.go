@@ -83,7 +83,7 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		slog.Info("Adding Part {}. {}", i, pv)
 		pm.Add(&pv)
-		if pv.GetEnd() == nil {
+		if len(pv.GetEnd()) == 0 {
 			endParts += 1
 		}
 	}
@@ -100,7 +100,7 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 
 func main() {
 	var conf = flag.String(
-		"conf", "conf.yaml", "config file")
+		"conf", "config.yaml", "config file")
 	flag.Parse()
 
 	log, err := zap.NewProduction()

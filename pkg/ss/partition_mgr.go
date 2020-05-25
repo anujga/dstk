@@ -16,8 +16,15 @@ type PartItem struct {
 
 func (p *PartItem) Less(than btree.Item) bool {
 	that := than.(*PartItem)
-	e1, e2 := p.consumer.Meta().GetEnd(), that.consumer.Meta().GetEnd()
+	e1, e2 := p.k, that.k
 	return bytes.Compare(e1, e2) < 0
+}
+
+func (p *PartItem) Run() bool {
+	for m := range p.mailBox {
+		p.consumer.Process(m)
+	}
+	return true
 }
 
 //---
@@ -67,25 +74,28 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	m.slog.Info("AddPartition Start", "part", p)
 	defer m.slog.Info("AddPartition Status", "part", p, "err", err)
 
-	if end == nil {
-		if m.lastPart != nil {
-			err = errors.New("duplicate last partition")
-			return err
-		}
-
-	}
 	c, maxOutstanding := m.consumer.Make(p)
 	i := PartItem{
 		k:        end,
 		consumer: c,
 		mailBox:  make(chan Msg, maxOutstanding),
 	}
-	if nil != m.partMap.ReplaceOrInsert(&i) {
+
+	if len(end) == 0 {
+		if m.lastPart != nil {
+			err = errors.New("duplicate last partition")
+			return err
+		}
+		m.lastPart = &i
+	} else if nil != m.partMap.ReplaceOrInsert(&i) {
 		err = errors.New("duplicate partition")
 		return err
 	}
 
 	//todo: also check for valid start and other constraints
+
+	go i.Run()
+
 	return nil
 }
 

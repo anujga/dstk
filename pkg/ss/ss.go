@@ -11,7 +11,7 @@ type Msg interface {
 
 type Consumer interface {
 	Process(msg Msg) bool
-	Meta() *dstk.Partition
+	//Meta() *dstk.Partition
 }
 
 type ConsumerFactory interface {
