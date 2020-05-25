@@ -163,6 +163,8 @@ func StartServer(port int32, listener *bufconn.Listener) (*grpc.Server, func()) 
 			slog.Fatalw("failed to start server",
 				"port", port,
 				"err", err)
+			//todo: dont crash the process, return a promise or channel
+			//or create a small interface for shutdown, shutdownNow, didStart ...
 			os.Exit(-2)
 		}
 	}

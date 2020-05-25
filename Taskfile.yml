@@ -11,6 +11,10 @@ vars:
     assets/css/vendor/reboot.css
     assets/css/main.css
 
+  PROTO_FILES: api/protobuf-spec/*.proto
+  PROTO_PATH: api/protobuf-spec/
+  PROTO_OUT_DIR: pkg/api/proto/
+
 tasks:
   default:
     cmds:
@@ -43,10 +47,15 @@ tasks:
     cmds:
       - go build -o bin/{{.EXE}} ./cmd/{{.EXE}}/
 
+  test:
+    cmds:
+      - go test ./...
+
   protos:
     desc: compile protobuf files
     cmds:
-      - protoc --go_out=plugins=grpc:. pb/*.proto
+      - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
+
 
   #  assets:
   #    desc: Bundle assets and generate box for it
@@ -96,10 +105,6 @@ tasks:
     deps:
       - os-deps
     cmds:
-      #      - task: go-get
-      #        vars: {REPO: github.com/tdewolff/minify/cmd/minify}
-      #      - task: go-get
-      #        vars: {REPO: github.com/UnnoTed/fileb0x}
       - task: go-get
         vars: {REPO: github.com/golang/protobuf/protoc-gen-go}
 
