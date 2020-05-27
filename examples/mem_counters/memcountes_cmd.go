@@ -61,12 +61,12 @@ func (m *memCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int) {
 }
 
 // 4. glue it up together
-func glue(log *zap.Logger, confPath string) (ss.Router, error) {
+func glue(confPath string) (ss.Router, error) {
 
-	slog := log.Sugar()
+	log := zap.L()
+	slog := zap.S()
 
 	viper.AddConfigPath(confPath)
-	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,10 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 	for i, p := range ps {
 		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		slog.Info("Adding Part {}. {}", i, pv)
-		pm.Add(&pv)
+		if err := pm.Add(&pv); err != nil {
+			return nil, err
+		}
+
 		if len(pv.GetEnd()) == 0 {
 			endParts += 1
 		}
@@ -98,36 +101,60 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 	return pm, nil
 }
 
-func main() {
-	var conf = flag.String(
-		"conf", "config.yaml", "config file")
-	flag.Parse()
+type handler func(*Request) (string, error)
 
-	log, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-
-	machine, err := glue(log, *conf)
-	if err != nil {
-		panic(err)
-	}
+// 5. server for partitions
+func server(callback handler) chan error {
+	var err error
 
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		var req Request
+		var err error
+
 		if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		if err = machine.OnMsg(&req); err != nil {
+		payload, err := callback(&req)
+		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		w.Write([]byte("ok"))
+
+		w.Write([]byte(payload))
 	})
 
-	err = http.ListenAndServe(":8080", nil)
-	log.Sugar().Fatalw("stopped", "err", err)
+	ch := make(chan error, 1)
+	go func() {
+		err = http.ListenAndServe(":8080", nil)
+		zap.S().Infow("stopped", "err", err)
+		ch <- err
+	}()
+
+	return ch
+}
+
+// 6. Thick client
+
+//
+func main() {
+	var conf = flag.String(
+		"conf", "config.yaml", "config file")
+	flag.Parse()
+
+	router, err := glue(*conf)
+	if err != nil {
+		panic(err)
+	}
+
+	servingFuture := server(func(msg *Request) (string, error) {
+		if err := router.OnMsg(msg); err != nil {
+			return "", err
+		}
+		return "ok", nil
+	})
+
+	<-servingFuture
 }
