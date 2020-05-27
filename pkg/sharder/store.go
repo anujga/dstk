@@ -19,12 +19,12 @@ type ShardStore struct {
 	For the last partition end = nil
 */
 type JobPartitionHolder struct {
-	id       int64
-	t        *rbt.Tree
-	index    *TimeIndex
-	deleted  *TimeIndex // TODO. How to cleanup deleted ?
-	lastPart *dstk.Partition
-	mux      sync.Mutex
+	id          int64
+	t           *rbt.Tree
+	index       *TimeIndex
+	deleted     *TimeIndex // TODO. How to cleanup deleted ?
+	lastPart    *dstk.Partition
+	mux         sync.Mutex
 }
 
 func NewJobPartitionHolder(jobId int64) *JobPartitionHolder {
@@ -210,14 +210,14 @@ func (jph *JobPartitionHolder) getUrl(partId int64) string {
 
 func (jph *JobPartitionHolder) createPartition(part *dstk.Partition) {
 	part.Active = true
-	part.ModifiedOn = curTime()
+	part.ModifiedOn = jph.timeCounter()
 	jph.t.Put(string(part.GetEnd()), part)
 	jph.index.Add(part)
 }
 
 func (jph *JobPartitionHolder) createLastPartition(part *dstk.Partition) {
 	part.Active = true
-	part.ModifiedOn = curTime()
+	part.ModifiedOn = jph.timeCounter()
 	jph.lastPart = part
 	jph.index.Add(part)
 }
@@ -227,22 +227,22 @@ func (jph *JobPartitionHolder) removePartition(part *dstk.Partition) {
 	jph.index.Remove(part)
 
 	part.Active = false
-	part.ModifiedOn = curTime()
+	part.ModifiedOn = jph.timeCounter()
 	jph.deleted.Add(part)
 }
 
 func (jph *JobPartitionHolder) replaceLastPartition(part *dstk.Partition) {
 	jph.index.Remove(jph.lastPart)
 	jph.lastPart.Active = false
-	jph.lastPart.ModifiedOn = curTime()
+	jph.lastPart.ModifiedOn = jph.timeCounter()
 	jph.deleted.Add(jph.lastPart)
 
 	part.Active = true
-	part.ModifiedOn = curTime()
+	part.ModifiedOn = jph.timeCounter()
 	jph.lastPart = part
 	jph.index.Add(part)
 }
 
-func curTime() int64 {
+func (jph *JobPartitionHolder) timeCounter() int64 {
 	return time.Now().UnixNano()
 }

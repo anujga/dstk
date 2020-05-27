@@ -61,7 +61,6 @@ func (store *ClientShardStore) StopCron() {
 func (store *ClientShardStore) updateStore() {
 	logger := zap.L()
 	client := *store.ci.c
-	lastModified := curTime()
 	for _, jobId := range store.jobs {
 		req := dstk.Delta_Req{
 			JobId:      jobId,
@@ -82,7 +81,6 @@ func (store *ClientShardStore) updateStore() {
 			}
 		}
 	}
-	store.lastModified = lastModified
 }
 
 func getClientInfo() *client {
