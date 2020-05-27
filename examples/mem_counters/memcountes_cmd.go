@@ -61,12 +61,12 @@ func (m *memCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int) {
 }
 
 // 4. glue it up together
-func glue(log *zap.Logger, confPath string) (ss.Router, error) {
+func glue(confPath string) (ss.Router, error) {
 
-	slog := log.Sugar()
+	log := zap.L()
+	slog := zap.S()
 
 	viper.AddConfigPath(confPath)
-	viper.ReadInConfig()
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,10 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 	for i, p := range ps {
 		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		slog.Info("Adding Part {}. {}", i, pv)
-		pm.Add(&pv)
+		if err := pm.Add(&pv); err != nil {
+			return nil, err
+		}
+
 		if len(pv.GetEnd()) == 0 {
 			endParts += 1
 		}
@@ -101,7 +104,7 @@ func glue(log *zap.Logger, confPath string) (ss.Router, error) {
 type handler func(*Request) (string, error)
 
 // 5. server for partitions
-func server(log *zap.Logger, callback handler) chan error {
+func server(callback handler) chan error {
 	var err error
 
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
@@ -126,29 +129,27 @@ func server(log *zap.Logger, callback handler) chan error {
 	ch := make(chan error, 1)
 	go func() {
 		err = http.ListenAndServe(":8080", nil)
-		log.Sugar().Infow("stopped", "err", err)
+		zap.S().Infow("stopped", "err", err)
 		ch <- err
 	}()
 
 	return ch
 }
 
+// 6. Thick client
+
+//
 func main() {
 	var conf = flag.String(
 		"conf", "config.yaml", "config file")
 	flag.Parse()
 
-	log, err := zap.NewProduction()
+	router, err := glue(*conf)
 	if err != nil {
 		panic(err)
 	}
 
-	router, err := glue(log, *conf)
-	if err != nil {
-		panic(err)
-	}
-
-	servingFuture := server(log, func(msg *Request) (string, error) {
+	servingFuture := server(func(msg *Request) (string, error) {
 		if err := router.OnMsg(msg); err != nil {
 			return "", err
 		}
