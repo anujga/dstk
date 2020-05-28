@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"net/http"
+	"time"
 )
 
 // 1. Define the Request payload and implement the ss.Msg interface
@@ -107,18 +108,26 @@ func main() {
 	var conf = flag.String(
 		"conf", "config.yaml", "config file")
 	flag.Parse()
-
 	router, err := glue(*conf)
 	if err != nil {
 		panic(err)
 	}
-
 	servingFuture := server(func(msg *Request) (string, error) {
-		if err := router.OnMsg(msg); err != nil {
+		// TODO: make sync/async handling configurable
+		if channel, err := router.OnMsg(msg); err != nil {
 			return "", err
+		} else {
+			select {
+			case e := <-channel:
+				if e == nil {
+					return "ok", nil
+				} else {
+					return "internal error", e
+				}
+			case _ = <-time.After(time.Second * 5):
+				return "internal error", errors.New("timedout")
+			}
 		}
-		return "ok", nil
 	})
-
 	<-servingFuture
 }

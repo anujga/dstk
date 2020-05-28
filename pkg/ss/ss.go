@@ -10,7 +10,7 @@ type Msg interface {
 }
 
 type Consumer interface {
-	Process(msg Msg) bool
+	Process(ptask *PartitionTask) bool
 	//Meta() *dstk.Partition
 }
 
@@ -19,7 +19,7 @@ type ConsumerFactory interface {
 }
 
 type Router interface {
-	OnMsg(m Msg) error
+	OnMsg(m Msg) (<-chan error, error)
 }
 
 type PartMgr interface {

@@ -11,7 +11,7 @@ import (
 type PartItem struct {
 	k        KeyT
 	consumer Consumer
-	mailBox  chan Msg
+	mailBox  chan *PartitionTask
 }
 
 func (p *PartItem) Less(than btree.Item) bool {
@@ -79,7 +79,7 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	part := PartItem{
 		k:        end,
 		consumer: c,
-		mailBox:  make(chan Msg, maxOutstanding),
+		mailBox:  make(chan *PartitionTask, maxOutstanding),
 	}
 
 	if len(end) == 0 {
@@ -100,15 +100,24 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	return nil
 }
 
+type PartitionTask struct {
+	C chan<- error
+	Msg Msg
+}
+
 // Single threaded router. 1 channel per partition
 // path=data
-func (m *PartitionMgr) OnMsg(msg Msg) error {
+func (m *PartitionMgr) OnMsg(msg Msg) (<-chan error, error) {
 	p := m.Find(msg.Key())
+	c := make(chan error, 1)
 	select {
-	case p.mailBox <- msg:
-		return nil
+	case p.mailBox <- &PartitionTask{
+		C:   c,
+		Msg: msg,
+	}:
+		return c, nil
 	default:
-		return errors.Newf(
+		return nil, errors.Newf(
 			"code=429. Partition Busy. Max outstanding allowed %s",
 			cap(p.mailBox))
 	}

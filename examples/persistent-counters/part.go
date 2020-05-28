@@ -17,16 +17,17 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 }
 
 /// this method does not have to be thread safe
-func (m *partitionCounter) Process(msg0 ss.Msg) bool {
-	msg := msg0.(*Request)
+func (m *partitionCounter) Process(pTask *ss.PartitionTask) bool {
+	msg := pTask.Msg.(*Request)
 	err := m.pc.Inc(msg.K, msg.V)
+	pTask.C <- err
 	return err == nil
 }
 
 // 3. implement ss.ConsumerFactory
 
 type partitionCounterMaker struct {
-	dbPathPrefix string
+	dbPathPrefix   string
 	maxOutstanding int
 }
 
