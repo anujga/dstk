@@ -37,7 +37,7 @@ func glue(confPath string) (ss.Router, error) {
 	}
 
 	// 4.1 Make the Partition Manager
-	factory := &partitionCounterMaker{viper.GetInt("max-outstanding")}
+	factory := &partitionCounterMaker{viper.GetString("db_path_prefix"), viper.GetInt("max_outstanding")}
 	pm := ss.NewPartitionMgr(factory, log)
 
 	// 4.2 Register predefined partitions.

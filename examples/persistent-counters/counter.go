@@ -4,7 +4,17 @@ import (
 	"encoding/binary"
 	"fmt"
 	badger "github.com/dgraph-io/badger/v2"
+	"os"
+	"time"
 )
+
+func counterMerge(old, incValue []byte) []byte {
+	oldInt, _ := binary.Varint(old)
+	incInt, _ := binary.Varint(incValue)
+	res := make([]byte, 64)
+	binary.PutVarint(res, oldInt+incInt)
+	return res
+}
 
 type PersistentCounter struct {
 	db *badger.DB
@@ -19,6 +29,8 @@ func (pc *PersistentCounter) Get(key string) (int64, error) {
 			return err
 		}
 		res, err = item.ValueCopy(nil)
+		val, _ := binary.Varint(res)
+		fmt.Printf("inside res %d\n", val)
 		return err
 	})
 	if err != nil {
@@ -29,21 +41,11 @@ func (pc *PersistentCounter) Get(key string) (int64, error) {
 }
 
 func (pc *PersistentCounter) Inc(key string, value int64) error {
-	presentVal, err := pc.Get(key)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			presentVal = 0
-		} else {
-			return err
-		}
-	}
-	err = pc.db.Update(func(txn *badger.Txn) error {
-		keyBytes := []byte(key)
-		valBytes := make([]byte, 64)
-		binary.PutVarint(valBytes, presentVal+value)
-		err = txn.Set(keyBytes, valBytes)
-		return err
-	})
+	mergeOp := pc.db.GetMergeOperator([]byte(key), counterMerge, time.Millisecond*1)
+	defer mergeOp.Stop()
+	incValBytes := make([]byte, 64)
+	binary.PutVarint(incValBytes, value)
+	err := mergeOp.Add(incValBytes)
 	return err
 }
 
@@ -52,6 +54,9 @@ func (pc *PersistentCounter) Close() error {
 }
 
 func NewCounter(dbPath string) (*PersistentCounter, error) {
+	if err := os.MkdirAll(dbPath, 0755); err != nil {
+		return nil, err
+	}
 	db, err := badger.Open(badger.DefaultOptions(dbPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create db %s", err)
@@ -59,9 +64,8 @@ func NewCounter(dbPath string) (*PersistentCounter, error) {
 	return &PersistentCounter{db: db}, nil
 }
 
-//
 //func main() {
-//	pc, err := NewCounter()
+//	pc, err := NewCounter("/var/tmp/test-db")
 //	fmt.Println(err)
 //	defer pc.Close()
 //	val, err := pc.Get("foo")

@@ -20,20 +20,25 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*Request)
 	err := m.pc.Inc(msg.K, msg.V)
-	//newVal, err := m.pc.Get(msg.K)
-	//fmt.Printf("new value  %d\n", newVal)
+	//time.Sleep(time.Millisecond * 1)
+	_, err = m.pc.Get(msg.K)
 	return err == nil
 }
 
 // 3. implement ss.ConsumerFactory
 
 type partitionCounterMaker struct {
+	dbPathPrefix string
 	maxOutstanding int
+}
+
+func (m *partitionCounterMaker) getDbPath(p *dstk.Partition) string {
+	return fmt.Sprintf("%s/%d", m.dbPathPrefix, p.GetId())
 }
 
 func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int, error) {
 	// TODO: gracefully stop the db too
-	pc, err := NewCounter(fmt.Sprintf("/var/tmp/counter-db/%d", p.GetId()))
+	pc, err := NewCounter(m.getDbPath(p))
 	if err != nil {
 		return nil, 0, err
 	}
