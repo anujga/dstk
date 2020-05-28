@@ -20,8 +20,6 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*Request)
 	err := m.pc.Inc(msg.K, msg.V)
-	//time.Sleep(time.Millisecond * 1)
-	_, err = m.pc.Get(msg.K)
 	return err == nil
 }
 
