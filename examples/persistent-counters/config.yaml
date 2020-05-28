@@ -1,0 +1,6 @@
+max_outstanding: 1024
+db_path_prefix: /var/tmp/counter-db
+parts:
+  - k
+  - r
+  -

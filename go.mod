@@ -3,6 +3,7 @@ module github.com/anujga/dstk
 go 1.14
 
 require (
+	github.com/dgraph-io/badger/v2 v2.0.3
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/btree v1.0.0

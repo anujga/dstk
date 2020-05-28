@@ -15,7 +15,7 @@ type Consumer interface {
 }
 
 type ConsumerFactory interface {
-	Make(p *dstk.Partition) (Consumer, int)
+	Make(p *dstk.Partition) (Consumer, int, error)
 }
 
 type Router interface {

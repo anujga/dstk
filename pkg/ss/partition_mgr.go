@@ -55,14 +55,12 @@ func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
 // Return value can only be nil if there are 0 partitions
 func (m *PartitionMgr) Find(key KeyT) *PartItem {
 	k := PartItem{k: key}
-
 	var q = m.lastPart
 	m.partMap.AscendGreaterOrEqual(&k, func(i btree.Item) bool {
 		p := i.(*PartItem)
 		q = p
 		return false
 	})
-
 	return q
 }
 
@@ -74,7 +72,10 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	m.slog.Info("AddPartition Start", "part", p)
 	defer m.slog.Info("AddPartition Status", "part", p, "err", err)
 
-	c, maxOutstanding := m.consumer.Make(p)
+	c, maxOutstanding, err := m.consumer.Make(p)
+	if err != nil {
+		return err
+	}
 	part := PartItem{
 		k:        end,
 		consumer: c,
