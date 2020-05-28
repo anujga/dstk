@@ -31,13 +31,14 @@ type partitionCounterMaker struct {
 	maxOutstanding int
 }
 
-func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int) {
+func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int, error) {
+	// TODO: gracefully stop the db too
 	pc, err := NewCounter(fmt.Sprintf("/var/tmp/counter-db/%d", p.GetId()))
 	if err != nil {
-		return nil, 0
+		return nil, 0, err
 	}
 	return &partitionCounter{
 		p:  p,
 		pc: pc,
-	}, m.maxOutstanding
+	}, m.maxOutstanding, nil
 }
