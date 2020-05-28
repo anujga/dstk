@@ -55,14 +55,12 @@ func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
 // Return value can only be nil if there are 0 partitions
 func (m *PartitionMgr) Find(key KeyT) *PartItem {
 	k := PartItem{k: key}
-
 	var q = m.lastPart
 	m.partMap.AscendGreaterOrEqual(&k, func(i btree.Item) bool {
 		p := i.(*PartItem)
 		q = p
 		return false
 	})
-
 	return q
 }
 
