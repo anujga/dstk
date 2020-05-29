@@ -1,6 +1,6 @@
 max_outstanding: 1024
 db_path_prefix: /var/tmp/counter-db
-response_buffer_size: 100
+response_buffer_size: 10
 parts:
   - k
   - r

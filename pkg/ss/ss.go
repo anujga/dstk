@@ -11,7 +11,7 @@ type Msg interface {
 }
 
 type Consumer interface {
-	Process(ptask Msg) bool
+	Process(msg Msg) bool
 	//Meta() *dstk.Partition
 }
 
