@@ -1,33 +1,11 @@
 package ss
 
 import (
-	"bytes"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/google/btree"
 	"go.uber.org/zap"
 	"gopkg.in/errgo.v2/fmt/errors"
 )
-
-type PartItem struct {
-	k        KeyT
-	consumer Consumer
-	mailBox  chan Msg
-}
-
-func (p *PartItem) Less(than btree.Item) bool {
-	that := than.(*PartItem)
-	e1, e2 := p.k, that.k
-	return bytes.Compare(e1, e2) < 0
-}
-
-func (p *PartItem) Run() bool {
-	for m := range p.mailBox {
-		p.consumer.Process(m)
-	}
-	return true
-}
-
-//---
 
 // todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
@@ -53,28 +31,29 @@ func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
 // Path = data
 // Time = O(log N/ log 32), N ~ MAX_PARTITIONS ~ 1M
 // Return value can only be nil if there are 0 partitions
-func (m *PartitionMgr) Find(key KeyT) *PartItem {
+func (pm *PartitionMgr) Find(key KeyT) *PartItem {
 	k := PartItem{k: key}
-
-	var q = m.lastPart
-	m.partMap.AscendGreaterOrEqual(&k, func(i btree.Item) bool {
+	var q = pm.lastPart
+	pm.partMap.AscendGreaterOrEqual(&k, func(i btree.Item) bool {
 		p := i.(*PartItem)
 		q = p
 		return false
 	})
-
 	return q
 }
 
 // path=control
-func (m *PartitionMgr) Add(p *dstk.Partition) error {
+func (pm *PartitionMgr) Add(p *dstk.Partition) error {
 	end := p.GetEnd()
 	var err error
 
-	m.slog.Info("AddPartition Start", "part", p)
-	defer m.slog.Info("AddPartition Status", "part", p, "err", err)
+	pm.slog.Info("AddPartition Start", "part", p)
+	defer pm.slog.Info("AddPartition Status", "part", p, "err", err)
 
-	c, maxOutstanding := m.consumer.Make(p)
+	c, maxOutstanding, err := pm.consumer.Make(p)
+	if err != nil {
+		return err
+	}
 	part := PartItem{
 		k:        end,
 		consumer: c,
@@ -82,12 +61,12 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 	}
 
 	if len(end) == 0 {
-		if m.lastPart != nil {
+		if pm.lastPart != nil {
 			err = errors.New("duplicate last partition")
 			return err
 		}
-		m.lastPart = &part
-	} else if nil != m.partMap.ReplaceOrInsert(&part) {
+		pm.lastPart = &part
+	} else if nil != pm.partMap.ReplaceOrInsert(&part) {
 		err = errors.New("duplicate partition")
 		return err
 	}
@@ -101,8 +80,8 @@ func (m *PartitionMgr) Add(p *dstk.Partition) error {
 
 // Single threaded router. 1 channel per partition
 // path=data
-func (m *PartitionMgr) OnMsg(msg Msg) error {
-	p := m.Find(msg.Key())
+func (pm *PartitionMgr) OnMsg(msg Msg) error {
+	p := pm.Find(msg.Key())
 	select {
 	case p.mailBox <- msg:
 		return nil
@@ -111,5 +90,4 @@ func (m *PartitionMgr) OnMsg(msg Msg) error {
 			"code=429. Partition Busy. Max outstanding allowed %s",
 			cap(p.mailBox))
 	}
-
 }

@@ -7,6 +7,7 @@ type KeyT []byte
 type Msg interface {
 	ReadOnly() bool
 	Key() KeyT
+	ResponseChannel() chan interface{}
 }
 
 type Consumer interface {
@@ -15,7 +16,7 @@ type Consumer interface {
 }
 
 type ConsumerFactory interface {
-	Make(p *dstk.Partition) (Consumer, int)
+	Make(p *dstk.Partition) (Consumer, int, error)
 }
 
 type Router interface {
