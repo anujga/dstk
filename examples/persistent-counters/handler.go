@@ -28,6 +28,8 @@ type ReqHandler struct {
 
 func (rh *ReqHandler) handle(req *Request) (string, error) {
 	if err := rh.router.OnMsg(req); err != nil {
+		// TODO find a better place to close this
+		close(req.C)
 		return "", err
 	} else {
 		var response string
