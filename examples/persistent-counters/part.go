@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss"
@@ -17,10 +18,14 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 }
 
 /// this method does not have to be thread safe
-func (m *partitionCounter) Process(pTask *ss.PartitionTask) bool {
-	msg := pTask.Msg.(*Request)
+func (m *partitionCounter) Process(msg0 ss.Msg) bool {
+	msg := msg0.(*Request)
 	err := m.pc.Inc(msg.K, msg.V)
-	pTask.C <- err
+	err = errors.New("foo")
+	if err != nil {
+		msg.ResponseChannel() <- err
+	}
+	close(msg.ResponseChannel())
 	return err == nil
 }
 

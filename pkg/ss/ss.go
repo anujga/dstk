@@ -7,10 +7,11 @@ type KeyT []byte
 type Msg interface {
 	ReadOnly() bool
 	Key() KeyT
+	ResponseChannel() chan interface{}
 }
 
 type Consumer interface {
-	Process(ptask *PartitionTask) bool
+	Process(ptask Msg) bool
 	//Meta() *dstk.Partition
 }
 
@@ -19,7 +20,7 @@ type ConsumerFactory interface {
 }
 
 type Router interface {
-	OnMsg(m Msg) (<-chan error, error)
+	OnMsg(m Msg) error
 }
 
 type PartMgr interface {
