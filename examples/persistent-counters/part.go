@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss"
@@ -21,11 +20,13 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*Request)
 	err := m.pc.Inc(msg.K, msg.V)
-	err = errors.New("foo")
-	if err != nil {
-		msg.ResponseChannel() <- err
+	c := msg.ResponseChannel()
+	if err == nil {
+		c <- "counter incremented"
+	} else {
+		c <- err
 	}
-	close(msg.ResponseChannel())
+	close(c)
 	return err == nil
 }
 
