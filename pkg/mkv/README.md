@@ -77,11 +77,16 @@ for not so critical data like user history, we may choose something easy
 like 2PC gaining automated recovery at the cost of some data loss or
 corruption.
 
+1. Dispatcher: Default one guarantees linear serializability. Potential
+optimization could be to allow 2 independent queues for reads and writes. This
+will result in eventual consistency. We can be smart about this and make sure
+requests frp, same session are queued behind write to give session consistency
 
-Some of these pipeline components are async as they do batching, rpc, diskio
-. However they are still expected to maintain ordering of events. Else
-framework will provide a components similar to the moving window in tcp
-protocol to guarantee ordered flow of messages upstream.
+1. Line Monitor: Some of these pipeline components are async as they do batching
+, rpc, disk io. However, they are still expected to maintain ordering of events. 
+Since msgs are already timestamped, this will provide an algorithm similar to
+the moving window in tcp protocol to guarantee ordered flow of messages
+upstream.
 
 
 ### StateStore
