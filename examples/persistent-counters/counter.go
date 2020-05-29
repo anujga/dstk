@@ -29,8 +29,6 @@ func (pc *PersistentCounter) Get(key string) (int64, error) {
 			return err
 		}
 		res, err = item.ValueCopy(nil)
-		val, _ := binary.Varint(res)
-		fmt.Printf("inside res %d\n", val)
 		return err
 	})
 	if err != nil {
@@ -41,11 +39,11 @@ func (pc *PersistentCounter) Get(key string) (int64, error) {
 }
 
 func (pc *PersistentCounter) Inc(key string, value int64) error {
-	mergeOp := pc.db.GetMergeOperator([]byte(key), counterMerge, time.Millisecond*1)
-	defer mergeOp.Stop()
 	incValBytes := make([]byte, 64)
 	binary.PutVarint(incValBytes, value)
+	mergeOp := pc.db.GetMergeOperator([]byte(key), counterMerge, time.Millisecond*1)
 	err := mergeOp.Add(incValBytes)
+	mergeOp.Stop()
 	return err
 }
 

@@ -20,15 +20,20 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*Request)
 	err := m.pc.Inc(msg.K, msg.V)
-	//time.Sleep(time.Millisecond * 1)
-	_, err = m.pc.Get(msg.K)
+	c := msg.ResponseChannel()
+	if err == nil {
+		c <- "counter incremented"
+	} else {
+		c <- err
+	}
+	close(c)
 	return err == nil
 }
 
 // 3. implement ss.ConsumerFactory
 
 type partitionCounterMaker struct {
-	dbPathPrefix string
+	dbPathPrefix   string
 	maxOutstanding int
 }
 

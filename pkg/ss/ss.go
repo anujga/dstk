@@ -7,6 +7,7 @@ type KeyT []byte
 type Msg interface {
 	ReadOnly() bool
 	Key() KeyT
+	ResponseChannel() chan interface{}
 }
 
 type Consumer interface {
