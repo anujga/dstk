@@ -2,17 +2,18 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
+	"net"
 )
 
 type handler func(*Request) (string, error)
-
-var log *zap.Logger
-var slog *zap.SugaredLogger
 
 func addPartitions(ps []string, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
 	var endParts = 0
@@ -43,25 +44,40 @@ func glue() (ss.Router, error) {
 		viper.GetString("db_path_prefix"),
 		viper.GetInt("max_outstanding"),
 	}
-	pm := ss.NewPartitionMgr(factory, log)
+	pm := ss.NewPartitionMgr(factory, zap.L())
 	// 4.2 Register predefined partitions.
 	ps := viper.GetStringSlice("parts")
-	err := addPartitions(ps, slog, pm)
+	err := addPartitions(ps, zap.S(), pm)
 	return pm, err
 }
 
 // 6. Thick client
+
+func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64) {
+	lis, err := net.Listen("tcp", ":9099")
+	if err != nil {
+		panic(fmt.Sprintf("failed to listen: %v", err))
+	}
+	s := grpc.NewServer()
+	rh := &ReqHandler{router: router}
+	counterServer := MakeServer(rh, log, resBufSize)
+	dstk.RegisterCounterRpcServer(s, counterServer)
+	reflection.Register(s)
+	if err := s.Serve(lis); err != nil {
+		panic(fmt.Sprintf("failed to serve: %v", err))
+	}
+}
 
 func main() {
 	router, err := glue()
 	if err != nil {
 		panic(err)
 	}
-	rh := ReqHandler{router: router}
 	chanSize := viper.GetInt64("response_buffer_size")
-	<-server(rh.handle, func() chan interface{} {
-		return make(chan interface{}, chanSize)
-	})
+	//<-server(rh.handle, func() chan interface{} {
+	//	return make(chan interface{}, chanSize)
+	//})
+	startGrpcServer(router, zap.L(), chanSize)
 }
 
 func init() {
@@ -72,6 +88,4 @@ func init() {
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err)
 	}
-	log = zap.L()
-	slog = zap.S()
 }
