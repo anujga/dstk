@@ -35,7 +35,7 @@ func (rh *ReqHandler) handle(req *Request) (interface{}, error) {
 	if err := rh.router.OnMsg(req); err != nil {
 		// TODO find a better place to close this
 		close(req.C)
-		return "", err
+		return "", status.Errorf(codes.Unavailable, err.Error())
 	} else {
 		var response interface{}
 		var errToRet error

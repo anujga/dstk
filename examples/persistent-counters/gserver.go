@@ -8,7 +8,7 @@ import (
 	"math/rand"
 )
 
-var charset = []byte("abcdefghijklmnopqrstuvwxyz")
+var charset = []byte("abcde")
 
 type CounterServer struct {
 	reqHandler *ReqHandler
@@ -47,7 +47,7 @@ func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.
 func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.CounterIncRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
 	req := &Request{
-		K: string(charset[rand.Int() % 26]),
+		K: string(charset[rand.Int() % len(charset)]),
 		V: rpcReq.Value,
 		C: ch,
 	}

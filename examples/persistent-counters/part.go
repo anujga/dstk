@@ -18,7 +18,7 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 
 /// this method does not have to be thread safe
 func (m *partitionCounter) Process(msg0 ss.Msg) bool {
-	go func() {
+	//go func() {
 		msg := msg0.(*Request)
 		var err error
 		c := msg.ResponseChannel()
@@ -38,7 +38,7 @@ func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 			}
 		}
 		close(c)
-	}()
+	//}()
 	return true
 }
 
