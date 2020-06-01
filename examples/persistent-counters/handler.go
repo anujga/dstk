@@ -26,6 +26,7 @@ type ReqHandler struct {
 	router ss.Router
 }
 
+//todo: this should happen in `PartitionMgr::OnMsg`
 func (rh *ReqHandler) handle(req *Request) (string, error) {
 	if err := rh.router.OnMsg(req); err != nil {
 		// TODO find a better place to close this

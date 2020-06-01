@@ -10,13 +10,13 @@ type Msg interface {
 	ResponseChannel() chan interface{}
 }
 
-type Consumer interface {
+type PartHandler interface {
 	Process(msg Msg) bool
 	//Meta() *dstk.Partition
 }
 
 type ConsumerFactory interface {
-	Make(p *dstk.Partition) (Consumer, int, error)
+	Make(p *dstk.Partition) (PartHandler, int, error)
 }
 
 type Router interface {

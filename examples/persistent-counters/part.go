@@ -6,7 +6,7 @@ import (
 	"github.com/anujga/dstk/pkg/ss"
 )
 
-// 2. Define the state for a given partition and implement ss.Consumer
+// 2. Define the state for a given partition and implement ss.PartHandler
 type partitionCounter struct {
 	p  *dstk.Partition
 	pc *PersistentCounter
@@ -41,7 +41,7 @@ func (m *partitionCounterMaker) getDbPath(p *dstk.Partition) string {
 	return fmt.Sprintf("%s/%d", m.dbPathPrefix, p.GetId())
 }
 
-func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int, error) {
+func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.PartHandler, int, error) {
 	// TODO: gracefully stop the db too
 	pc, err := NewCounter(m.getDbPath(p))
 	if err != nil {
