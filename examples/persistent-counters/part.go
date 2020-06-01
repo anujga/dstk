@@ -30,6 +30,7 @@ func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*Request)
 	var err error
 	c := msg.ResponseChannel()
+	defer close(c)
 	// TODO better way to model get/inc requests
 	if msg.V == 0 {
 		if val, err := m.pc.Get(msg.K); err == nil {
@@ -56,7 +57,6 @@ func (m *partitionCounter) Process(msg0 ss.Msg) bool {
 			c <- err
 		}
 	}
-	close(c)
 	//}()
 	return true
 }

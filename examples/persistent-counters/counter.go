@@ -48,28 +48,3 @@ func (pc *PersistentCounter) Inc(key string, value int64) error {
 func (pc *PersistentCounter) Close() error {
 	return pc.db.Close()
 }
-
-//func NewCounter(db  string) (*PersistentCounter, error) {
-//	if err := os.MkdirAll(dbPath, 0755); err != nil {
-//		return nil, err
-//	}
-//	db, err := badger.Open(badger.DefaultOptions(dbPath))
-//	if err != nil {
-//		return nil, fmt.Errorf("failed to create db %s", err)
-//	}
-//	return &PersistentCounter{db: db}, nil
-//}
-
-//func main() {
-//	pc, err := NewCounter("/var/tmp/test-db")
-//	fmt.Println(err)
-//	defer pc.Close()
-//	val, err := pc.Get("foo")
-//	fmt.Println(val)
-//	err = pc.Inc("foo", 10)
-//	val, err = pc.Get("foo")
-//	fmt.Println(val)
-//	err = pc.Inc("foo", 10)
-//	val, err = pc.Get("foo")
-//	fmt.Println(val)
-//}
