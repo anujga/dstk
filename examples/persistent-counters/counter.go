@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	badger "github.com/dgraph-io/badger/v2"
-	"os"
 	"time"
 )
 
@@ -51,16 +49,16 @@ func (pc *PersistentCounter) Close() error {
 	return pc.db.Close()
 }
 
-func NewCounter(dbPath string) (*PersistentCounter, error) {
-	if err := os.MkdirAll(dbPath, 0755); err != nil {
-		return nil, err
-	}
-	db, err := badger.Open(badger.DefaultOptions(dbPath))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create db %s", err)
-	}
-	return &PersistentCounter{db: db}, nil
-}
+//func NewCounter(db  string) (*PersistentCounter, error) {
+//	if err := os.MkdirAll(dbPath, 0755); err != nil {
+//		return nil, err
+//	}
+//	db, err := badger.Open(badger.DefaultOptions(dbPath))
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to create db %s", err)
+//	}
+//	return &PersistentCounter{db: db}, nil
+//}
 
 //func main() {
 //	pc, err := NewCounter("/var/tmp/test-db")

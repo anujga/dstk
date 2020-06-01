@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
+	"runtime"
 )
 
 type handler func(*Request) (string, error)
@@ -40,14 +41,16 @@ func addPartitions(ps []string, slog *zap.SugaredLogger, pm *ss.PartitionMgr) er
 // 4. glue it up together
 func glue() (ss.Router, error) {
 	// 4.1 Make the Partition Manager
-	factory := &partitionCounterMaker{
-		viper.GetString("db_path_prefix"),
-		viper.GetInt("max_outstanding"),
+	factory, err := newCounterMaker(
+		viper.GetString("db_path"),
+		viper.GetInt("max_outstanding"))
+	if err != nil {
+		return nil, err
 	}
 	pm := ss.NewPartitionMgr(factory, zap.L())
 	// 4.2 Register predefined partitions.
 	ps := viper.GetStringSlice("parts")
-	err := addPartitions(ps, zap.S(), pm)
+	err = addPartitions(ps, zap.S(), pm)
 	return pm, err
 }
 
@@ -77,10 +80,15 @@ func main() {
 	//<-server(rh.handle, func() chan interface{} {
 	//	return make(chan interface{}, chanSize)
 	//})
+	go func() {
+		// this is to enable prometheus
+		<-server(nil, nil)
+	}()
 	startGrpcServer(router, zap.L(), chanSize)
 }
 
 func init() {
+	_ = runtime.GOMAXPROCS(1)
 	var conf = flag.String(
 		"conf", "config.yaml", "config file")
 	flag.Parse()

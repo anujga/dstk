@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -27,6 +28,7 @@ func server(callback handler, cf func() chan interface{}) chan error {
 	})
 	ch := make(chan error, 1)
 	go func() {
+		http.Handle("/metrics", promhttp.Handler())
 		err = http.ListenAndServe(":8080", nil)
 		zap.S().Infow("stopped", "err", err)
 		ch <- err
