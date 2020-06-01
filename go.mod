@@ -7,6 +7,7 @@ require (
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.4.2
 	github.com/google/btree v1.0.0
+	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/viper v1.7.0
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.15.0

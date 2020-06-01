@@ -5,10 +5,10 @@ import (
 	"fmt"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"go.uber.org/zap"
-	"math/rand"
+	"time"
 )
 
-var charset = []byte("abcde")
+var charset = []byte("abcdefghijklmnopqrstuvwxyz")
 
 type CounterServer struct {
 	reqHandler *ReqHandler
@@ -47,7 +47,7 @@ func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.
 func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.CounterIncRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
 	req := &Request{
-		K: string(charset[rand.Int() % len(charset)]),
+		K: string(charset[time.Now().UnixNano() % 26]),
 		V: rpcReq.Value,
 		C: ch,
 	}
