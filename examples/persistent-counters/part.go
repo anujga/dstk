@@ -18,16 +18,28 @@ func (m *partitionCounter) Meta() *dstk.Partition {
 
 /// this method does not have to be thread safe
 func (m *partitionCounter) Process(msg0 ss.Msg) bool {
-	msg := msg0.(*Request)
-	err := m.pc.Inc(msg.K, msg.V)
-	c := msg.ResponseChannel()
-	if err == nil {
-		c <- "counter incremented"
-	} else {
-		c <- err
-	}
-	close(c)
-	return err == nil
+	//go func() {
+		msg := msg0.(*Request)
+		var err error
+		c := msg.ResponseChannel()
+		// TODO better way to model get/inc requests
+		if msg.V == 0 {
+			if val, err := m.pc.Get(msg.K); err == nil {
+				c <- val
+			} else {
+				c <- err
+			}
+		} else {
+			err = m.pc.Inc(msg.K, msg.V)
+			if err == nil {
+				c <- "counter incremented"
+			} else {
+				c <- err
+			}
+		}
+		close(c)
+	//}()
+	return true
 }
 
 // 3. implement ss.ConsumerFactory
