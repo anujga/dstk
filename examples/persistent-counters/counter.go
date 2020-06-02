@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	badger "github.com/dgraph-io/badger/v2"
 	"time"
 )
@@ -39,8 +40,14 @@ func (pc *PersistentCounter) Inc(key string, value int64, ttlSeconds float64) er
 			return err
 		}
 		if err == nil {
-			existing, _ := item.ValueCopy(nil)
-			exValue, _ = binary.Varint(existing)
+			if existingBytes, err := item.ValueCopy(nil); err != nil {
+				return err
+			} else {
+				var n int
+				if exValue, n = binary.Varint(existingBytes); n <= 0 {
+					return fmt.Errorf("invalid data for %s", key)
+				}
+			}
 		}
 		res := make([]byte, 64)
 		binary.PutVarint(res, value+exValue)
