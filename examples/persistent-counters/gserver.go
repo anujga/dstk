@@ -18,11 +18,7 @@ type CounterServer struct {
 
 func (c *CounterServer) Remove(ctx context.Context, rpcReq *pb.CounterRemoveReq) (*pb.CounterRemoveRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
-	req := &Request{
-		K:           rpcReq.Key,
-		RequestType: Remove,
-		C:           ch,
-	}
+	req := newRemoveRequest(rpcReq.Key, ch)
 	var exCode pb.Ex_ExCode
 	var response interface{}
 	var err error
@@ -42,11 +38,7 @@ func (c *CounterServer) Remove(ctx context.Context, rpcReq *pb.CounterRemoveReq)
 
 func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.CounterGetRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
-	req := &Request{
-		K:           rpcReq.Key,
-		RequestType: Get,
-		C:           ch,
-	}
+	req := newGetRequest(rpcReq.Key, ch)
 	if response, err := c.reqHandler.handle(req); err != nil {
 		c.log.Error("Request handling  failed",
 			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
@@ -76,13 +68,7 @@ func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.
 	if nano&1 == 1 {
 		keyStr = keyStr + string(charset[13+time.Now().UnixNano()%13])
 	}
-	req := &Request{
-		//K: keyStr,
-		K:           rpcReq.Key,
-		V:           rpcReq.Value,
-		C:           ch,
-		RequestType: Inc,
-	}
+	req := newIncRequest(rpcReq.Key, rpcReq.Value, float64(rpcReq.TtlSeconds), ch)
 	var exCode pb.Ex_ExCode
 	var response interface{}
 	var err error

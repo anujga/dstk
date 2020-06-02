@@ -23,7 +23,7 @@ message CounterRemoveRes {
 message CounterIncReq {
   string key = 1;
   int64 value = 2;
-  int64 ttl_seconds = 3;
+  float ttl_seconds = 3;
 }
 
 message CounterIncRes {
