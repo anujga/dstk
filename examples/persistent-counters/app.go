@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
-	"runtime"
 )
 
 type handler func(*Request) (string, error)
@@ -20,8 +19,8 @@ func addPartitions(ps []string, slog *zap.SugaredLogger, pm *ss.PartitionMgr) er
 	var endParts = 0
 	i := 0
 	for i, p := range ps {
-		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		slog.Infow("Adding Partition", "id", i, "end", p)
+		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		if err := pm.Add(&pv); err != nil {
 			return err
 		}
@@ -50,7 +49,9 @@ func glue() (ss.Router, error) {
 	pm := ss.NewPartitionMgr(factory, zap.L())
 	// 4.2 Register predefined partitions.
 	ps := viper.GetStringSlice("parts")
-	err = addPartitions(ps, zap.S(), pm)
+	slog := zap.S()
+	slog.Infow("Adding partitions", "keys", ps)
+	err = addPartitions(ps, slog, pm)
 	return pm, err
 }
 
@@ -88,7 +89,6 @@ func main() {
 }
 
 func init() {
-	_ = runtime.GOMAXPROCS(1)
 	var conf = flag.String(
 		"conf", "config.yaml", "config file")
 	flag.Parse()

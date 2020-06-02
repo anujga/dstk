@@ -13,43 +13,15 @@ var charset = []byte("abcdefghijklmnopqrstuvwxyz")
 type CounterServer struct {
 	reqHandler *ReqHandler
 	resBufSize int64
-	log *zap.Logger
+	log        *zap.Logger
 }
 
-func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.CounterGetRes, error) {
+func (c *CounterServer) Remove(ctx context.Context, rpcReq *pb.CounterRemoveReq) (*pb.CounterRemoveRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
 	req := &Request{
-		K: rpcReq.Key,
-		C: ch,
-	}
-	if response, err := c.reqHandler.handle(req); err != nil {
-		c.log.Error("Request handling  failed",
-			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
-		ex := &pb.Ex{
-			Id:   pb.Ex_ERR_UNSPECIFIED,
-			Msg:  "internal error",
-		}
-		return &pb.CounterGetRes{
-			Ex:    ex,
-			Value: 0,
-		}, err
-	} else {
-		ex := &pb.Ex{
-			Id:   pb.Ex_SUCCESS,
-		}
-		return &pb.CounterGetRes{
-			Ex:    ex,
-			Value: response.(int64),
-		}, err
-	}
-}
-
-func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.CounterIncRes, error) {
-	ch := make(chan interface{}, c.resBufSize)
-	req := &Request{
-		K: string(charset[time.Now().UnixNano() % 26]),
-		V: rpcReq.Value,
-		C: ch,
+		K:           rpcReq.Key,
+		RequestType: Remove,
+		C:           ch,
 	}
 	var exCode pb.Ex_ExCode
 	var response interface{}
@@ -62,7 +34,67 @@ func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.
 		exCode = pb.Ex_SUCCESS
 	}
 	ex := pb.Ex{
-		Id: exCode,
+		Id:  exCode,
+		Msg: response.(string),
+	}
+	return &pb.CounterRemoveRes{Ex: &ex}, err
+}
+
+func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.CounterGetRes, error) {
+	ch := make(chan interface{}, c.resBufSize)
+	req := &Request{
+		K:           rpcReq.Key,
+		RequestType: Get,
+		C:           ch,
+	}
+	if response, err := c.reqHandler.handle(req); err != nil {
+		c.log.Error("Request handling  failed",
+			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
+		ex := &pb.Ex{
+			Id:  pb.Ex_ERR_UNSPECIFIED,
+			Msg: "internal error",
+		}
+		return &pb.CounterGetRes{
+			Ex:    ex,
+			Value: 0,
+		}, err
+	} else {
+		ex := &pb.Ex{
+			Id: pb.Ex_SUCCESS,
+		}
+		return &pb.CounterGetRes{
+			Ex:    ex,
+			Value: response.(int64),
+		}, err
+	}
+}
+
+func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.CounterIncRes, error) {
+	nano := time.Now().UnixNano()
+	ch := make(chan interface{}, c.resBufSize)
+	keyStr := string(charset[nano%26])
+	if nano&1 == 1 {
+		keyStr = keyStr + string(charset[13+time.Now().UnixNano()%13])
+	}
+	req := &Request{
+		//K: keyStr,
+		K:           rpcReq.Key,
+		V:           rpcReq.Value,
+		C:           ch,
+		RequestType: Inc,
+	}
+	var exCode pb.Ex_ExCode
+	var response interface{}
+	var err error
+	if response, err = c.reqHandler.handle(req); err != nil {
+		c.log.Error("Request handling  failed",
+			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
+		exCode = pb.Ex_ERR_UNSPECIFIED
+	} else {
+		exCode = pb.Ex_SUCCESS
+	}
+	ex := pb.Ex{
+		Id:  exCode,
 		Msg: response.(string),
 	}
 	return &pb.CounterIncRes{Ex: &ex}, err

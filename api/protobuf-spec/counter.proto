@@ -12,9 +12,18 @@ message CounterGetRes {
   int64 value = 2;
 }
 
+message CounterRemoveReq {
+  string key = 1;
+}
+
+message CounterRemoveRes {
+  Ex ex = 1;
+}
+
 message CounterIncReq {
   string key = 1;
   int64 value = 2;
+  int64 ttl_seconds = 3;
 }
 
 message CounterIncRes {
@@ -24,4 +33,5 @@ message CounterIncRes {
 service CounterRpc {
   rpc Get (CounterGetReq) returns (CounterGetRes);
   rpc Inc (CounterIncReq) returns (CounterIncRes);
+  rpc Remove (CounterRemoveReq) returns (CounterRemoveRes);
 }
