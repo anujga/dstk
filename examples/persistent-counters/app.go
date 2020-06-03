@@ -19,8 +19,8 @@ func addPartitions(ps []string, slog *zap.SugaredLogger, pm *ss.PartitionMgr) er
 	var endParts = 0
 	i := 0
 	for i, p := range ps {
-		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		slog.Infow("Adding Partition", "id", i, "end", p)
+		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
 		if err := pm.Add(&pv); err != nil {
 			return err
 		}
@@ -49,7 +49,9 @@ func glue() (ss.Router, error) {
 	pm := ss.NewPartitionMgr(factory, zap.L())
 	// 4.2 Register predefined partitions.
 	ps := viper.GetStringSlice("parts")
-	err = addPartitions(ps, zap.S(), pm)
+	slog := zap.S()
+	slog.Infow("Adding partitions", "keys", ps)
+	err = addPartitions(ps, slog, pm)
 	return pm, err
 }
 
@@ -71,7 +73,6 @@ func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64) {
 }
 
 func main() {
-	initialize()
 	router, err := glue()
 	if err != nil {
 		panic(err)
@@ -87,10 +88,9 @@ func main() {
 	startGrpcServer(router, zap.L(), chanSize)
 }
 
-func initialize() {
-	//_ = runtime.GOMAXPROCS(1)
+func init() {
 	var conf = flag.String(
-		"conf", "./", "config file")
+		"conf", "config.yaml", "config file")
 	flag.Parse()
 	viper.AddConfigPath(*conf)
 	if err := viper.ReadInConfig(); err != nil {
