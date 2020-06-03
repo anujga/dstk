@@ -5,10 +5,7 @@ import (
 	"fmt"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"go.uber.org/zap"
-	"time"
 )
-
-var charset = []byte("abcdefghijklmnopqrstuvwxyz")
 
 type CounterServer struct {
 	reqHandler *ReqHandler
@@ -62,12 +59,7 @@ func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.
 }
 
 func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.CounterIncRes, error) {
-	nano := time.Now().UnixNano()
 	ch := make(chan interface{}, c.resBufSize)
-	keyStr := string(charset[nano%26])
-	if nano&1 == 1 {
-		keyStr = keyStr + string(charset[13+time.Now().UnixNano()%13])
-	}
 	req := newIncRequest(rpcReq.Key, rpcReq.Value, float64(rpcReq.TtlSeconds), ch)
 	var exCode pb.Ex_ExCode
 	var response interface{}
