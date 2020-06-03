@@ -1,4 +1,4 @@
-package slicer
+package se
 
 import "go.uber.org/atomic"
 

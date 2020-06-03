@@ -4,7 +4,7 @@ import (
 	"context"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
-	"github.com/anujga/dstk/pkg/slicer"
+	"github.com/anujga/dstk/pkg/sharding_engine"
 	"google.golang.org/grpc"
 )
 
@@ -51,7 +51,7 @@ func (s *staticClient) Close() error {
 }
 
 type mkvClient struct {
-	slice slicer.SliceRdr
+	slice se.SliceRdr
 	pool  core.ConnPool
 }
 
@@ -76,7 +76,7 @@ func (m *mkvClient) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func UsingSlicer(slice slicer.SliceRdr) Client {
+func UsingSlicer(slice se.SliceRdr) Client {
 	return &mkvClient{
 		slice: slice,
 		pool:  core.NonExpiryPool(&rpcConnFactory{}),

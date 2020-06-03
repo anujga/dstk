@@ -7,6 +7,11 @@ PROTO_OUT_DIR := pkg/api/proto/
 test: $(GO_FILES) | protobuf
 	go test ./...
 
+
+.PHONY: build
+build: $(GO_FILES) | protobuf
+	go build ./...
+
 .PHONY: racetest
 racetest: $(GO_FILES) | protobuf
 	go test -race ./...
@@ -21,3 +26,5 @@ clean:
 .PHONY: fmt
 fmt:
 	go fmt ./...
+
+.DEFAULT_GOAL := build

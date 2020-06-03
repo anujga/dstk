@@ -3,12 +3,45 @@ package dstk;
 
 import "common.proto";
 
+// Used by thick client to refresh list of global partitions
+// Currently support full snapshot. Push api can be added later
+service SeClientApi {
+    rpc AllParts (AllPartsReq) returns (AllPartsRes);
+}
+
+message AllPartsReq {
+
+}
+
+message AllPartsRes {
+    repeated Partition parts = 1;
+}
+
+// Used by workers to refresh the list of partitions that
+// it needs to process
+// Currently support full snapshot. Push api can be added later
+service SeWorkerApi {
+    rpc MyParts (MyPartsReq) returns (MyPartsRes);
+}
+
+message MyPartsReq {
+    int64 worker_id = 1;
+}
+
+message MyPartsRes {
+    repeated Partition parts = 1;
+}
+
+// User by assigner to manipulate partitions
 service ShardStorage {
     rpc CreateJobPartition (CreateJobPartReq) returns (ChangeRes);
     rpc SplitPartition (SplitReq) returns (ChangeRes);
     rpc MergePartition (MergeReq) returns (ChangeRes);
+
+    //todo: this should move to ClientAPI
     rpc GetDeltaPartitions (Delta.Req) returns (Delta.Res);
 }
+
 
 message ChangeRes {
     Ex ex = 1;

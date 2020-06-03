@@ -54,7 +54,7 @@ func (pm *PartitionMgr) Add(p *dstk.Partition) error {
 	if err != nil {
 		return err
 	}
-	part := PartItem{
+	part := &PartItem{
 		k:        end,
 		consumer: c,
 		mailBox:  make(chan Msg, maxOutstanding),
@@ -65,8 +65,8 @@ func (pm *PartitionMgr) Add(p *dstk.Partition) error {
 			err = errors.New("duplicate last partition")
 			return err
 		}
-		pm.lastPart = &part
-	} else if nil != pm.partMap.ReplaceOrInsert(&part) {
+		pm.lastPart = part
+	} else if nil != pm.partMap.ReplaceOrInsert(part) {
 		err = errors.New("duplicate partition")
 		return err
 	}
@@ -87,7 +87,7 @@ func (pm *PartitionMgr) OnMsg(msg Msg) error {
 		return nil
 	default:
 		return errors.Newf(
-			"code=429. Partition Busy. Max outstanding allowed %s",
+			"code=429. Partition Busy. Max outstanding allowed %d",
 			cap(p.mailBox))
 	}
 }

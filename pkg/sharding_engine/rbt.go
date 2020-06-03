@@ -1,4 +1,4 @@
-package slicer
+package se
 
 import (
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
