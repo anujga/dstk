@@ -5,21 +5,78 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"sync"
+	"time"
 )
 
 //todo: implement using immutable tree and get rid of mutex
-type staticClient struct {
-	t        *rbt.Tree
-	mu       sync.Mutex
-	lastPart *pb.Partition
+type snapshotFile struct {
+	t             *rbt.Tree
+	mu            sync.Mutex
+	lastPart      *pb.Partition
+	notifications chan interface{}
 }
 
-func (s *staticClient) Update(parts []*pb.Partition) error {
+func (s *snapshotFile) Notifications() <-chan interface{} {
+	return s.notifications
+}
+
+func ClientUsingSnapshot(filename string, watch bool) (ThickClient, error) {
+	r := &snapshotFile{
+		t: rbt.NewWithStringComparator(),
+	}
+	err := core.YamlParser(filename, watch, r)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func (s *snapshotFile) RefreshFile(v *viper.Viper) error {
+	parts, err := parseConfig(v)
+	if err != nil {
+		return err
+	}
+	err = s.updateTree(parts.GetParts())
+	if err != nil {
+		return err
+	}
+	s.notifications <- time.Now()
+	return nil
+}
+
+func (s *snapshotFile) Parts() []*pb.Partition {
+	var iface []*pb.Partition
+	s.mu.Lock()
+	{
+		ps := s.t.Values()
+		iface = make([]*pb.Partition, len(ps))
+		for i := range ps {
+			iface[i] = ps[i].(*pb.Partition)
+		}
+	}
+	s.mu.Unlock()
+	return iface
+}
+
+func parseConfig(v *viper.Viper) (*pb.Partitions, error) {
+	parts := v.Get("parts")
+	if parts == nil {
+		return nil, errors.Newf("config does not contain '.parts[]'")
+	}
+
+	var ps pb.Partitions
+	err := core.Obj2Proto(parts, &ps)
+	if err != nil {
+		return nil, err
+	}
+	return &ps, nil
+}
+
+func (s *snapshotFile) updateTree(parts []*pb.Partition) error {
 	var lastPart *pb.Partition
 	t := rbt.NewWithStringComparator()
 
@@ -50,70 +107,7 @@ func (s *staticClient) Update(parts []*pb.Partition) error {
 	return nil
 }
 
-func StaticFile(filename string, watch bool) (ThickClient, error) {
-	v, err := core.ParseYaml(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	r := &staticClient{
-		t: rbt.NewWithStringComparator(),
-	}
-
-	err = refreshFile(v, r)
-	if err != nil {
-		return nil, err
-	}
-
-	if watch {
-		v.WatchConfig()
-		v.OnConfigChange(func(in fsnotify.Event) {
-			filename := v.ConfigFileUsed()
-			zap.S().Infow("config file modified", "filename", filename)
-			if (in.Op & (fsnotify.Write | fsnotify.Create)) == 0 {
-				return
-			}
-			zap.S().Infow("config parsing file", "filename", filename)
-
-			err := refreshFile(v, r)
-			if err != nil {
-				zap.S().Errorw("failed to refresh config",
-					"filename", filename,
-					"error", err)
-			}
-		})
-	}
-
-	return r, nil
-}
-
-func getParts(v *viper.Viper) (*pb.Partitions, error) {
-	parts := v.Get("parts")
-	if parts == nil {
-		return nil, errors.Newf("config does not contain '.parts[]'")
-	}
-
-	var m pb.Partitions
-	err := core.Obj2Proto(parts, &m)
-	if err != nil {
-		return nil, err
-	}
-	return &m, nil
-}
-
-func refreshFile(v *viper.Viper, r *staticClient) error {
-	parts, err := getParts(v)
-	if err != nil {
-		return err
-	}
-	err = r.Update(parts.GetParts())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *staticClient) Get(ctx context.Context, key []byte) (*pb.Partition, error) {
+func (s *snapshotFile) Get(ctx context.Context, key []byte) (*pb.Partition, error) {
 	k := string(key)
 	s.mu.Lock()
 	v, found := s.t.Ceiling(k)

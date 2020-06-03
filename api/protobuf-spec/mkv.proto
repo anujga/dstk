@@ -23,13 +23,11 @@ message GetReq {
     int64 partition_id = 2;
 }
 message GetRes {
-    Ex ex = 1;
     int64 partition_id = 2;
     bytes payload = 3;
 }
 
 service Mkv {
-    rpc AddPart (AddParReq) returns (Ex);
     rpc Get (GetReq) returns (GetRes);
 }
 

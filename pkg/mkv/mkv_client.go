@@ -13,38 +13,22 @@ type Client interface {
 	Get(ctx context.Context, key []byte) ([]byte, error)
 }
 
-type staticClient struct {
-	//todo: explore the usage of envoy instead of manually creating grpc connections
-	//for stats, rate limiting, retry, round robin / local zone, auth ...
-	conn *grpc.ClientConn
-
-	client pb.MkvClient
-}
-
-func (s *staticClient) Get(c context.Context, key []byte) ([]byte, error) {
-	r, err := s.client.Get(c, &pb.GetReq{
-		Key:         key,
-		PartitionId: 0,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if r.Ex.GetId() != pb.Ex_SUCCESS {
-		return nil, core.WrapEx(r.Ex)
-	}
-
-	return r.Payload, nil
-}
-
-func (s *staticClient) Close() error {
-	return s.conn.Close()
-}
-
+// todo: explore the usage of envoy instead of manually creating grpc conn_pool
+// for stats, rate limiting, retry, round robin, proximity routing, auth ...
+// istio with headless service should make this pretty trivial
+// https://github.com/istio/istio/issues/10659
 type mkvClient struct {
 	slice se.ThickClient
 	pool  core.ConnPool
+}
+
+func ShardedClient(slice se.ThickClient, opts ...grpc.DialOption) Client {
+	return &mkvClient{
+		slice: slice,
+		pool: core.NonExpiryPool(&rpcConnFactory{
+			opts: opts,
+		}),
+	}
 }
 
 func (m *mkvClient) Get(ctx context.Context, key []byte) ([]byte, error) {
@@ -59,7 +43,7 @@ func (m *mkvClient) Get(ctx context.Context, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	conn := o.(*staticClient)
+	conn := o.(*unitPartition)
 	value, err := conn.Get(ctx, key)
 	if err != nil {
 		return nil, err
@@ -68,27 +52,51 @@ func (m *mkvClient) Get(ctx context.Context, key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func UsingSlicer(slice se.ThickClient) Client {
-	return &mkvClient{
-		slice: slice,
-		pool:  core.NonExpiryPool(&rpcConnFactory{}),
-	}
-}
+// todo: extract this boilerplate into core
 
 type rpcConnFactory struct {
-	//auth string
+	opts []grpc.DialOption
 }
 
 func (c *rpcConnFactory) Open(ctx context.Context, url string) (interface{}, error) {
-	conn, err := grpc.DialContext(ctx, url)
+	conn, err := grpc.DialContext(ctx, url, c.opts...)
 	if err != nil {
 		return nil, err
 	}
 	client := pb.NewMkvClient(conn)
-	return &staticClient{conn: conn, client: client}, nil
+	return &unitPartition{conn: conn, client: client, url: url}, nil
 }
 
 func (c *rpcConnFactory) Close(conn interface{}) error {
-	conn2 := conn.(*staticClient)
+	conn2 := conn.(*unitPartition)
 	return conn2.Close()
+}
+
+// makes call to a single partition. it may choose to connect with more than
+// one node in case of master slave and send request in round robin.
+type unitPartition struct {
+	// required only for close
+	conn *grpc.ClientConn
+
+	// mostly used for debugging
+	url string
+
+	client pb.MkvClient
+}
+
+func (s *unitPartition) Get(c context.Context, key []byte) ([]byte, error) {
+	r, err := s.client.Get(c, &pb.GetReq{
+		Key:         key,
+		PartitionId: 0,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Payload, nil
+}
+
+func (s *unitPartition) Close() error {
+	return s.conn.Close()
 }

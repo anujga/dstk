@@ -83,9 +83,6 @@ func TestGet(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if r.Ex.Id != pb.Ex_SUCCESS {
-			t.Error(core.WrapEx(r.Ex))
-		}
 
 		value := string(r.Payload)
 		if value != "v2" {
