@@ -1,12 +1,13 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
 
 type ConnectionFactory interface {
-	Open(url string) (interface{}, error)
+	Open(ctx context.Context, url string) (interface{}, error)
 	Close(interface{}) error
 }
 
@@ -21,7 +22,7 @@ type nonExpiryPool struct {
 }
 
 type ConnPool interface {
-	Get(url string) (interface{}, error)
+	Get(ctx context.Context, url string) (interface{}, error)
 }
 
 func NonExpiryPool(factory ConnectionFactory) *nonExpiryPool {
@@ -31,7 +32,7 @@ func NonExpiryPool(factory ConnectionFactory) *nonExpiryPool {
 	}
 }
 
-func (m *nonExpiryPool) Get(url string) (interface{}, error) {
+func (m *nonExpiryPool) Get(ctx context.Context, url string) (interface{}, error) {
 	m.mu.Lock()
 	conn, exists := m.table[url]
 	m.mu.Unlock()
@@ -45,7 +46,7 @@ func (m *nonExpiryPool) Get(url string) (interface{}, error) {
 	m.connMu.Lock()
 	{
 		var err error
-		if conn, err = m.factory.Open(url); err != nil {
+		if conn, err = m.factory.Open(ctx, url); err != nil {
 			m.connMu.Unlock()
 			return nil, err
 		}

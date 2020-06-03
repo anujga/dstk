@@ -8,29 +8,21 @@ import (
 	"google.golang.org/grpc"
 )
 
-//todo: explore the usage of envoy instead of manually creating grpc connections
-//for stats, rate limiting, retry, round robin / local zone, auth ...
-
+//This is the interface used by clients of mkv
 type Client interface {
-	Get(key []byte) ([]byte, error)
+	Get(ctx context.Context, key []byte) ([]byte, error)
 }
 
 type staticClient struct {
-	conn   *grpc.ClientConn
+	//todo: explore the usage of envoy instead of manually creating grpc connections
+	//for stats, rate limiting, retry, round robin / local zone, auth ...
+	conn *grpc.ClientConn
+
 	client pb.MkvClient
 }
 
-func newRpcClient(serverUrl string) (*staticClient, error) {
-	conn, err := grpc.Dial(serverUrl)
-	if err != nil {
-		return nil, err
-	}
-	client := pb.NewMkvClient(conn)
-	return &staticClient{conn: conn, client: client}, nil
-}
-
-func (s *staticClient) Get(key []byte) ([]byte, error) {
-	r, err := s.client.Get(context.TODO(), &pb.GetReq{
+func (s *staticClient) Get(c context.Context, key []byte) ([]byte, error) {
+	r, err := s.client.Get(c, &pb.GetReq{
 		Key:         key,
 		PartitionId: 0,
 	})
@@ -51,24 +43,24 @@ func (s *staticClient) Close() error {
 }
 
 type mkvClient struct {
-	slice se.SliceRdr
+	slice se.ThickClient
 	pool  core.ConnPool
 }
 
-func (m *mkvClient) Get(key []byte) ([]byte, error) {
-	part, err := m.slice.Get(key)
+func (m *mkvClient) Get(ctx context.Context, key []byte) ([]byte, error) {
+	part, err := m.slice.Get(context.TODO(), key)
 	if err != nil {
 		return nil, err
 	}
 
-	url := part.Url()
-	o, err := m.pool.Get(url)
+	url := part.GetUrl()
+	o, err := m.pool.Get(ctx, url)
 	if err != nil {
 		return nil, err
 	}
 
 	conn := o.(*staticClient)
-	value, err := conn.Get(key)
+	value, err := conn.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +68,7 @@ func (m *mkvClient) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func UsingSlicer(slice se.SliceRdr) Client {
+func UsingSlicer(slice se.ThickClient) Client {
 	return &mkvClient{
 		slice: slice,
 		pool:  core.NonExpiryPool(&rpcConnFactory{}),
@@ -87,8 +79,13 @@ type rpcConnFactory struct {
 	//auth string
 }
 
-func (c *rpcConnFactory) Open(url string) (interface{}, error) {
-	return newRpcClient(url)
+func (c *rpcConnFactory) Open(ctx context.Context, url string) (interface{}, error) {
+	conn, err := grpc.DialContext(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	client := pb.NewMkvClient(conn)
+	return &staticClient{conn: conn, client: client}, nil
 }
 
 func (c *rpcConnFactory) Close(conn interface{}) error {

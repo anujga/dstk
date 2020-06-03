@@ -80,26 +80,27 @@ func (s *shardStoreUpdater) MergePartition(_ context.Context, in *dstk.MergeReq)
 	return &res, nil
 }
 
-func (s *shardStoreUpdater) FindPartition(_ context.Context, in *dstk.Find_Req) (*dstk.Find_Res, error) {
-	logger := zap.L()
-	jobId := in.GetJobId()
-	key := in.GetKey()
-	if jobId == 0 || key == nil {
-		ex := core.NewErr(dstk.Ex_INVALID_ARGUMENT, "Invalid job id or key")
-		logger.Error("Invalid Input Partition: ", zap.Any("Error", ex))
-		res := dstk.Find_Res{Ex: ex.Ex}
-		return &res, nil
-	}
-	partition, err := s.store.Find(jobId, key)
-	if err != nil {
-		ex := core.NewErr(dstk.Ex_NOT_FOUND, err.Error())
-		logger.Error("SplitPartition Error: ", zap.Any("Error", ex))
-		res := dstk.Find_Res{Ex: ex.Ex}
-		return &res, nil
-	}
-	res := dstk.Find_Res{Par: partition}
-	return &res, nil
-}
+//
+//func (s *shardStoreUpdater) FindPartition(_ context.Context, in *dstk.Find_Req) (*dstk.Find_Res, error) {
+//	logger := zap.L()
+//	jobId := in.GetJobId()
+//	key := in.GetKey()
+//	if jobId == 0 || key == nil {
+//		ex := core.NewErr(dstk.Ex_INVALID_ARGUMENT, "Invalid job id or key")
+//		logger.Error("Invalid Input Partition: ", zap.Any("Error", ex))
+//		res := dstk.Find_Res{Ex: ex.Ex}
+//		return &res, nil
+//	}
+//	partition, err := s.store.Find(jobId, key)
+//	if err != nil {
+//		ex := core.NewErr(dstk.Ex_NOT_FOUND, err.Error())
+//		logger.Error("SplitPartition Error: ", zap.Any("Error", ex))
+//		res := dstk.Find_Res{Ex: ex.Ex}
+//		return &res, nil
+//	}
+//	res := dstk.Find_Res{Par: partition}
+//	return &res, nil
+//}
 
 func (s *shardStoreUpdater) GetDeltaPartitions(_ context.Context, in *dstk.Delta_Req) (*dstk.Delta_Res, error) {
 	logger := zap.L()

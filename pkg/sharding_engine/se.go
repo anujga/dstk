@@ -6,24 +6,15 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 )
 
-type SliceRdr interface {
-	Get(key []byte) (Partition, error)
-}
-
 type slicerCli struct {
-	cli      SliceRdr
+	cli      ThickClient
 	connPool core.ConnPool
 }
 
 type PartId int64
 type WorkerId int64
 
-type Client interface {
-	Lookup(ctx context.Context, id PartId) (pb.Partition, error)
+// Used by applications who want to implement their own thick clients
+type ThickClient interface {
+	Get(ctx context.Context, key []byte) (*pb.Partition, error)
 }
-
-//type ShardingEngine interface {
-//	ClientApi
-//	WorkerApi
-//	AssignerApi
-//}
