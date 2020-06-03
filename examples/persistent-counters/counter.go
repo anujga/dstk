@@ -39,7 +39,7 @@ func (pc *PersistentCounter) Get(key string) (int64, error) {
 func (pc *PersistentCounter) Inc(key string, value int64) error {
 	incValBytes := make([]byte, 64)
 	binary.PutVarint(incValBytes, value)
-	mergeOp := pc.db.GetMergeOperator([]byte(key), counterMerge, time.Millisecond*1)
+	mergeOp := pc.db.GetMergeOperator([]byte(key), counterMerge, time.Second*1)
 	err := mergeOp.Add(incValBytes)
 	mergeOp.Stop()
 	return err

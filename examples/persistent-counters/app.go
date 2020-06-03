@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
-	"runtime"
 )
 
 type handler func(*Request) (string, error)
@@ -72,6 +71,7 @@ func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64) {
 }
 
 func main() {
+	initialize()
 	router, err := glue()
 	if err != nil {
 		panic(err)
@@ -87,10 +87,10 @@ func main() {
 	startGrpcServer(router, zap.L(), chanSize)
 }
 
-func init() {
-	_ = runtime.GOMAXPROCS(1)
+func initialize() {
+	//_ = runtime.GOMAXPROCS(1)
 	var conf = flag.String(
-		"conf", "config.yaml", "config file")
+		"conf", "./", "config file")
 	flag.Parse()
 	viper.AddConfigPath(*conf)
 	if err := viper.ReadInConfig(); err != nil {

@@ -13,7 +13,7 @@ var charset = []byte("abcdefghijklmnopqrstuvwxyz")
 type CounterServer struct {
 	reqHandler *ReqHandler
 	resBufSize int64
-	log *zap.Logger
+	log        *zap.Logger
 }
 
 func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.CounterGetRes, error) {
@@ -26,8 +26,8 @@ func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.
 		c.log.Error("Request handling  failed",
 			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
 		ex := &pb.Ex{
-			Id:   pb.Ex_ERR_UNSPECIFIED,
-			Msg:  "internal error",
+			Id:  pb.Ex_ERR_UNSPECIFIED,
+			Msg: "internal error",
 		}
 		return &pb.CounterGetRes{
 			Ex:    ex,
@@ -35,7 +35,7 @@ func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.
 		}, err
 	} else {
 		ex := &pb.Ex{
-			Id:   pb.Ex_SUCCESS,
+			Id: pb.Ex_SUCCESS,
 		}
 		return &pb.CounterGetRes{
 			Ex:    ex,
@@ -47,7 +47,7 @@ func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.
 func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.CounterIncRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
 	req := &Request{
-		K: string(charset[time.Now().UnixNano() % 26]),
+		K: string(charset[time.Now().UnixNano()%26]),
 		V: rpcReq.Value,
 		C: ch,
 	}
@@ -62,7 +62,7 @@ func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.
 		exCode = pb.Ex_SUCCESS
 	}
 	ex := pb.Ex{
-		Id: exCode,
+		Id:  exCode,
 		Msg: response.(string),
 	}
 	return &pb.CounterIncRes{Ex: &ex}, err
