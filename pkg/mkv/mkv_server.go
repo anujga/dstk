@@ -8,6 +8,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	"io/ioutil"
 	"net"
@@ -44,14 +46,14 @@ func MakeServer() (pb.MkvServer, error) {
 	return &s, nil
 }
 
-func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) (*pb.Ex, error) {
+func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) error {
 	uri := args.GetUri()
 	if !strings.HasPrefix(uri, "file://") {
 		s.slog.Errorw("Unkown file prefix",
 			"allowed", "file://",
 			"found", uri,
 		)
-		return &pb.Ex{Id: pb.Ex_NOT_IMPLEMENTED}, nil
+		return status.Newf(codes.Unimplemented, "Url should have a `file://` prefix. found %s", uri).Err()
 	}
 
 	filename := strings.TrimPrefix(uri, "file://")
@@ -114,16 +116,16 @@ func (s *mkvServer) Get(ctx context.Context, args *pb.GetReq) (*pb.GetRes, error
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.partitions[p]; !ok {
-		return &pb.GetRes{Ex: &pb.Ex{Id: pb.Ex_BAD_PARTITION}}, nil
+		return nil, core.ErrInfo(codes.Unavailable, "Bad Partition",
+			"resolved", string(p)).Err()
 	}
 
 	val, ok := s.data[k]
 	if !ok {
-		return &pb.GetRes{Ex: &pb.Ex{Id: pb.Ex_NOT_FOUND}}, nil
+		return nil, status.New(codes.NotFound, "Not found").Err()
 	}
 
 	return &pb.GetRes{
-		Ex:          core.ExOK,
 		PartitionId: val.partitionId,
 		Payload:     val.payload,
 	}, nil

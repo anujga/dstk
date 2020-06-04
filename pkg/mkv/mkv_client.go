@@ -4,33 +4,88 @@ import (
 	"context"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
-	"github.com/anujga/dstk/pkg/slicer"
+	"github.com/anujga/dstk/pkg/sharding_engine"
 	"google.golang.org/grpc"
 )
 
-//todo: explore the usage of envoy instead of manually creating grpc connections
-//for stats, rate limiting, retry, round robin / local zone, auth ...
-
+//This is the interface used by clients of mkv
 type Client interface {
-	Get(key []byte) ([]byte, error)
+	Get(ctx context.Context, key []byte) ([]byte, error)
 }
 
-type staticClient struct {
-	conn   *grpc.ClientConn
-	client pb.MkvClient
+// todo: explore the usage of envoy instead of manually creating grpc conn_pool
+// for stats, rate limiting, retry, round robin, proximity routing, auth ...
+// istio with headless service should make this pretty trivial
+// https://github.com/istio/istio/issues/10659
+type mkvClient struct {
+	slice se.ThickClient
+	pool  core.ConnPool
 }
 
-func newRpcClient(serverUrl string) (*staticClient, error) {
-	conn, err := grpc.Dial(serverUrl)
+func ShardedClient(slice se.ThickClient, opts ...grpc.DialOption) Client {
+	return &mkvClient{
+		slice: slice,
+		pool: core.NonExpiryPool(&rpcConnFactory{
+			opts: opts,
+		}),
+	}
+}
+
+func (m *mkvClient) Get(ctx context.Context, key []byte) ([]byte, error) {
+	part, err := m.slice.Get(context.TODO(), key)
+	if err != nil {
+		return nil, err
+	}
+
+	url := part.GetUrl()
+	o, err := m.pool.Get(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+
+	conn := o.(*unitPartition)
+	value, err := conn.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+// todo: extract this boilerplate into core
+
+type rpcConnFactory struct {
+	opts []grpc.DialOption
+}
+
+func (c *rpcConnFactory) Open(ctx context.Context, url string) (interface{}, error) {
+	conn, err := grpc.DialContext(ctx, url, c.opts...)
 	if err != nil {
 		return nil, err
 	}
 	client := pb.NewMkvClient(conn)
-	return &staticClient{conn: conn, client: client}, nil
+	return &unitPartition{conn: conn, client: client, url: url}, nil
 }
 
-func (s *staticClient) Get(key []byte) ([]byte, error) {
-	r, err := s.client.Get(context.TODO(), &pb.GetReq{
+func (c *rpcConnFactory) Close(conn interface{}) error {
+	conn2 := conn.(*unitPartition)
+	return conn2.Close()
+}
+
+// makes call to a single partition. it may choose to connect with more than
+// one node in case of master slave and send request in round robin.
+type unitPartition struct {
+	// required only for close
+	conn *grpc.ClientConn
+
+	// mostly used for debugging
+	url string
+
+	client pb.MkvClient
+}
+
+func (s *unitPartition) Get(c context.Context, key []byte) ([]byte, error) {
+	r, err := s.client.Get(c, &pb.GetReq{
 		Key:         key,
 		PartitionId: 0,
 	})
@@ -39,59 +94,9 @@ func (s *staticClient) Get(key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if r.Ex.GetId() != pb.Ex_SUCCESS {
-		return nil, core.WrapEx(r.Ex)
-	}
-
 	return r.Payload, nil
 }
 
-func (s *staticClient) Close() error {
+func (s *unitPartition) Close() error {
 	return s.conn.Close()
-}
-
-type mkvClient struct {
-	slice slicer.SliceRdr
-	pool  core.ConnPool
-}
-
-func (m *mkvClient) Get(key []byte) ([]byte, error) {
-	part, err := m.slice.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	url := part.Url()
-	o, err := m.pool.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	conn := o.(*staticClient)
-	value, err := conn.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
-}
-
-func UsingSlicer(slice slicer.SliceRdr) Client {
-	return &mkvClient{
-		slice: slice,
-		pool:  core.NonExpiryPool(&rpcConnFactory{}),
-	}
-}
-
-type rpcConnFactory struct {
-	//auth string
-}
-
-func (c *rpcConnFactory) Open(url string) (interface{}, error) {
-	return newRpcClient(url)
-}
-
-func (c *rpcConnFactory) Close(conn interface{}) error {
-	conn2 := conn.(*staticClient)
-	return conn2.Close()
 }

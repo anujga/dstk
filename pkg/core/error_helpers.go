@@ -1,6 +1,11 @@
 package core
 
-import dstk "github.com/anujga/dstk/pkg/api/proto"
+import (
+	dstk "github.com/anujga/dstk/pkg/api/proto"
+	details "google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
 
 const (
 	//note: for backward compatibility, we can only add entries in the end
@@ -33,3 +38,18 @@ func (m *Errr) Error() string {
 }
 
 var ExOK = &dstk.Ex{Id: dstk.Ex_SUCCESS}
+
+func ErrInfo(c codes.Code, msg string, k string, v string) *status.Status {
+	ex := status.New(c, msg)
+
+	ex2, err := ex.WithDetails(
+		&details.ErrorInfo{
+			Metadata: map[string]string{k: v},
+		})
+
+	if err != nil {
+		return ex
+	} else {
+		return ex2
+	}
+}

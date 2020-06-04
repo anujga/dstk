@@ -7,7 +7,7 @@ import (
 
 type PartItem struct {
 	k        KeyT
-	consumer Consumer
+	consumer PartHandler
 	mailBox  chan Msg
 }
 

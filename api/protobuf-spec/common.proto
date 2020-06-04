@@ -11,6 +11,10 @@ message Partition {
     string url = 6;
 }
 
+message Partitions {
+    repeated Partition parts = 1;
+}
+
 message Ex {
     //bulk of these msgs are copied from http and
     //https://cloud.google.com/apis/design/errors#generating_errors

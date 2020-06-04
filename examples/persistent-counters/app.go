@@ -87,7 +87,7 @@ func main() {
 
 func init() {
 	var conf = flag.String(
-		"conf", "config.yaml", "config file")
+		"conf", "./", "config file")
 	flag.Parse()
 	viper.AddConfigPath(*conf)
 	if err := viper.ReadInConfig(); err != nil {

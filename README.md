@@ -13,6 +13,6 @@ Distributed System Toolkit. Collection of modules and reference designs to
 - [Dev Guidlines](docs/dev.md)
 
 ## Reference Architectures
-- [Stateful Services](docs/stateful-service.md)
+- [Stateful Services](pkg/ss/README.md)
     - [Memory based counters](examples/mem_counters/memcountes_cmd.go)
-    - [MKV](pkg/mkv/README.md)
+    - [MKV](pkg/ss/README.md)
