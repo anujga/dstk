@@ -39,13 +39,13 @@ func addPartitions(ps []string, slog *zap.SugaredLogger, pm *ss.PartitionMgr) er
 
 // 4. glue it up together
 func glue() (ss.Router, error) {
-	// 4.1 Make the Partition Manager
 	factory, err := newCounterMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
 	if err != nil {
 		return nil, err
 	}
+	// 4.1 Make the Partition Manager
 	pm := ss.NewPartitionMgr(factory, zap.L())
 	// 4.2 Register predefined partitions.
 	ps := viper.GetStringSlice("parts")
@@ -63,7 +63,7 @@ func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64) {
 		panic(fmt.Sprintf("failed to listen: %v", err))
 	}
 	s := grpc.NewServer()
-	rh := &ReqHandler{router: router}
+	rh := &ss.MsgHandler{Router: router}
 	counterServer := MakeServer(rh, log, resBufSize)
 	dstk.RegisterCounterRpcServer(s, counterServer)
 	reflection.Register(s)
@@ -78,9 +78,6 @@ func main() {
 		panic(err)
 	}
 	chanSize := viper.GetInt64("response_buffer_size")
-	//<-server(rh.handle, func() chan interface{} {
-	//	return make(chan interface{}, chanSize)
-	//})
 	go func() {
 		// this is to enable prometheus
 		<-server(nil, nil)
