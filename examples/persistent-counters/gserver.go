@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	pb "github.com/anujga/dstk/pkg/api/proto"
+	"github.com/anujga/dstk/pkg/ss"
 	"go.uber.org/zap"
 )
 
 type CounterServer struct {
-	reqHandler *ReqHandler
+	reqHandler *ss.MsgHandler
 	resBufSize int64
 	log        *zap.Logger
 }
@@ -19,7 +20,7 @@ func (c *CounterServer) Remove(ctx context.Context, rpcReq *pb.CounterRemoveReq)
 	var exCode pb.Ex_ExCode
 	var response interface{}
 	var err error
-	if response, err = c.reqHandler.handle(req); err != nil {
+	if response, err = c.reqHandler.Handle(req); err != nil {
 		c.log.Error("Request handling  failed",
 			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
 		exCode = pb.Ex_ERR_UNSPECIFIED
@@ -36,7 +37,7 @@ func (c *CounterServer) Remove(ctx context.Context, rpcReq *pb.CounterRemoveReq)
 func (c *CounterServer) Get(ctx context.Context, rpcReq *pb.CounterGetReq) (*pb.CounterGetRes, error) {
 	ch := make(chan interface{}, c.resBufSize)
 	req := newGetRequest(rpcReq.Key, ch)
-	if response, err := c.reqHandler.handle(req); err != nil {
+	if response, err := c.reqHandler.Handle(req); err != nil {
 		c.log.Error("Request handling  failed",
 			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
 		ex := &pb.Ex{
@@ -64,7 +65,7 @@ func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.
 	var exCode pb.Ex_ExCode
 	var response interface{}
 	var err error
-	if response, err = c.reqHandler.handle(req); err != nil {
+	if response, err = c.reqHandler.Handle(req); err != nil {
 		c.log.Error("Request handling  failed",
 			zap.String("req", fmt.Sprintf("%v", rpcReq)), zap.Error(err))
 		exCode = pb.Ex_ERR_UNSPECIFIED
@@ -78,6 +79,6 @@ func (c *CounterServer) Inc(ctx context.Context, rpcReq *pb.CounterIncReq) (*pb.
 	return &pb.CounterIncRes{Ex: &ex}, err
 }
 
-func MakeServer(rh *ReqHandler, log *zap.Logger, resBufSize int64) *CounterServer {
+func MakeServer(rh *ss.MsgHandler, log *zap.Logger, resBufSize int64) *CounterServer {
 	return &CounterServer{reqHandler: rh, log: log, resBufSize: resBufSize}
 }
