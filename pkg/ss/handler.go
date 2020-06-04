@@ -1,8 +1,7 @@
-package main
+package ss
 
 import (
 	"errors"
-	"github.com/anujga/dstk/pkg/ss"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"time"
@@ -27,21 +26,21 @@ func handleResponseElement(elem interface{}, response *interface{}, e *error) {
 	return
 }
 
-type ReqHandler struct {
-	router ss.Router
+type MsgHandler struct {
+	Router
 }
 
-func (rh *ReqHandler) handle(req *Request) (interface{}, error) {
-	if err := rh.router.OnMsg(req); err != nil {
+func (mh *MsgHandler) Handle(req Msg) (interface{}, error) {
+	if err := mh.OnMsg(req); err != nil {
 		// TODO find a better place to close this
-		close(req.C)
+		close(req.ResponseChannel())
 		return "", status.Errorf(codes.Unavailable, err.Error())
 	} else {
 		var response interface{}
 		var errToRet error
 		for {
 			select {
-			case e, ok := <-req.C:
+			case e, ok := <-req.ResponseChannel():
 				if !ok {
 					return response, errToRet
 				}

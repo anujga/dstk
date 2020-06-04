@@ -3,30 +3,22 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/anujga/dstk/pkg/bdb"
 	badger "github.com/dgraph-io/badger/v2"
 	"time"
 )
 
 type PersistentCounter struct {
-	db *badger.DB
+	db *bdb.Wrapper
 }
 
 func (pc *PersistentCounter) Get(key string) (int64, error) {
-	var res []byte
-	err := pc.db.View(func(txn *badger.Txn) error {
-		keyBytes := []byte(key)
-		item, err := txn.Get(keyBytes)
-		if err != nil {
-			return err
-		}
-		res, err = item.ValueCopy(nil)
-		return err
-	})
-	if err != nil {
+	if res, err := pc.db.Get([]byte(key)); err == nil {
+		val, _ := binary.Varint(res)
+		return val, nil
+	} else {
 		return 0, err
 	}
-	val, _ := binary.Varint(res)
-	return val, nil
 }
 
 func (pc *PersistentCounter) Inc(key string, value int64, ttlSeconds float64) error {
@@ -57,9 +49,7 @@ func (pc *PersistentCounter) Inc(key string, value int64, ttlSeconds float64) er
 }
 
 func (pc *PersistentCounter) Remove(key string) error {
-	return pc.db.Update(func(txn *badger.Txn) error {
-		return txn.Delete([]byte(key))
-	})
+	return pc.db.Remove([]byte(key))
 }
 
 func (pc *PersistentCounter) Close() error {
