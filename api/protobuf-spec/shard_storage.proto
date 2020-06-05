@@ -32,7 +32,7 @@ message MyPartsRes {
     repeated Partition parts = 1;
 }
 
-// User by assigner to manipulate partitions
+// Used by assigner to manipulate partitions
 service ShardStorage {
     rpc CreateJobPartition (CreateJobPartReq) returns (ChangeRes);
     rpc SplitPartition (SplitReq) returns (ChangeRes);
