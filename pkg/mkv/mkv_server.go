@@ -67,7 +67,7 @@ func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) error {
 		s.slog.Errorw("Could not open patition file",
 			"uri", uri,
 			"err", err)
-		return &pb.Ex{Id: pb.Ex_INVALID_ARGUMENT}, err
+		return err
 	}
 
 	p := &pb.MkvPartition{}
@@ -76,24 +76,14 @@ func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) error {
 			"uri", uri,
 			"err", err)
 
-		return &pb.Ex{Id: pb.Ex_INVALID_ARGUMENT}, err
+		return err
 	}
 
 	id := p.GetId()
-	s.mu.Lock()
-
-	{
-		if _, ok := s.partitions[id]; ok {
-			s.slog.Errorw("Partition already exists")
-			return &pb.Ex{Id: pb.Ex_INVALID_ARGUMENT, Msg: "Partition already exists"}, err
-		}
-
-		//note: partition is already added assuming there cannot be any failure
-		//subsequently
-		s.partitions[id] = uri
+	err = s.insertPartition(id, uri)
+	if err != nil {
+		return err
 	}
-
-	s.mu.Unlock()
 
 	i := 0
 	var e *pb.MkvPartition_Entry
@@ -107,7 +97,26 @@ func (s *mkvServer) AddPart(ctx context.Context, args *pb.AddParReq) error {
 	}
 
 	s.slog.Infow("file read successfully", "uri", uri, "count", i+1)
-	return core.ExOK, nil
+	return nil
+}
+
+func (s *mkvServer) insertPartition(id int64, uri string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if oldPart, ok := s.partitions[id]; ok {
+		s.slog.Errorw("Partition already exists")
+		return core.ErrInfo(
+			codes.InvalidArgument,
+			"Partition already exists",
+			"old", oldPart).Err()
+	}
+
+	//note: partition is already added assuming there cannot be any failure
+	//subsequently
+	s.partitions[id] = uri
+
+	return nil
 }
 
 func (s *mkvServer) Get(ctx context.Context, args *pb.GetReq) (*pb.GetRes, error) {
