@@ -18,3 +18,14 @@ They should be handled as
     some failure will stress the system unnecessarily. Use throttled
     logs or metrics.
              
+### Readings
+1. Errors: https://cloud.google.com/apis/design/errors
+1. Logging: 
+    - https://github.com/uber-go/zap
+    - https://engineering.grab.com/structured-logging
+1. grpc:
+    - https://grpc.io/docs/what-is-grpc/core-concepts/
+    
+1. golang:
+    - https://dave.cheney.net/2019/05/07/prefer-table-driven-tests
+    
