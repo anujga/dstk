@@ -2,14 +2,12 @@ package rangemap
 
 import (
 	"errors"
+	"fmt"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/google/btree"
 )
 
-var (
-	ErrRangeOverlaps = errors.New("range overlaps")
-	ErrKeyAbsent = errors.New("key absent")
-)
+var ErrKeyAbsent = errors.New("key absent")
 
 type DummyRange struct {
 	start core.KeyT
@@ -59,7 +57,7 @@ func (rm *RangeMap) Put(rng Range) error {
 	}
 	pred := rm.getLessOrEqual(item)
 	if pred != nil && !pred.preceeds(item) {
-		return ErrRangeOverlaps
+		return fmt.Errorf("%v overlaps with %v", item, pred)
 	}
 	var succ *rangeItem
 	rm.root.AscendGreaterOrEqual(item, func(i btree.Item) bool {
@@ -67,15 +65,14 @@ func (rm *RangeMap) Put(rng Range) error {
 		return false
 	})
 	if succ != nil && !item.preceeds(succ) {
-		return ErrRangeOverlaps
+		return fmt.Errorf("%v overlaps with %v", item, succ)
 	}
 	i := rm.root.ReplaceOrInsert(item)
 	if i != nil {
-		panic("range already exists")
+		return fmt.Errorf("range %v already exists", rng)
 	}
 	return nil
 }
-
 
 func (rm *RangeMap) Remove(rng Range) (Range, error) {
 	delItem, err := NewRange(rng)
@@ -89,7 +86,7 @@ func (rm *RangeMap) Remove(rng Range) (Range, error) {
 			ri := rm.root.Delete(item)
 			return ri.(*rangeItem).Range, nil
 		} else {
-			return nil, ErrKeyAbsent
+			return nil, fmt.Errorf("potential match %v is not %v", item, delItem)
 		}
 	}
 }

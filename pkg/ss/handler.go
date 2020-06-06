@@ -2,8 +2,6 @@ package ss
 
 import (
 	"errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"time"
 )
 
@@ -16,9 +14,8 @@ func handleResponseElement(elem interface{}, response *interface{}, e *error) {
 		*response = elem.(string)
 		*e = nil
 	case error:
-		err := elem.(error)
-		*response = err.Error()
-		*e = status.Errorf(codes.Internal, err.Error())
+		*e = elem.(error)
+		*response = (*e).Error()
 	default:
 		*response = "internal error"
 		*e = errors.New("invalid response")
@@ -34,7 +31,7 @@ func (mh *MsgHandler) Handle(req Msg) (interface{}, error) {
 	if err := mh.OnMsg(req); err != nil {
 		// TODO find a better place to close this
 		close(req.ResponseChannel())
-		return "", status.Errorf(codes.Internal, err.Error())
+		return "", err
 	} else {
 		var response interface{}
 		var errToRet error
@@ -46,7 +43,7 @@ func (mh *MsgHandler) Handle(req Msg) (interface{}, error) {
 				}
 				handleResponseElement(e, &response, &errToRet)
 			case _ = <-time.After(time.Second * 5):
-				return "internal error", status.Errorf(codes.Aborted, "timeout")
+				return "internal error", errors.New("timeout")
 			}
 		}
 	}

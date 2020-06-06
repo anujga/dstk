@@ -2,26 +2,27 @@ package rangemap
 
 import (
 	"encoding/binary"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/google/go-cmp/cmp"
 	"testing"
 )
 
 type TestRange struct {
-	KeyStart []byte
-	KeyEnd   []byte
+	KeyStart string
+	KeyEnd   string
 	Value    string
 }
 
-func (t TestRange) Start() []byte {
-	return t.KeyStart
+func (t TestRange) Start() core.KeyT {
+	return []byte(t.KeyStart)
 }
 
-func (t TestRange) End() []byte {
-	return t.KeyEnd
+func (t TestRange) End() core.KeyT {
+	return []byte(t.KeyEnd)
 }
 
 type KeyVal struct {
-	key   []byte
+	key   string
 	value string
 }
 
@@ -33,11 +34,11 @@ type Test struct {
 	removeInvalidRanges []TestRange
 }
 
-func getMaxKey() []byte {
+func getMaxKey() string {
 	i := int64(1024)
 	res := make([]byte, 64)
 	binary.PutVarint(res, i)
-	return res
+	return string(res)
 }
 
 func prepareTests() map[string]Test {
@@ -45,47 +46,47 @@ func prepareTests() map[string]Test {
 	return map[string]Test{
 		"simple": {
 			ranges: []TestRange{
-				{[]byte("a"), []byte("o"), "H1"},
+				{"a", "o", "H1"},
 			},
 			invalidRanges: []TestRange{
-				{[]byte("d"), []byte("k"), "H2"},
+				{"d", "k", "H2"},
 			},
 			keyValues: []KeyVal{
-				{key: []byte("a"), value: "H1"},
+				{"a", "H1"},
 			},
 			removeValidRanges: []TestRange{
-				{[]byte("a"), []byte("o"), "H1"},
+				{"a", "o", "H1"},
 			},
 			removeInvalidRanges: []TestRange{
-				{[]byte("a"), []byte("z"), "H1"},
+				{"a", "z", "H1"},
 			},
 		},
 		"overlapping": {
 			ranges: []TestRange{
-				{[]byte("a"), []byte("o"), "H1"},
-				{[]byte("o"), []byte("s"), "H2"},
-				{[]byte("zc"), []byte("zz"), "H3"},
-				{[]byte(""), []byte("a"), "first"},
-				{[]byte("zzz"), maxKey, "last"},
+				{"a", "o", "H1"},
+				{"o", "s", "H2"},
+				{"zc", "zz", "H3"},
+				{"", "a", "first"},
+				{"zzz", maxKey, "last"},
 			},
 			invalidRanges: []TestRange{
-				{[]byte(""), maxKey, "H1"},
-				{[]byte("za"), []byte("zze"), "H1"},
+				{"", maxKey, "H1"},
+				{"za", "zze", "H1"},
 			},
 			keyValues: []KeyVal{
-				{key: []byte("a"), value: "H1"},
-				{key: []byte("o"), value: "H2"},
-				{key: []byte("t"), value: ""},
-				{key: []byte(""), value: "first"},
-				{key: maxKey, value: ""},
+				{"a", "H1"},
+				{"o", "H2"},
+				{"t", ""},
+				{"", "first"},
+				{maxKey, ""},
 			},
 			removeValidRanges: []TestRange{
-				{[]byte("a"), []byte("o"), "H1"},
-				{[]byte(""), []byte("a"), "first"},
+				{"a", "o", "H1"},
+				{"", "a", "first"},
 			},
 			removeInvalidRanges: []TestRange{
-				{[]byte("a"), []byte("z"), "H1"},
-				{[]byte("zzzab"), maxKey, "H1"},
+				{"a", "z", "H1"},
+				{"zzzab", maxKey, "H1"},
 			},
 		},
 	}
@@ -102,12 +103,12 @@ func TestRangeMap_Put(t *testing.T) {
 				}
 			}
 			for _, rng := range test.invalidRanges {
-				if e := rm.Put(rng); e != ErrRangeOverlaps {
+				if e := rm.Put(rng); e == nil {
 					t.Fatalf("accepted invalid range %s", rng)
 				}
 			}
 			for _, kv := range test.keyValues {
-				rng, err := rm.Get(kv.key)
+				rng, err := rm.Get([]byte(kv.key))
 				if err == ErrKeyAbsent {
 					if kv.value != "" {
 						t.Fatalf("failed to get value for %v", rng)
@@ -129,7 +130,7 @@ func TestRangeMap_Put(t *testing.T) {
 				}
 			}
 			for _, r := range test.removeInvalidRanges {
-				if _, err := rm.Remove(r); err != ErrKeyAbsent {
+				if _, err := rm.Remove(r); err == nil {
 					t.Fatalf("Removed invalid range: %v", r)
 				}
 			}
