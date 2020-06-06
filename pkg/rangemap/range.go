@@ -27,7 +27,7 @@ func (r *rangeItem) contains(t core.KeyT) bool {
 	return bytes.Compare(r.Start(), t) <= 0 && bytes.Compare(t, r.End()) < 0
 }
 
-func (r *rangeItem) preceeds(that *rangeItem) bool {
+func (r *rangeItem) precedes(that *rangeItem) bool {
 	return bytes.Compare(r.End(), that.Start()) <= 0
 }
 

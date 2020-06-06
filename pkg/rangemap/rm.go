@@ -56,7 +56,7 @@ func (rm *RangeMap) Put(rng Range) error {
 		return err
 	}
 	pred := rm.getLessOrEqual(item)
-	if pred != nil && !pred.preceeds(item) {
+	if pred != nil && !pred.precedes(item) {
 		return fmt.Errorf("%v overlaps with %v", item, pred)
 	}
 	var succ *rangeItem
@@ -64,7 +64,7 @@ func (rm *RangeMap) Put(rng Range) error {
 		succ = i.(*rangeItem)
 		return false
 	})
-	if succ != nil && !item.preceeds(succ) {
+	if succ != nil && !item.precedes(succ) {
 		return fmt.Errorf("%v overlaps with %v", item, succ)
 	}
 	i := rm.root.ReplaceOrInsert(item)
