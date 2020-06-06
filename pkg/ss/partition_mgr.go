@@ -2,6 +2,7 @@ package ss
 
 import (
 	dstk "github.com/anujga/dstk/pkg/api/proto"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
 	"gopkg.in/errgo.v2/fmt/errors"
@@ -27,7 +28,7 @@ func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
 }
 
 // Path = data
-func (pm *PartitionMgr) Find(key KeyT) (*PartRange, error) {
+func (pm *PartitionMgr) Find(key core.KeyT) (*PartRange, error) {
 	if rng, err := pm.rangeMap.Get(key); err == nil {
 		return rng.(*PartRange), nil
 	} else {

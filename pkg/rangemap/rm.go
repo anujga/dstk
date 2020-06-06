@@ -2,6 +2,7 @@ package rangemap
 
 import (
 	"errors"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/google/btree"
 )
 
@@ -11,14 +12,14 @@ var (
 )
 
 type DummyRange struct {
-	start []byte
+	start core.KeyT
 }
 
-func (ki *DummyRange) Start() []byte {
+func (ki *DummyRange) Start() core.KeyT {
 	return ki.start
 }
 
-func (ki *DummyRange) End() []byte {
+func (ki *DummyRange) End() core.KeyT {
 	return nil
 }
 
@@ -39,7 +40,7 @@ func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
 	return itemInTree
 }
 
-func (rm *RangeMap) Get(key []byte) (Range, error) {
+func (rm *RangeMap) Get(key core.KeyT) (Range, error) {
 	item, err := NewRange(&DummyRange{start: key})
 	if err != nil {
 		return nil, err

@@ -3,14 +3,15 @@ package rangemap
 import (
 	"bytes"
 	"errors"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/google/btree"
 )
 
 var ErrInvalidRange = errors.New("invalid range")
 
 type Range interface {
-	Start() []byte
-	End() []byte
+	Start() core.KeyT
+	End() core.KeyT
 }
 
 type rangeItem struct {
@@ -22,7 +23,7 @@ func (r *rangeItem) Less(than btree.Item) bool {
 	return bytes.Compare(r.Start(), that.Start()) < 0
 }
 
-func (r *rangeItem) contains(t []byte) bool {
+func (r *rangeItem) contains(t core.KeyT) bool {
 	return bytes.Compare(r.Start(), t) <= 0 && bytes.Compare(t, r.End()) < 0
 }
 

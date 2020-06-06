@@ -1,6 +1,9 @@
 package ss
 
-import dstk "github.com/anujga/dstk/pkg/api/proto"
+import (
+	dstk "github.com/anujga/dstk/pkg/api/proto"
+	"github.com/anujga/dstk/pkg/core"
+)
 
 type PartRange struct {
 	partition *dstk.Partition
@@ -8,11 +11,11 @@ type PartRange struct {
 	mailBox   chan Msg
 }
 
-func (p *PartRange) Start() []byte {
+func (p *PartRange) Start() core.KeyT {
 	return p.partition.GetStart()
 }
 
-func (p *PartRange) End() []byte {
+func (p *PartRange) End() core.KeyT {
 	return p.partition.GetEnd()
 }
 
