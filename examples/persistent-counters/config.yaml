@@ -2,5 +2,7 @@ max_outstanding: 10000
 db_path: /var/tmp/counter-db
 response_buffer_size: 5
 parts:
-  - o
-  -
+  - start: ""
+    end: "o"
+  - start: "w"
+    end: "z"

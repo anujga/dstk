@@ -24,6 +24,6 @@ type Router interface {
 }
 
 type PartMgr interface {
-	Find(key KeyT) *PartItem
+	Find(key KeyT) *PartRange
 	Add(p *dstk.Partition) error
 }

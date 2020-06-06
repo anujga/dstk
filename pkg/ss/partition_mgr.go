@@ -2,7 +2,7 @@ package ss
 
 import (
 	dstk "github.com/anujga/dstk/pkg/api/proto"
-	"github.com/google/btree"
+	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
 	"gopkg.in/errgo.v2/fmt/errors"
 )
@@ -11,8 +11,7 @@ import (
 // need to define a proper data structure that can be reused
 type PartitionMgr struct {
 	consumer ConsumerFactory
-	partMap  *btree.BTree // PartItem
-	lastPart *PartItem
+	rangeMap *rangemap.RangeMap
 	log      *zap.Logger
 	slog     *zap.SugaredLogger
 }
@@ -21,67 +20,51 @@ type PartitionMgr struct {
 func NewPartitionMgr(consumer ConsumerFactory, log *zap.Logger) *PartitionMgr {
 	return &PartitionMgr{
 		consumer: consumer,
-		partMap:  btree.New(32),
-		lastPart: nil,
+		rangeMap: rangemap.New(32),
 		log:      log,
 		slog:     log.Sugar(),
 	}
 }
 
 // Path = data
-// Time = O(log N/ log 32), N ~ MAX_PARTITIONS ~ 1M
-// Return value can only be nil if there are 0 partitions
-func (pm *PartitionMgr) Find(key KeyT) *PartItem {
-	k := PartItem{k: key}
-	var q = pm.lastPart
-	pm.partMap.AscendGreaterOrEqual(&k, func(i btree.Item) bool {
-		p := i.(*PartItem)
-		q = p
-		return false
-	})
-	return q
+func (pm *PartitionMgr) Find(key KeyT) (*PartRange, error) {
+	if rng, err := pm.rangeMap.Get(key); err == nil {
+		return rng.(*PartRange), nil
+	} else {
+		return nil, err
+	}
 }
 
 // path=control
 func (pm *PartitionMgr) Add(p *dstk.Partition) error {
-	end := p.GetEnd()
 	var err error
-
 	pm.slog.Info("AddPartition Start", "part", p)
 	defer pm.slog.Info("AddPartition Status", "part", p, "err", err)
-
 	c, maxOutstanding, err := pm.consumer.Make(p)
 	if err != nil {
 		return err
 	}
-	part := &PartItem{
-		k:        end,
-		consumer: c,
-		mailBox:  make(chan Msg, maxOutstanding),
+	part := &PartRange{
+		partition: p,
+		consumer:  c,
+		mailBox:   make(chan Msg, maxOutstanding),
 	}
-
-	if len(end) == 0 {
-		if pm.lastPart != nil {
-			err = errors.New("duplicate last partition")
-			return err
-		}
-		pm.lastPart = part
-	} else if nil != pm.partMap.ReplaceOrInsert(part) {
-		err = errors.New("duplicate partition")
+	if err := pm.rangeMap.Put(part); err == nil {
+		//todo: also check for valid start and other constraints
+		go part.Run()
+		return nil
+	} else {
 		return err
 	}
-
-	//todo: also check for valid start and other constraints
-
-	go part.Run()
-
-	return nil
 }
 
 // Single threaded router. 1 channel per partition
 // path=data
 func (pm *PartitionMgr) OnMsg(msg Msg) error {
-	p := pm.Find(msg.Key())
+	p, err := pm.Find(msg.Key())
+	if err != nil {
+		return err
+	}
 	select {
 	case p.mailBox <- msg:
 		return nil

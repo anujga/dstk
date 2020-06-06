@@ -1,23 +1,22 @@
 package ss
 
-import (
-	"bytes"
-	"github.com/google/btree"
-)
+import dstk "github.com/anujga/dstk/pkg/api/proto"
 
-type PartItem struct {
-	k        KeyT
-	consumer PartHandler
-	mailBox  chan Msg
+type PartRange struct {
+	partition *dstk.Partition
+	consumer  PartHandler
+	mailBox   chan Msg
 }
 
-func (p *PartItem) Less(than btree.Item) bool {
-	that := than.(*PartItem)
-	e1, e2 := p.k, that.k
-	return bytes.Compare(e1, e2) < 0
+func (p *PartRange) Start() []byte {
+	return p.partition.GetStart()
 }
 
-func (p *PartItem) Run() bool {
+func (p *PartRange) End() []byte {
+	return p.partition.GetEnd()
+}
+
+func (p *PartRange) Run() bool {
 	for m := range p.mailBox {
 		p.consumer.Process(m)
 	}

@@ -1,84 +1,138 @@
 package rangemap
 
 import (
-	"github.com/google/btree"
+	"encoding/binary"
+	"github.com/google/go-cmp/cmp"
 	"testing"
 )
 
+type TestRange struct {
+	KeyStart []byte
+	KeyEnd   []byte
+	Value    string
+}
+
+func (t TestRange) Start() []byte {
+	return t.KeyStart
+}
+
+func (t TestRange) End() []byte {
+	return t.KeyEnd
+}
+
+type KeyVal struct {
+	key   []byte
+	value string
+}
+
+type Test struct {
+	ranges              []TestRange
+	invalidRanges       []TestRange
+	keyValues           []KeyVal
+	removeValidRanges   []TestRange
+	removeInvalidRanges []TestRange
+}
+
+func getMaxKey() []byte {
+	i := int64(1024)
+	res := make([]byte, 64)
+	binary.PutVarint(res, i)
+	return res
+}
+
+func prepareTests() map[string]Test {
+	maxKey := getMaxKey()
+	return map[string]Test{
+		"simple": {
+			ranges: []TestRange{
+				{[]byte("a"), []byte("o"), "H1"},
+			},
+			invalidRanges: []TestRange{
+				{[]byte("d"), []byte("k"), "H2"},
+			},
+			keyValues: []KeyVal{
+				{key: []byte("a"), value: "H1"},
+			},
+			removeValidRanges: []TestRange{
+				{[]byte("a"), []byte("o"), "H1"},
+			},
+			removeInvalidRanges: []TestRange{
+				{[]byte("a"), []byte("z"), "H1"},
+			},
+		},
+		"overlapping": {
+			ranges: []TestRange{
+				{[]byte("a"), []byte("o"), "H1"},
+				{[]byte("o"), []byte("s"), "H2"},
+				{[]byte("zc"), []byte("zz"), "H3"},
+				{[]byte(""), []byte("a"), "first"},
+				{[]byte("zzz"), maxKey, "last"},
+			},
+			invalidRanges: []TestRange{
+				{[]byte(""), maxKey, "H1"},
+				{[]byte("za"), []byte("zze"), "H1"},
+			},
+			keyValues: []KeyVal{
+				{key: []byte("a"), value: "H1"},
+				{key: []byte("o"), value: "H2"},
+				{key: []byte("t"), value: ""},
+				{key: []byte(""), value: "first"},
+				{key: maxKey, value: ""},
+			},
+			removeValidRanges: []TestRange{
+				{[]byte("a"), []byte("o"), "H1"},
+				{[]byte(""), []byte("a"), "first"},
+			},
+			removeInvalidRanges: []TestRange{
+				{[]byte("a"), []byte("z"), "H1"},
+				{[]byte("zzzab"), maxKey, "H1"},
+			},
+		},
+	}
+}
+
 func TestRangeMap_Put(t *testing.T) {
-	rm := RangeMap{root: btree.New(3)}
-	// [abc)defghijklmnopqrstuvwxyz
-	err := rm.Put(NewClosedOpenRange([]byte("a"), []byte("c")), "part1")
-	if err != nil {
-		t.Error(err)
-	}
-	if got := rm.Get([]byte("b")); got != "part1" {
-		t.Errorf("expected %s but got %s", "part1", got)
-	}
-	// [abc)[cdefg)hijklmnopqrstuvwxyz
-	err = rm.Put(NewClosedOpenRange([]byte("c"), []byte("g")), "part2")
-	if err != nil {
-		t.Error(err)
-	}
-	if got := rm.Get([]byte("c")); got != "part2" {
-		t.Errorf("expected %s but got %s", "part2", got)
-	}
-	if got := rm.Get([]byte("g")); got != nil {
-		t.Errorf("expected nil but got %s", got)
-	}
-	// [abc)[cdefg)hijklmnopqrstuv[wxyz)
-	rng := NewClosedOpenRange([]byte("w"), []byte("z"))
-	err = rm.Put(rng, "foobar")
-	if err != nil {
-		t.Error(err)
-	}
-	// [abc)[cdefg)hijklmnopqrstuv[wxyz) --NOT OKAY--> [abc)[cdefg)hijkl[mnopqrstuv[wx)yz)
-	rng = NewClosedOpenRange([]byte("m"), []byte("x"))
-	err = rm.Put(rng, "foobar")
-	if err != ErrSuffixOverlaps {
-		t.Errorf("Accepted overlapping partitions %v - %v", rng.Start, rng.End)
-	}
-	// [abc)[cdefg)hijklmnopqrstuv[wxyz) --NOT OKAY--> [abc)[cd[efg)hij)klmnopqrstuv[wxyz)
-	rng = NewClosedOpenRange([]byte("e"), []byte("j"))
-	err = rm.Put(rng, "foobar")
-	if err != ErrPrefixOverlaps {
-		t.Errorf("Accepted overlapping partitions %v - %v", rng.Start, rng.End)
-	}
-	// [abc)[cdefg)hijklmnopqrstuv[wxyz) --NOT OKAY--> [[abc)[cdefg)hijklmnopqrstuv[wxyz))
-	rng = NewClosedOpenRange([]byte("a"), []byte("z"))
-	err = rm.Put(rng, "foobar")
-	if err != ErrPrefixOverlaps {
-		t.Errorf("Accepted overlapping partitions %v - %v", rng.Start, rng.End)
-	}
-	// [abc)[cdefg)hijkl[mnop)qrstuv[wxyz)
-	rng = NewClosedOpenRange([]byte("m"), []byte("p"))
-	err = rm.Put(rng, "foobar")
-	if err != nil {
-		t.Error(err)
-	}
-	// [abc)[cdefg)hijkl[mnop)qrstuv[wxyz) --NOT OKAY--> [abc)[cdefg)hij[kl[mnop)qrs)tuv[wxyz)
-	rng = NewClosedOpenRange([]byte("k"), []byte("s"))
-	err = rm.Put(rng, "foobar")
-	if err != ErrSuffixOverlaps {
-		t.Errorf("Accepted overlapping partitions %v - %v", rng.Start, rng.End)
-	}
-	// partitions now - [abc)[cdefg)hijkl[mnop)qrstuv[wxyz)
-	rng = NewGreaterThanRange([]byte("k"))
-	err = rm.Put(rng, "foobar")
-	if err != ErrSuffixOverlaps {
-		t.Errorf("Accepted overlapping partitions %v - %v", rng.Start, rng.End)
-	}
-	rng = NewGreaterThanRange([]byte("m"))
-	err = rm.Put(rng, "foobar")
-	if err != ErrPrefixOverlaps {
-		t.Errorf("Accepted overlapping partitions %v - %v", rng.Start, rng.End)
-	}
-	rng = NewGreaterThanRange([]byte("z"))
-	err = rm.Put(rng, "zpart")
-	if err != nil {
-		t.Error(err)
-	}
-	if got := rm.Get([]byte("zab")); got != "zpart" {
-		t.Errorf("expected %s but got %s", "zpart", got)
+	tests := prepareTests()
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			rm := New(3)
+			for _, rng := range test.ranges {
+				if e := rm.Put(rng); e != nil {
+					t.Fatalf("Putting range %v failed with error %v", rng, e)
+				}
+			}
+			for _, rng := range test.invalidRanges {
+				if e := rm.Put(rng); e != ErrRangeOverlaps {
+					t.Fatalf("accepted invalid range %s", rng)
+				}
+			}
+			for _, kv := range test.keyValues {
+				rng, err := rm.Get(kv.key)
+				if err == ErrKeyAbsent {
+					if kv.value != "" {
+						t.Fatalf("failed to get value for %v", rng)
+					}
+				} else {
+					testRange := rng.(TestRange)
+					if diff := cmp.Diff(kv.value, testRange.Value); diff != "" {
+						t.Fatalf(diff)
+					}
+				}
+			}
+			for _, r := range test.removeValidRanges {
+				if removed, err := rm.Remove(r); err != nil {
+					t.Fatal(err)
+				} else {
+					if diff := cmp.Diff(r, removed); diff != "" {
+						t.Fatalf(diff)
+					}
+				}
+			}
+			for _, r := range test.removeInvalidRanges {
+				if _, err := rm.Remove(r); err != ErrKeyAbsent {
+					t.Fatalf("Removed invalid range: %v", r)
+				}
+			}
+		})
 	}
 }
