@@ -15,7 +15,7 @@ type partitionCounterMaker struct {
 	maxOutstanding int
 }
 
-func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.Consumer, int, error) {
+func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.PartHandler, int, error) {
 	pc := &PersistentCounter{db: m.db}
 	return &partitionCounter{
 		p:  p,

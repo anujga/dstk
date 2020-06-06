@@ -1,6 +1,8 @@
 package main
 
-import "github.com/anujga/dstk/pkg/ss"
+import (
+	"github.com/anujga/dstk/pkg/core"
+)
 
 type RequestType byte
 
@@ -27,7 +29,7 @@ func (r *Request) ReadOnly() bool {
 	return r.RequestType == Get
 }
 
-func (r *Request) Key() ss.KeyT {
+func (r *Request) Key() core.KeyT {
 	return []byte(r.K)
 }
 
