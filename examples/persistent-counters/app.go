@@ -9,31 +9,28 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
 )
 
 type handler func(*Request) (string, error)
 
-func addPartitions(ps []string, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
-	var endParts = 0
+type Parts struct {
+	Parts []struct {
+		Start string
+		End   string
+	}
+}
+
+func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
 	i := 0
-	for i, p := range ps {
+	for i, p := range (*partitions).Parts {
 		slog.Infow("Adding Partition", "id", i, "end", p)
-		pv := dstk.Partition{Id: int64(i), End: []byte(p)}
+		pv := dstk.Partition{Id: int64(i), End: []byte(p.End), Start: []byte(p.Start)}
 		if err := pm.Add(&pv); err != nil {
 			return err
 		}
-		if len(pv.GetEnd()) == 0 {
-			endParts += 1
-		}
 	}
 	slog.Infof("partitions count = %d\n", i+1)
-	// 4.3 Ensure presence of end partition
-	if endParts != 1 {
-		return errors.Newf(
-			"exactly 1 end partition required. found: %d", endParts)
-	}
 	return nil
 }
 
@@ -48,10 +45,14 @@ func glue() (ss.Router, error) {
 	// 4.1 Make the Partition Manager
 	pm := ss.NewPartitionMgr(factory, zap.L())
 	// 4.2 Register predefined partitions.
-	ps := viper.GetStringSlice("parts")
+	parts := new(Parts)
+	err = viper.Unmarshal(&parts)
+	if err != nil {
+		return nil, err
+	}
 	slog := zap.S()
-	slog.Infow("Adding partitions", "keys", ps)
-	err = addPartitions(ps, slog, pm)
+	slog.Infow("Adding partitions", "keys", parts)
+	err = addPartitions(parts, slog, pm)
 	return pm, err
 }
 
