@@ -29,5 +29,5 @@ type ThickClient interface {
 	// as a response to notification, the client is likely to request
 	// a snapshot. this is an expensive op, hence provided separately
 	// instead of sending on the channel.
-	Parts() []*pb.Partition
+	Parts() ([]*pb.Partition, error)
 }

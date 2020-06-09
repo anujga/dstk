@@ -6,30 +6,28 @@ import "common.proto";
 // Used by thick client to refresh list of global partitions
 // Currently support full snapshot. Push api can be added later
 service SeClientApi {
-    rpc AllParts (AllPartsReq) returns (AllPartsRes);
+    rpc AllParts (AllPartsReq) returns (PartList);
 }
 
 message AllPartsReq {
-
+    // unused
+    string client_id = 1;
 }
 
-message AllPartsRes {
+message PartList {
     repeated Partition parts = 1;
+    int64 last_modified = 2;
 }
 
 // Used by workers to refresh the list of partitions that
 // it needs to process
 // Currently support full snapshot. Push api can be added later
 service SeWorkerApi {
-    rpc MyParts (MyPartsReq) returns (MyPartsRes);
+    rpc MyParts (MyPartsReq) returns (PartList);
 }
 
 message MyPartsReq {
     int64 worker_id = 1;
-}
-
-message MyPartsRes {
-    repeated Partition parts = 1;
 }
 
 // User by assigner to manipulate partitions
