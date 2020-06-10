@@ -84,11 +84,9 @@ func main() {
 	}
 	chanSize := viper.GetInt64("response_buffer_size")
 	go func() {
-		// export metrics
-		e := <-utils.HttpServer(map[string]http.Handler{
+		<-utils.HttpServer(map[string]http.Handler{
 			"/metrics": promhttp.Handler(),
 		}, ":8080")
-		logger.Error(e.Error())
 	}()
 	msgHandler := &ss.MsgHandler{Router: router}
 	startGrpcServer(logger, chanSize, msgHandler)
