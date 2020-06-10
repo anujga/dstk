@@ -5,7 +5,7 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
-	"gopkg.in/errgo.v2/fmt/errors"
+	"google.golang.org/grpc/codes"
 )
 
 // todo: this is the 4th implementation of the range map.
@@ -37,7 +37,7 @@ func (pm *PartitionMgr) Find(key core.KeyT) (*PartRange, error) {
 }
 
 // path=control
-func (pm *PartitionMgr) Add(p *dstk.Partition) error {
+func (pm *PartitionMgr) Adqd(p *dstk.Partition) error {
 	var err error
 	pm.slog.Info("AddPartition Start", "part", p)
 	defer pm.slog.Info("AddPartition Status", "part", p, "err", err)
@@ -70,8 +70,9 @@ func (pm *PartitionMgr) OnMsg(msg Msg) error {
 	case p.mailBox <- msg:
 		return nil
 	default:
-		return errors.Newf(
-			"code=429. Partition Busy. Max outstanding allowed %d",
-			cap(p.mailBox))
+		return core.ErrInfo(codes.ResourceExhausted,"Partition Busy",
+			"capacity", cap(p.mailBox),
+			"partition", p.Id()).Err()
+
 	}
 }
