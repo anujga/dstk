@@ -5,11 +5,14 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss"
+	"github.com/anujga/dstk/pkg/utils"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"net/http"
 )
 
 type Parts struct {
@@ -28,12 +31,12 @@ func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionM
 			return err
 		}
 	}
-	slog.Infof("partitions count = %d\n", i+1)
+	slog.Infof("partitions count = %d", i+1)
 	return nil
 }
 
 // 4. glue it up together
-func glue() (ss.Router, error) {
+func glue(logger *zap.Logger) (ss.Router, error) {
 	factory, err := newConsumerMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
@@ -48,7 +51,7 @@ func glue() (ss.Router, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog := zap.S()
+	slog := logger.Sugar()
 	slog.Infow("Adding partitions", "keys", parts)
 	err = addPartitions(parts, slog, pm)
 	return pm, err
@@ -56,7 +59,7 @@ func glue() (ss.Router, error) {
 
 // 6. Thick client
 
-func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) {
+func startGrpcServer(log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) {
 	lis, err := net.Listen("tcp", ":9099")
 	if err != nil {
 		panic(fmt.Sprintf("failed to listen: %v", err))
@@ -71,17 +74,24 @@ func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss
 }
 
 func main() {
-	router, err := glue()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	router, err := glue(logger)
 	if err != nil {
 		panic(err)
 	}
 	chanSize := viper.GetInt64("response_buffer_size")
 	go func() {
 		// export metrics
-		<-server()
+		e := <-utils.HttpServer(map[string]http.Handler{
+			"/metrics": promhttp.Handler(),
+		}, ":8080")
+		logger.Error(e.Error())
 	}()
 	msgHandler := &ss.MsgHandler{Router: router}
-	startGrpcServer(router, zap.L(), chanSize, msgHandler)
+	startGrpcServer(logger, chanSize, msgHandler)
 }
 
 func init() {
