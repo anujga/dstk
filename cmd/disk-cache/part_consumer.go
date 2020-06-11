@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/bdb"
 	"github.com/anujga/dstk/pkg/ss"
@@ -16,12 +18,13 @@ func (m *partitionConsumer) Meta() *dstk.Partition {
 	return m.p
 }
 
-func (m *partitionConsumer) get(req *DcRequest) bool {
-	if val, err := m.pc.Get(req.K); err == nil {
-		req.C <- val
+// thread safe
+func (m *partitionConsumer) get(req *dstk.DcGetReq, ch chan interface{}) bool {
+	if val, err := m.pc.Get(req.GetKey()); err == nil {
+		ch <- val
 		return true
 	} else {
-		req.C <- err
+		ch <- err
 		return false
 	}
 }
@@ -29,11 +32,13 @@ func (m *partitionConsumer) get(req *DcRequest) bool {
 /// this method does not have to be thread safe
 func (m *partitionConsumer) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*DcRequest)
-	c := msg.ResponseChannel()
+	c := msg0.ResponseChannel()
 	defer close(c)
-	switch msg.RequestType {
-	case Get:
-		return m.get(msg)
+	switch msg.grpcRequest.(type) {
+	case *dstk.DcGetReq:
+		return m.get(msg.grpcRequest.(*dstk.DcGetReq), msg.C)
+	default:
+		c <- errors.New(fmt.Sprintf("invalid message %v", msg))
+		return false
 	}
-	return true
 }
