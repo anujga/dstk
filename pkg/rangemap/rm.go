@@ -9,15 +9,15 @@ import (
 
 var ErrKeyAbsent = errors.New("key absent")
 
-type DummyRange struct {
+type dummyRange struct {
 	start core.KeyT
 }
 
-func (ki *DummyRange) Start() core.KeyT {
+func (ki *dummyRange) Start() core.KeyT {
 	return ki.start
 }
 
-func (ki *DummyRange) End() core.KeyT {
+func (ki *dummyRange) End() core.KeyT {
 	return nil
 }
 
@@ -39,7 +39,7 @@ func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
 }
 
 func (rm *RangeMap) Get(key core.KeyT) (Range, error) {
-	item, err := NewRange(&DummyRange{start: key})
+	item, err := NewRange(&dummyRange{start: key})
 	if err != nil {
 		return nil, err
 	}
