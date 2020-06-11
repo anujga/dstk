@@ -12,7 +12,6 @@ type tc struct {
 	notifications chan interface{}
 	cache         stateHolder
 	rpc           pb.SeClientApiClient
-	lastModified  int64
 	clientId      string
 }
 
@@ -60,7 +59,7 @@ func (t *tc) syncSe() error {
 	}
 
 	newTime := rs.GetLastModified()
-	if newTime <= t.lastModified {
+	if newTime <= t.cache.LastModified() {
 		return nil
 	}
 	err = t.cache.UpdateTree(rs.GetParts(), newTime)
