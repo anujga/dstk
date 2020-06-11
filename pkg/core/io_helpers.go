@@ -36,13 +36,26 @@ type YamlRefresher interface {
 	RefreshFile(*viper.Viper) error
 }
 
-func YamlParser(filename string, watch bool, p YamlRefresher) error {
+func ParseYamlFile(filename string, watch bool, fn YamlRefresher) error {
 	v, err := ParseYaml(filename)
 	if err != nil {
 		return err
 	}
 
-	err = p.RefreshFile(v)
+	return YamlParserV(v, watch, fn)
+}
+
+func ParseYamlFolder(path string, watch bool, fn YamlRefresher) error {
+	v := viper.New()
+	v.AddConfigPath(path)
+	if err := v.ReadInConfig(); err != nil {
+		return err
+	}
+	return YamlParserV(v, watch, fn)
+}
+
+func YamlParserV(v *viper.Viper, watch bool, p YamlRefresher) error {
+	err := p.RefreshFile(v)
 	if err != nil {
 		return err
 	}

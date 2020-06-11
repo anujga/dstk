@@ -19,6 +19,10 @@ func (p *PartRange) End() core.KeyT {
 	return p.partition.GetEnd()
 }
 
+func (p *PartRange) Id() int64 {
+	return p.partition.GetId()
+}
+
 func (p *PartRange) Run() bool {
 	for m := range p.mailBox {
 		p.consumer.Process(m)

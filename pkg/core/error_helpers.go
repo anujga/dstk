@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	details "google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -39,12 +40,26 @@ func (m *Errr) Error() string {
 
 var ExOK = &dstk.Ex{Id: dstk.Ex_SUCCESS}
 
-func ErrInfo(c codes.Code, msg string, k string, v string) *status.Status {
+func values2Map(keyValues ...interface{}) map[string]string {
+	n := len(keyValues)
+	kv := make(map[string]string, n/2)
+	for i := 0; i < n; i+=2 {
+		var v = ""
+		if i + 1 < n {
+			v = fmt.Sprintf("%#v", keyValues[i+1])
+		}
+		k := fmt.Sprintf("%#v", keyValues[i])
+		kv[k] = v
+	}
+	return kv
+}
+
+func ErrInfo(c codes.Code, msg string, keyValues ...interface{}) *status.Status {
 	ex := status.New(c, msg)
 
 	ex2, err := ex.WithDetails(
 		&details.ErrorInfo{
-			Metadata: map[string]string{k: v},
+			Metadata: values2Map(keyValues),
 		})
 
 	if err != nil {
