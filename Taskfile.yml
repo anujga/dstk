@@ -30,6 +30,11 @@ tasks:
       - task: build
       - ./{{.EXE}}
 
+  se:
+    desc: Build and run SE
+    cmds:
+      - go run cmd/se/se_app.go --conf=cmd/se/conf
+
   build:
     desc: Build the web app
     deps: [assets, templates]

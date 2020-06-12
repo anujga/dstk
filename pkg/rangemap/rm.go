@@ -64,6 +64,9 @@ func (rm *RangeMap) Get(key core.KeyT) (Range, error) {
 		return nil, err
 	}
 	pred := rm.getLessOrEqual(item)
+	if pred == nil {
+		return nil, ErrKeyAbsent(key).Err()
+	}
 	if pred.contains(key) {
 		return pred.Range, nil
 	}
