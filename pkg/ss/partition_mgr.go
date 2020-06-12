@@ -91,6 +91,9 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 }
 
 //todo: should indicate whether changes were applied or not
+// poor algorithm that creates a new map.
+//only apply delta changes. linear serializability is invalid here
+//because there can be 2 mailbox for a given partition
 func (pm *PartitionMgr) syncSe() error {
 	rs, err := pm.rpc.MyParts(context.TODO(),
 		&pb.MyPartsReq{WorkerId: int64(pm.id)})

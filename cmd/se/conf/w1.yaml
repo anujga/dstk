@@ -1,0 +1,7 @@
+Id: 1
+Url: worker-1
+Parts:
+  - Start: ""
+    End: "o"
+  - Start: "w"
+    End: "z"
