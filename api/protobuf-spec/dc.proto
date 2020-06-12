@@ -1,14 +1,11 @@
 syntax = "proto3";
 package dstk;
 
-import "common.proto";
-
 message DcGetReq {
   bytes key = 1;
 }
 
 message DcGetRes {
-  Ex ex = 1;
   bytes value = 2;
 }
 
@@ -16,8 +13,7 @@ message DcRemoveReq {
   bytes key = 1;
 }
 
-message DcRemoveRes {
-  Ex ex = 1;
+message DcRes {
 }
 
 message DcPutReq {
@@ -26,12 +22,8 @@ message DcPutReq {
   float ttl_seconds = 3;
 }
 
-message DcPutRes {
-  Ex ex = 1;
-}
-
 service DcRpc {
   rpc Get (DcGetReq) returns (DcGetRes);
-  rpc Put (DcPutReq) returns (DcPutRes);
-  rpc Remove (DcRemoveReq) returns (DcRemoveRes);
+  rpc Put (DcPutReq) returns (DcRes);
+  rpc Remove (DcRemoveReq) returns (DcRes);
 }

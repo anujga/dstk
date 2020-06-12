@@ -1,23 +1,13 @@
 package main
 
 import (
+	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 )
 
-type RequestType byte
-
-const (
-	Get RequestType = iota
-	Put
-	Remove
-)
-
 type DcRequest struct {
-	K core.KeyT
-	V core.KeyT
-	C chan interface{}
-	TtlSeconds float64
-	RequestType RequestType
+	grpcRequest interface{}
+	C           chan interface{}
 }
 
 func (r *DcRequest) ResponseChannel() chan interface{} {
@@ -25,35 +15,18 @@ func (r *DcRequest) ResponseChannel() chan interface{} {
 }
 
 func (r *DcRequest) ReadOnly() bool {
-	return r.RequestType == Get
+	_, ok := r.grpcRequest.(*dstk.DcGetReq)
+	return ok
 }
 
 func (r *DcRequest) Key() core.KeyT {
-	return r.K
-}
-
-func newPutRequest(key, value core.KeyT, ttlSeconds float64, ch chan interface{}) *DcRequest {
-	return &DcRequest{
-		K:           key,
-		V:           value,
-		C:           ch,
-		TtlSeconds:  ttlSeconds,
-		RequestType: Put,
+	switch r.grpcRequest.(type) {
+	case *dstk.DcGetReq:
+		return r.grpcRequest.(*dstk.DcGetReq).GetKey()
+	case *dstk.DcPutReq:
+		return r.grpcRequest.(*dstk.DcPutReq).GetKey()
+	case *dstk.DcRemoveReq:
+		return r.grpcRequest.(*dstk.DcRemoveReq).GetKey()
 	}
-}
-
-func newGetRequest(key core.KeyT, ch chan interface{}) *DcRequest {
-	return &DcRequest{
-		K:           key,
-		C:           ch,
-		RequestType: Get,
-	}
-}
-
-func newRemoveRequest(key core.KeyT, ch chan interface{}) *DcRequest {
-	return &DcRequest{
-		K:           key,
-		C:           ch,
-		RequestType: Remove,
-	}
+	return nil
 }
