@@ -48,6 +48,7 @@ func ParseYamlFile(filename string, watch bool, fn YamlRefresher) error {
 func ParseYamlFolder(path string, watch bool, fn YamlRefresher) error {
 	v := viper.New()
 	v.AddConfigPath(path)
+	v.SetConfigName("master")
 	if err := v.ReadInConfig(); err != nil {
 		return err
 	}

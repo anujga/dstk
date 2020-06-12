@@ -43,9 +43,17 @@ func (pm *PartitionMgr) ResetMap(s *state) {
 	// sleep for 1 minute
 	go func() {
 		<-time.NewTimer(1 * time.Minute).C
-		old.m.Close()
+		CloseConsumers(old.m)
 	}()
 
+}
+
+func CloseConsumers(rs *rangemap.RangeMap) {
+	for i := range rs.Iter(core.MinKey) {
+		p := i.(*PartRange)
+		//the consumer will continue to work till mailbox is empty
+		close(p.mailBox)
+	}
 }
 
 // Path = data
@@ -83,6 +91,9 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 }
 
 //todo: should indicate whether changes were applied or not
+// poor algorithm that creates a new map.
+//only apply delta changes. linear serializability is invalid here
+//because there can be 2 mailbox for a given partition
 func (pm *PartitionMgr) syncSe() error {
 	rs, err := pm.rpc.MyParts(context.TODO(),
 		&pb.MyPartsReq{WorkerId: int64(pm.id)})

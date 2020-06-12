@@ -10,9 +10,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"net"
-	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -24,12 +24,14 @@ func StartServer(port int, confPath string) (*core.FutureErr, error) {
 	}
 
 	sock := grpc.NewServer()
-	se := &fileSe{
-		path: confPath,
+	server, err := UsingLocalFolder(confPath, true)
+	if err != nil {
+		return nil, err
 	}
 
-	pb.RegisterSeWorkerApiServer(sock, se)
-	pb.RegisterSeClientApiServer(sock, se)
+	reflection.Register(sock)
+	pb.RegisterSeWorkerApiServer(sock, server)
+	pb.RegisterSeClientApiServer(sock, server)
 
 	f := core.RunAsync(func() error {
 		return sock.Serve(lis)
@@ -58,7 +60,7 @@ func (r *fileSe) AllParts(_ context.Context, _ *pb.AllPartsReq) (*pb.PartList, e
 }
 
 func (r *fileSe) MyParts(_ context.Context, req *pb.MyPartsReq) (*pb.PartList, error) {
-	s := r.state.Load().(seState)
+	s := r.state.Load().(*seState)
 
 	id := se.WorkerId(req.WorkerId)
 	ps, found := s.partsByWorker[id]
@@ -73,7 +75,7 @@ func (r *fileSe) MyParts(_ context.Context, req *pb.MyPartsReq) (*pb.PartList, e
 	}, nil
 }
 
-func UsingLocalFolder(path string, watch bool) (pb.SeWorkerApiServer, error) {
+func UsingLocalFolder(path string, watch bool) (*fileSe, error) {
 	r := &fileSe{
 		path: path,
 	}
@@ -98,6 +100,16 @@ func (r *fileSe) RefreshFile(v *viper.Viper) error {
 	return nil
 }
 
+type startEnd struct {
+	Start, End string
+}
+
+type config struct {
+	Id    int64
+	Parts []startEnd
+	Url   string
+}
+
 func parseConfig(v *viper.Viper) (*seState, *status.Status) {
 	v.SetConfigName("master")
 	ws := v.GetStringSlice("workers")
@@ -110,39 +122,66 @@ func parseConfig(v *viper.Viper) (*seState, *status.Status) {
 	}
 
 	partMap := make(map[se.WorkerId][]*pb.Partition)
-	partList := make([]*pb.Partition, 1000)
+	partList := make([]*pb.Partition, 0, 1000)
 
+	now := time.Now().UnixNano()
 	for _, w := range ws {
 		v.SetConfigName(w)
+		if err := v.ReadInConfig(); err != nil {
+			return nil, status.New(
+				codes.InvalidArgument,
+				err.Error())
+		}
 		zap.S().Infow("parsing worker", "worker", w)
 
-		id, err := strconv.ParseInt(w, 10, 64)
+		var c config
+		err := v.Unmarshal(&c)
 		if err != nil {
-			return nil, status.New(codes.InvalidArgument, err.Error())
+			return nil, status.New(
+				codes.InvalidArgument,
+				err.Error())
 		}
-		workerId := se.WorkerId(id)
+
+		if c.Id == 0 {
+			return nil, core.ErrInfo(
+				codes.InvalidArgument,
+				"Bad partition id",
+				"id", v.Get("id"))
+		}
+		workerId := se.WorkerId(c.Id)
 		if _, found := partMap[workerId]; found {
 			return nil, core.ErrInfo(codes.InvalidArgument,
 				"repeated worker id in master list",
 				"workerId", workerId)
 		}
 
-		parts := v.Get("parts")
-		if parts == nil {
+		if c.Parts == nil {
 			return nil, core.ErrInfo(
 				codes.InvalidArgument,
 				"config does not contain '.parts[]'",
 				"workerId", string(workerId))
 		}
 
-		ps := &pb.Partitions{}
-		err = core.Obj2Proto(parts, ps)
-		if err != nil {
-			return nil, status.New(codes.InvalidArgument, err.Error())
+		var ps = make([]*pb.Partition, 0, len(c.Parts))
+		for _, p := range c.Parts {
+			var end = []byte(p.End)
+			if len(end) == 0 {
+				end = core.MaxKey
+			}
+
+			part := pb.Partition{
+				Id:         0,
+				ModifiedOn: now,
+				Active:     true,
+				Start:      []byte(p.Start),
+				End:        []byte(p.End),
+				Url:        c.Url,
+			}
+			ps = append(ps, &part)
 		}
 
-		partMap[workerId] = ps.Parts
-		partList = append(partList, ps.Parts...)
+		partMap[workerId] = ps
+		partList = append(partList, ps...)
 	}
 
 	return &seState{

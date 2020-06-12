@@ -34,6 +34,7 @@ func (m *partitionConsumer) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*DcRequest)
 	c := msg0.ResponseChannel()
 	defer close(c)
+
 	switch msg.grpcRequest.(type) {
 	case *dstk.DcGetReq:
 		return m.get(msg.grpcRequest.(*dstk.DcGetReq), msg.C)
