@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
@@ -59,18 +58,19 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 
 // 6. Thick client
 
-func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) {
+func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) error {
 	lis, err := net.Listen("tcp", ":9099")
 	if err != nil {
-		panic(fmt.Sprintf("failed to listen: %v", err))
+		return err
 	}
 	s := grpc.NewServer()
 	cacheServer := MakeServer(rh, log, resBufSize)
 	dstk.RegisterDcRpcServer(s, cacheServer)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
-		panic(fmt.Sprintf("failed to serve: %v", err))
+		return err
 	}
+	return nil
 }
 
 func main() {
@@ -88,12 +88,13 @@ func main() {
 	}
 
 	f := core.RunAsync(func() error {
-		server()
-		return nil
+		msgHandler := &ss.MsgHandler{Router: router}
+		return startGrpcServer(router, zap.L(), chanSize, msgHandler)
 	})
-	msgHandler := &ss.MsgHandler{Router: router}
-	startGrpcServer(router, zap.L(), chanSize, msgHandler)
-	f.Wait()
+	err = f.Wait()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func init() {

@@ -2,17 +2,41 @@ package simple
 
 import (
 	"context"
+	"fmt"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"net"
 	"strconv"
 	"sync/atomic"
 	"time"
 )
+
+func StartServer(port int, confPath string) (*core.FutureErr, error) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return nil, err
+	}
+
+	sock := grpc.NewServer()
+	se := &fileSe{
+		path: confPath,
+	}
+
+	pb.RegisterSeWorkerApiServer(sock, se)
+	pb.RegisterSeClientApiServer(sock, se)
+
+	f := core.RunAsync(func() error {
+		return sock.Serve(lis)
+	})
+
+	return f, nil
+}
 
 type fileSe struct {
 	path  string
