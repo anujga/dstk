@@ -31,7 +31,7 @@ func (mh *MsgHandler) Handle(req Msg) (interface{}, error) {
 	if err := mh.OnMsg(req); err != nil {
 		// TODO find a better place to close this
 		close(req.ResponseChannel())
-		return "", err.Err()
+		return "", err
 	} else {
 		var response interface{}
 		var errToRet error

@@ -4,6 +4,7 @@ import (
 	"context"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"google.golang.org/grpc"
 )
 
 type slicerCli struct {
@@ -30,4 +31,20 @@ type ThickClient interface {
 	// a snapshot. this is an expensive op, hence provided separately
 	// instead of sending on the channel.
 	Parts() ([]*pb.Partition, error)
+}
+
+func NewSeClient(ctx context.Context, target string, opts ...grpc.DialOption) (pb.SeClientApiClient, error) {
+	conn, err := grpc.DialContext(ctx, target, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return pb.NewSeClientApiClient(conn), err
+}
+
+func NewSeWorker(ctx context.Context, target string, opts ...grpc.DialOption) (pb.SeWorkerApiClient, error) {
+	conn, err := grpc.DialContext(ctx, target, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return pb.NewSeWorkerApiClient(conn), err
 }
