@@ -1,8 +1,6 @@
 syntax = "proto3";
 package dstk;
 
-import "common.proto";
-
 message MkvPartition {
     message Entry {
         bytes key = 1;
