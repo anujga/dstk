@@ -1,8 +1,5 @@
 max_outstanding: 1000
-db_path: /var/tmp/mkv-db
+db_path: /tmp/mkv-db
 response_buffer_size: 5
-parts:
-  - start: ""
-    end: "o"
-  - start: "w"
-    end: "z"
+se_url: localhost:6001
+worker_id: 1

@@ -32,7 +32,11 @@ func (pm *PartitionMgr) Map() *rangemap.RangeMap {
 }
 
 func (pm *PartitionMgr) State() *state {
-	return pm.state.Load().(*state)
+	s := pm.state.Load()
+	if s == nil {
+		return nil
+	}
+	return s.(*state)
 }
 
 func (pm *PartitionMgr) ResetMap(s *state) {
@@ -43,7 +47,9 @@ func (pm *PartitionMgr) ResetMap(s *state) {
 	// sleep for 1 minute
 	go func() {
 		<-time.NewTimer(1 * time.Minute).C
-		CloseConsumers(old.m)
+		if old != nil {
+			CloseConsumers(old.m)
+		}
 	}()
 
 }
@@ -74,7 +80,7 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 		slog:     zap.S().With("workerId", workerId),
 	}
 
-	core.Repeat(30*time.Second, func(timestamp time.Time) bool {
+	core.Repeat(5*time.Second, func(timestamp time.Time) bool {
 		err := pm.syncSe()
 		if err != nil {
 			pm.slog.Errorw("fetch updates from SE",
@@ -86,6 +92,10 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 				"delay", delay)
 		}
 		return true
+	})
+	pm.ResetMap(&state{
+		m:            rangemap.New(15),
+		lastModified: 0,
 	})
 	return pm
 }
@@ -102,15 +112,16 @@ func (pm *PartitionMgr) syncSe() error {
 	}
 
 	newTime := rs.GetLastModified()
-	if newTime <= pm.State().lastModified {
+	s := pm.State()
+	if newTime <= s.lastModified {
 		return nil
 	}
-	s, err := newMap(pm, rs)
+	newState, err := newMap(pm, rs)
 	if err != nil {
 		return err
 	}
 
-	pm.ResetMap(s)
+	pm.ResetMap(newState)
 	return nil
 }
 

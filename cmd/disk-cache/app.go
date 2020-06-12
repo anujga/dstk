@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
@@ -74,10 +75,15 @@ func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss
 }
 
 func main() {
+	core.ZapGlobalLevel(zap.InfoLevel)
 	chanSize := viper.GetInt64("response_buffer_size")
-	workerId := se.WorkerId(viper.GetInt64("worker_id"))
-	targetUrl := viper.GetString("seServer")
-	rpc, err := se.NewSeWorker(context.TODO(), targetUrl)
+	wid := viper.GetInt64("worker_id")
+	if wid <= 0 {
+		panic(fmt.Sprintf("Bad worker id %s", viper.Get("worker_id")))
+	}
+	workerId := se.WorkerId(wid)
+	targetUrl := viper.GetString("se_url")
+	rpc, err := se.NewSeWorker(context.TODO(), targetUrl, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
