@@ -5,6 +5,7 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/rangemap"
+	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"sync/atomic"
@@ -17,7 +18,7 @@ type PartitionMgr struct {
 	consumer ConsumerFactory
 	state    atomic.Value //[state]
 	rpc      pb.SeWorkerApiClient
-	id       int64
+	id       se.WorkerId
 	slog     *zap.SugaredLogger
 }
 
@@ -57,7 +58,7 @@ func (pm *PartitionMgr) Find(key core.KeyT) (*PartRange, error) {
 }
 
 //todo: ensure there is at least 1 partition during construction
-func NewPartitionMgr2(workerId int64, consumer ConsumerFactory, rpc pb.SeWorkerApiClient) *PartitionMgr {
+func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeWorkerApiClient) *PartitionMgr {
 	pm := &PartitionMgr{
 		consumer: consumer,
 		rpc:      rpc,
@@ -84,7 +85,7 @@ func NewPartitionMgr2(workerId int64, consumer ConsumerFactory, rpc pb.SeWorkerA
 //todo: should indicate whether changes were applied or not
 func (pm *PartitionMgr) syncSe() error {
 	rs, err := pm.rpc.MyParts(context.TODO(),
-		&pb.MyPartsReq{WorkerId: pm.id})
+		&pb.MyPartsReq{WorkerId: int64(pm.id)})
 	if err != nil {
 		return err
 	}
