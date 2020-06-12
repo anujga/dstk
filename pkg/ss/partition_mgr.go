@@ -43,9 +43,17 @@ func (pm *PartitionMgr) ResetMap(s *state) {
 	// sleep for 1 minute
 	go func() {
 		<-time.NewTimer(1 * time.Minute).C
-		old.m.Close()
+		CloseConsumers(old.m)
 	}()
 
+}
+
+func CloseConsumers(rs *rangemap.RangeMap) {
+	for i := range rs.Iter(core.MinKey) {
+		p := i.(*PartRange)
+		//the consumer will continue to work till mailbox is empty
+		close(p.mailBox)
+	}
 }
 
 // Path = data

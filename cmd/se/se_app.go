@@ -7,7 +7,7 @@ import (
 
 func main() {
 	var port = flag.Int("port", 6001, "grpc port")
-	var confPath = flag.String("port", "./conf", "path of the config folder")
+	var confPath = flag.String("conf", "./conf", "path of the config folder")
 	flag.Parse()
 
 	f, err := simple.StartServer(*port, *confPath)

@@ -24,12 +24,13 @@ func StartServer(port int, confPath string) (*core.FutureErr, error) {
 	}
 
 	sock := grpc.NewServer()
-	se := &fileSe{
-		path: confPath,
+	server, err := UsingLocalFolder(confPath, true)
+	if err != nil {
+		return nil, err
 	}
 
-	pb.RegisterSeWorkerApiServer(sock, se)
-	pb.RegisterSeClientApiServer(sock, se)
+	pb.RegisterSeWorkerApiServer(sock, server)
+	pb.RegisterSeClientApiServer(sock, server)
 
 	f := core.RunAsync(func() error {
 		return sock.Serve(lis)
@@ -73,7 +74,7 @@ func (r *fileSe) MyParts(_ context.Context, req *pb.MyPartsReq) (*pb.PartList, e
 	}, nil
 }
 
-func UsingLocalFolder(path string, watch bool) (pb.SeWorkerApiServer, error) {
+func UsingLocalFolder(path string, watch bool) (*fileSe, error) {
 	r := &fileSe{
 		path: path,
 	}

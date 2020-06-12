@@ -2,12 +2,19 @@ package rangemap
 
 import (
 	"bytes"
-	"errors"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/google/btree"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-var ErrInvalidRange = errors.New("invalid range")
+func ErrInvalidRange(r Range) *status.Status {
+	return core.ErrInfo(
+		codes.InvalidArgument,
+		"invalid range",
+		"start", r.Start(),
+		"end", r.End())
+}
 
 type Range interface {
 	Start() core.KeyT
@@ -35,6 +42,10 @@ func NewRange(rng Range) (*rangeItem, error) {
 	if rng.End() == nil || bytes.Compare(rng.Start(), rng.End()) < 0 {
 		return &rangeItem{rng}, nil
 	} else {
-		return nil, ErrInvalidRange
+		return nil, ErrInvalidRange(rng).Err()
 	}
+}
+
+func NewKeyRange(k core.KeyT) *rangeItem {
+	return &rangeItem{&dummyRange{start: k}}
 }
