@@ -9,6 +9,7 @@ type Wrapper struct {
 	*badger.DB
 }
 
+// thread safe
 func (w *Wrapper) Get(key []byte) ([]byte, error) {
 	var res []byte
 	err := w.View(func(txn *badger.Txn) error {
@@ -25,6 +26,7 @@ func (w *Wrapper) Get(key []byte) ([]byte, error) {
 	return res, nil
 }
 
+// thread safe
 func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float64) error {
 	return w.Update(func(txn *badger.Txn) error {
 		entry := badger.NewEntry(key, value).WithTTL(time.Duration(ttlSeconds) * time.Second)
@@ -32,12 +34,13 @@ func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float64) error {
 	})
 }
 
+// thread safe
 func (w *Wrapper) Remove(key []byte) error {
 	return w.Update(func(txn *badger.Txn) error {
 		return txn.Delete(key)
 	})
 }
 
-func (w *Wrapper) Close() error {
+func (w *Wrapper) StoreClose() error {
 	return w.Close()
 }

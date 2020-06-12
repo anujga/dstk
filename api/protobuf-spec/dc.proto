@@ -1,0 +1,29 @@
+syntax = "proto3";
+package dstk;
+
+message DcGetReq {
+  bytes key = 1;
+}
+
+message DcGetRes {
+  bytes value = 2;
+}
+
+message DcRemoveReq {
+  bytes key = 1;
+}
+
+message DcRes {
+}
+
+message DcPutReq {
+  bytes key = 1;
+  bytes value = 2;
+  float ttl_seconds = 3;
+}
+
+service DcRpc {
+  rpc Get (DcGetReq) returns (DcGetRes);
+  rpc Put (DcPutReq) returns (DcRes);
+  rpc Remove (DcRemoveReq) returns (DcRes);
+}

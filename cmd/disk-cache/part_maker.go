@@ -10,16 +10,15 @@ import (
 )
 
 // 3. implement ss.ConsumerFactory
-type partitionCounterMaker struct {
+type partitionConsumerMaker struct {
 	db             *bdb.Wrapper
 	maxOutstanding int
 }
 
-func (m *partitionCounterMaker) Make(p *dstk.Partition) (ss.PartHandler, int, error) {
-	pc := &PersistentCounter{db: m.db}
-	return &partitionCounter{
+func (m *partitionConsumerMaker) Make(p *dstk.Partition) (ss.PartHandler, int, error) {
+	return &partitionConsumer{
 		p:  p,
-		pc: pc,
+		pc: m.db,
 	}, m.maxOutstanding, nil
 }
 
@@ -38,12 +37,12 @@ func getDb(dbPath string) (*badger.DB, error) {
 	return db, err
 }
 
-func newCounterMaker(dbPath string, maxOutstanding int) (*partitionCounterMaker, error) {
+func newConsumerMaker(dbPath string, maxOutstanding int) (*partitionConsumerMaker, error) {
 	db, err := getDb(dbPath)
 	if err != nil {
 		return nil, err
 	}
-	return &partitionCounterMaker{
+	return &partitionConsumerMaker{
 		db:             &bdb.Wrapper{DB: db},
 		maxOutstanding: maxOutstanding,
 	}, nil

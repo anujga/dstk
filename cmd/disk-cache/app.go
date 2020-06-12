@@ -5,14 +5,15 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss"
+	"github.com/anujga/dstk/pkg/utils"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
+	"net/http"
 )
-
-type handler func(*Request) (string, error)
 
 type Parts struct {
 	Parts []struct {
@@ -30,13 +31,13 @@ func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionM
 			return err
 		}
 	}
-	slog.Infof("partitions count = %d\n", i+1)
+	slog.Infof("partitions count = %d", i+1)
 	return nil
 }
 
 // 4. glue it up together
-func glue() (ss.Router, error) {
-	factory, err := newCounterMaker(
+func glue(logger *zap.Logger) (ss.Router, error) {
+	factory, err := newConsumerMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
 	if err != nil {
@@ -50,7 +51,7 @@ func glue() (ss.Router, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog := zap.S()
+	slog := logger.Sugar()
 	slog.Infow("Adding partitions", "keys", parts)
 	err = addPartitions(parts, slog, pm)
 	return pm, err
@@ -58,15 +59,14 @@ func glue() (ss.Router, error) {
 
 // 6. Thick client
 
-func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64) {
+func startGrpcServer(log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) {
 	lis, err := net.Listen("tcp", ":9099")
 	if err != nil {
 		panic(fmt.Sprintf("failed to listen: %v", err))
 	}
 	s := grpc.NewServer()
-	rh := &ss.MsgHandler{Router: router}
-	counterServer := MakeServer(rh, log, resBufSize)
-	dstk.RegisterCounterRpcServer(s, counterServer)
+	cacheServer := MakeServer(rh, log, resBufSize)
+	dstk.RegisterDcRpcServer(s, cacheServer)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		panic(fmt.Sprintf("failed to serve: %v", err))
@@ -74,21 +74,27 @@ func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64) {
 }
 
 func main() {
-	router, err := glue()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	router, err := glue(logger)
 	if err != nil {
 		panic(err)
 	}
 	chanSize := viper.GetInt64("response_buffer_size")
 	go func() {
-		// this is to enable prometheus
-		<-server(nil, nil)
+		<-utils.HttpServer(map[string]http.Handler{
+			"/metrics": promhttp.Handler(),
+		}, ":8080")
 	}()
-	startGrpcServer(router, zap.L(), chanSize)
+	msgHandler := &ss.MsgHandler{Router: router}
+	startGrpcServer(logger, chanSize, msgHandler)
 }
 
 func init() {
 	var conf = flag.String(
-		"conf", "./", "config file")
+		"conf", "./cmd/disk-cache", "config file")
 	flag.Parse()
 	viper.AddConfigPath(*conf)
 	if err := viper.ReadInConfig(); err != nil {

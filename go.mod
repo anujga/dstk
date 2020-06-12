@@ -6,9 +6,9 @@ require (
 	github.com/dgraph-io/badger/v2 v2.0.3
 	github.com/emirpasic/gods v1.12.0
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/golang/protobuf v1.4.1
+	github.com/golang/protobuf v1.4.2
 	github.com/google/btree v1.0.0
-	github.com/google/go-cmp v0.4.1 // indirect
+	github.com/google/go-cmp v0.4.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/viper v1.7.0
 	go.uber.org/zap v1.15.0
@@ -19,6 +19,5 @@ require (
 	google.golang.org/genproto v0.0.0-20200528191852-705c0b31589b
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.24.0
-	gopkg.in/errgo.v2 v2.1.0
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 )

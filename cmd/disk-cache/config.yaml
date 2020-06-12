@@ -1,5 +1,5 @@
-max_outstanding: 10000
-db_path: /var/tmp/counter-db
+max_outstanding: 1000
+db_path: /var/tmp/mkv-db
 response_buffer_size: 5
 parts:
   - start: ""
