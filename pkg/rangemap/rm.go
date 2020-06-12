@@ -90,3 +90,7 @@ func (rm *RangeMap) Remove(rng Range) (Range, error) {
 		}
 	}
 }
+
+func (rm *RangeMap) Close() {
+	panic("not implemented")
+}
