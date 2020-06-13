@@ -15,7 +15,7 @@ type Client interface {
 	Remove(key core.KeyT) error
 }
 
-type Impl struct {
+type impl struct {
 	tc     se.ThickClient
 	rpcMap *core.ConcurrentMap
 }
@@ -30,7 +30,7 @@ func newClientLambda(ctx context.Context) func(target interface{}) (interface{},
 	}
 }
 
-func (i *Impl) getRpc(ctx context.Context, key core.KeyT) (pb.DcRpcClient, error) {
+func (i *impl) getRpc(ctx context.Context, key core.KeyT) (pb.DcRpcClient, error) {
 	if part, err := i.tc.Get(ctx, key); err == nil {
 		if res, err := i.rpcMap.ComputeIfAbsent(part.GetUrl(), newClientLambda(ctx)); err == nil {
 			return res.(pb.DcRpcClient), nil
@@ -42,7 +42,7 @@ func (i *Impl) getRpc(ctx context.Context, key core.KeyT) (pb.DcRpcClient, error
 	}
 }
 
-func (i *Impl) Get(key core.KeyT) ([]byte, error) {
+func (i *impl) Get(key core.KeyT) ([]byte, error) {
 	ctx := context.TODO()
 	if rpc, err := i.getRpc(ctx, key); err == nil {
 		rpcResponse, err := rpc.Get(ctx, &pb.DcGetReq{Key: key})
@@ -56,11 +56,11 @@ func (i *Impl) Get(key core.KeyT) ([]byte, error) {
 	}
 }
 
-func (i *Impl) Put(key, value core.KeyT) error {
+func (i *impl) Put(key, value core.KeyT) error {
 	panic("implement me")
 }
 
-func (i *Impl) Remove(key core.KeyT) error {
+func (i *impl) Remove(key core.KeyT) error {
 	panic("implement me")
 }
 
@@ -69,7 +69,7 @@ func NewClient(ctx context.Context, seUrl string, opts ...grpc.DialOption) (Clie
 	if err != nil {
 		return nil, err
 	}
-	c := Impl{
+	c := impl{
 		tc:     se.NewThickClient("c1", seClient),
 		rpcMap: core.NewConcurrentMap(),
 	}
