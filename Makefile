@@ -2,7 +2,7 @@ GO_FILES := $(shell find . -type f -name '*.go' -print)
 PROTO_FILES := $(shell find . -type f -name '*.proto' -print)
 PROTO_PATH := api/protobuf-spec/
 PROTO_OUT_DIR := pkg/api/proto/
-PATH := $(PATH):/home/gowrisundaram/go/bin:/usr/local/go/bin
+PATH := $(PATH):/home/gowrisundaram/go/bin
 
 .PHONY: test
 test: $(GO_FILES) | protobuf
