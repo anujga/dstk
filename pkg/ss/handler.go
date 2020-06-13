@@ -9,10 +9,8 @@ func handleResponseElement(elem interface{}, response *interface{}, e *error) {
 	switch elem.(type) {
 	case int64:
 		*response = elem.(int64)
-		*e = nil
 	case string:
 		*response = elem.(string)
-		*e = nil
 	case error:
 		*e = elem.(error)
 		*response = (*e).Error()
