@@ -32,6 +32,7 @@ func newClientLambda(ctx context.Context) func(target interface{}) (interface{},
 
 func (i *impl) getRpc(ctx context.Context, key core.KeyT) (pb.DcRpcClient, error) {
 	if part, err := i.tc.Get(ctx, key); err == nil {
+		// TODO will taking a lock on map become a choke point?
 		if res, err := i.rpcMap.ComputeIfAbsent(part.GetUrl(), newClientLambda(ctx)); err == nil {
 			return res.(pb.DcRpcClient), nil
 		} else {
@@ -42,6 +43,7 @@ func (i *impl) getRpc(ctx context.Context, key core.KeyT) (pb.DcRpcClient, error
 	}
 }
 
+// thread safe
 func (i *impl) Get(key core.KeyT) ([]byte, error) {
 	ctx := context.TODO()
 	if rpc, err := i.getRpc(ctx, key); err == nil {
