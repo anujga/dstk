@@ -1,13 +1,19 @@
 package rangemap
 
 import (
-	"errors"
 	"fmt"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/google/btree"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-var ErrKeyAbsent = errors.New("key absent")
+func ErrKeyAbsent(k core.KeyT) *status.Status {
+	return core.ErrInfo(
+		codes.InvalidArgument,
+		"key absent",
+		"key", k)
+}
 
 type dummyRange struct {
 	start core.KeyT
@@ -38,16 +44,33 @@ func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
 	return itemInTree
 }
 
+func (rm *RangeMap) Iter(start core.KeyT) chan interface{} {
+	item := NewKeyRange(start)
+	ch := make(chan interface{})
+	go func() {
+		rm.root.AscendGreaterOrEqual(item, func(i btree.Item) bool {
+			ch <- i
+			return true
+		})
+		close(ch)
+	}()
+
+	return ch
+}
+
 func (rm *RangeMap) Get(key core.KeyT) (Range, error) {
 	item, err := NewRange(&dummyRange{start: key})
 	if err != nil {
 		return nil, err
 	}
 	pred := rm.getLessOrEqual(item)
+	if pred == nil {
+		return nil, ErrKeyAbsent(key).Err()
+	}
 	if pred.contains(key) {
 		return pred.Range, nil
 	}
-	return nil, ErrKeyAbsent
+	return nil, ErrKeyAbsent(key).Err()
 }
 
 func (rm *RangeMap) Put(rng Range) error {
@@ -80,7 +103,7 @@ func (rm *RangeMap) Remove(rng Range) (Range, error) {
 		return nil, err
 	}
 	if item := rm.getLessOrEqual(delItem); item == nil {
-		return nil, ErrKeyAbsent
+		return nil, ErrInvalidRange(rng).Err()
 	} else {
 		if !item.Less(delItem) && !delItem.Less(item) {
 			ri := rm.root.Delete(item)

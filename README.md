@@ -8,9 +8,11 @@ Distributed System Toolkit. Collection of modules and reference designs to
     apt  install protobuf-compiler golang-1.14
   
     # Perfer this over makefile for new changes
-    go install -v github.com/go-task/task/cmd/task
+    https://taskfile.dev/#/installation
     ```
 - [Dev Guidlines](docs/dev.md)
+- Start SE on port 6001
+    `task se`
 
 ## Reference Architectures
 - [Stateful Services](pkg/ss/README.md)

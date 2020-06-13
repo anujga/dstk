@@ -5,6 +5,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -48,6 +49,7 @@ func ParseYamlFile(filename string, watch bool, fn YamlRefresher) error {
 func ParseYamlFolder(path string, watch bool, fn YamlRefresher) error {
 	v := viper.New()
 	v.AddConfigPath(path)
+	v.SetConfigName("master")
 	if err := v.ReadInConfig(); err != nil {
 		return err
 	}
@@ -80,4 +82,15 @@ func YamlParserV(v *viper.Viper, watch bool, p YamlRefresher) error {
 	}
 
 	return nil
+}
+
+func ZapGlobalLevel(l zapcore.Level) {
+	c := zap.NewDevelopmentConfig()
+	c.Level = zap.NewAtomicLevelAt(l)
+	log, err := c.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	zap.ReplaceGlobals(log)
 }

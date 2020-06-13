@@ -1,42 +1,42 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
+	"github.com/anujga/dstk/pkg/core"
+	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/ss"
-	"github.com/anujga/dstk/pkg/utils"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
-	"net/http"
 )
 
-type Parts struct {
-	Parts []struct {
-		Start string
-		End   string
-	}
-}
+//type Parts struct {
+//	Parts []struct {
+//		Start string
+//		End   string
+//	}
+//}
 
-func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
-	i := 0
-	for i, p := range (*partitions).Parts {
-		slog.Infow("Adding Partition", "id", i, "end", p)
-		pv := dstk.Partition{Id: int64(i), End: []byte(p.End), Start: []byte(p.Start)}
-		if err := pm.Add(&pv); err != nil {
-			return err
-		}
-	}
-	slog.Infof("partitions count = %d", i+1)
-	return nil
-}
+//func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
+//	i := 0
+//	for i, p := range (*partitions).Parts {
+//		slog.Infow("Adding Partition", "id", i, "end", p)
+//		pv := dstk.Partition{Id: int64(i), End: []byte(p.End), Start: []byte(p.Start)}
+//		if err := pm.Add(&pv); err != nil {
+//			return err
+//		}
+//	}
+//	slog.Infof("partitions count = %d\n", i+1)
+//	return nil
+//}
 
 // 4. glue it up together
-func glue(logger *zap.Logger) (ss.Router, error) {
+func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 	factory, err := newConsumerMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
@@ -44,52 +44,63 @@ func glue(logger *zap.Logger) (ss.Router, error) {
 		return nil, err
 	}
 	// 4.1 Make the Partition Manager
-	pm := ss.NewPartitionMgr(factory, zap.L())
+	pm := ss.NewPartitionMgr2(workerId, factory, rpc)
 	// 4.2 Register predefined partitions.
-	parts := new(Parts)
-	err = viper.Unmarshal(&parts)
-	if err != nil {
-		return nil, err
-	}
-	slog := logger.Sugar()
-	slog.Infow("Adding partitions", "keys", parts)
-	err = addPartitions(parts, slog, pm)
+	//parts := new(Parts)
+	//err = viper.Unmarshal(&parts)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//slog := zap.S()
+	//slog.Infow("Adding partitions", "keys", parts)
+	//err = addPartitions(parts, slog, pm)
 	return pm, err
 }
 
 // 6. Thick client
 
-func startGrpcServer(log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) {
+func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) error {
 	lis, err := net.Listen("tcp", ":9099")
 	if err != nil {
-		panic(fmt.Sprintf("failed to listen: %v", err))
+		return err
 	}
 	s := grpc.NewServer()
 	cacheServer := MakeServer(rh, log, resBufSize)
 	dstk.RegisterDcRpcServer(s, cacheServer)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
-		panic(fmt.Sprintf("failed to serve: %v", err))
+		return err
 	}
+	return nil
 }
 
 func main() {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-	router, err := glue(logger)
-	if err != nil {
-		panic(err)
-	}
+	core.ZapGlobalLevel(zap.InfoLevel)
 	chanSize := viper.GetInt64("response_buffer_size")
-	go func() {
-		<-utils.HttpServer(map[string]http.Handler{
-			"/metrics": promhttp.Handler(),
-		}, ":8080")
-	}()
-	msgHandler := &ss.MsgHandler{Router: router}
-	startGrpcServer(logger, chanSize, msgHandler)
+	wid := viper.GetInt64("worker_id")
+	if wid <= 0 {
+		panic(fmt.Sprintf("Bad worker id %s", viper.Get("worker_id")))
+	}
+	workerId := se.WorkerId(wid)
+	targetUrl := viper.GetString("se_url")
+	rpc, err := se.NewSeWorker(context.TODO(), targetUrl, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+
+	router, err := glue(workerId, rpc)
+	if err != nil {
+		panic(err)
+	}
+
+	f := core.RunAsync(func() error {
+		msgHandler := &ss.MsgHandler{Router: router}
+		return startGrpcServer(router, zap.L(), chanSize, msgHandler)
+	})
+	err = f.Wait()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func init() {
