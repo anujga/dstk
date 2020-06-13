@@ -16,6 +16,8 @@ func handleResponseElement(elem interface{}, response *interface{}, e *error) {
 	case error:
 		*e = elem.(error)
 		*response = (*e).Error()
+	case []byte:
+		*response = elem.([]byte)
 	default:
 		*response = "internal error"
 		*e = errors.New("invalid response")
