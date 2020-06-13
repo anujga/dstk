@@ -25,10 +25,6 @@ func (m *partitionConsumer) get(req *dstk.DcGetReq, ch chan interface{}) bool {
 		return true
 	} else {
 		ch <- err
-		err := m.pc.Put(req.GetKey(), req.GetKey(), 1000)
-		if err != nil {
-			fmt.Printf("error in putting %v", err)
-		}
 		return false
 	}
 }
