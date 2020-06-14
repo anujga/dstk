@@ -67,8 +67,27 @@ func (d DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcRe
 	}
 }
 
-func (d DiskCacheServer) Remove(ctx context.Context, req *pb.DcRemoveReq) (*pb.DcRes, error) {
-	panic("implement me")
+func (d DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*pb.DcRes, error) {
+	if rpcReq.GetKey() == nil {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"Key cannot be null")
+	}
+	ch := make(chan interface{}, d.resBufSize)
+	req := &DcRequest{
+		grpcRequest: rpcReq,
+		C:           ch,
+	}
+	if responses, err := d.reqHandler.Handle(req); err != nil {
+		return nil, err
+	} else {
+		if len(responses) == 0 {
+			return &pb.DcRes{}, nil
+		} else {
+			d.log.Error("invalid response", zap.Any("responses", responses))
+			return nil, status.Error(codes.Internal, "internal")
+		}
+	}
 }
 
 func MakeServer(rh *ss.MsgHandler, log *zap.Logger, resBufSize int64) *DiskCacheServer {
