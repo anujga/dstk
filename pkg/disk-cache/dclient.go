@@ -5,60 +5,35 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
+	"github.com/anujga/dstk/pkg/ss/partrpc"
 	"google.golang.org/grpc"
-	"time"
 )
 
 type Client interface {
 	Get(key core.KeyT) ([]byte, error)
-	Put(key, value core.KeyT) error
+	Put(key, value core.KeyT, ttlSeconds float32) error
 	Remove(key core.KeyT) error
 }
 
 type impl struct {
-	tc     se.ThickClient
-	rpcMap *core.ConcurrentMap
+	clientPool partrpc.PartitionClientPool
 }
 
-func newClientLambda(ctx context.Context) func(target interface{}) (interface{}, error) {
-	return func(target interface{}) (interface{}, error) {
-		conn, err := grpc.DialContext(ctx, target.(string), grpc.WithInsecure())
-		if err != nil {
-			return nil, err
-		}
-		return pb.NewDcRpcClient(conn), err
-	}
-}
-
-func (i *impl) getRpc(ctx context.Context, key core.KeyT) (pb.DcRpcClient, error) {
-	if part, err := i.tc.Get(ctx, key); err == nil {
-		// TODO will taking a lock on map become a choke point?
-		if res, err := i.rpcMap.ComputeIfAbsent(part.GetUrl(), newClientLambda(ctx)); err == nil {
-			return res.(pb.DcRpcClient), nil
-		} else {
-			return nil, err
-		}
-	} else {
-		return nil, err
-	}
-}
-
-// thread safe
 func (i *impl) Get(key core.KeyT) ([]byte, error) {
 	ctx := context.TODO()
-	if rpc, err := i.getRpc(ctx, key); err == nil {
-		rpcResponse, err := rpc.Get(ctx, &pb.DcGetReq{Key: key})
-		if err != nil {
-			return nil, err
-		} else {
+	if client, err := i.clientPool.GetClient(ctx, key); err == nil {
+		dcClient := client.RpcClient().(pb.DcRpcClient)
+		if rpcResponse, err := dcClient.Get(ctx, &pb.DcGetReq{Key: key}); err == nil {
 			return rpcResponse.GetValue(), nil
+		} else {
+			return nil, err
 		}
 	} else {
 		return nil, err
 	}
 }
 
-func (i *impl) Put(key, value core.KeyT) error {
+func (i *impl) Put(key, value core.KeyT, ttlSeconds float32) error {
 	panic("implement me")
 }
 
@@ -71,11 +46,10 @@ func NewClient(ctx context.Context, seUrl string, opts ...grpc.DialOption) (Clie
 	if err != nil {
 		return nil, err
 	}
-	c := impl{
-		tc:     se.NewThickClient("c1", seClient),
-		rpcMap: core.NewConcurrentMap(),
-	}
-	// thick client state is not loaded immediately, so waiting. we need to fix this
-	time.Sleep(time.Second * 80)
-	return &c, nil
+	clientPool := partrpc.NewPartitionClientPool(func(conn *grpc.ClientConn) interface{} {
+		return pb.NewDcRpcClient(conn)
+	}, seClient, opts...)
+	return &impl{
+		clientPool: clientPool,
+	}, nil
 }

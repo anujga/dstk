@@ -12,7 +12,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	val, err := client.Get([]byte("foo"))
+	val, err := client.Get([]byte("harsha"))
 	if err != nil {
 		fmt.Println(err)
 	} else {

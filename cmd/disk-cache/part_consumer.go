@@ -29,15 +29,25 @@ func (m *partitionConsumer) get(req *dstk.DcGetReq, ch chan interface{}) bool {
 	}
 }
 
+func (m *partitionConsumer) put(req *dstk.DcPutReq, ch chan interface{}) bool {
+	if err := m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds()); err == nil {
+		return true
+	} else {
+		ch <- err
+		return false
+	}
+}
+
 /// this method does not have to be thread safe
 func (m *partitionConsumer) Process(msg0 ss.Msg) bool {
 	msg := msg0.(*DcRequest)
 	c := msg0.ResponseChannel()
 	defer close(c)
-
 	switch msg.grpcRequest.(type) {
 	case *dstk.DcGetReq:
 		return m.get(msg.grpcRequest.(*dstk.DcGetReq), msg.C)
+	case *dstk.DcPutReq:
+		return m.put(msg.grpcRequest.(*dstk.DcPutReq), msg.C)
 	default:
 		c <- errors.New(fmt.Sprintf("invalid message %v", msg))
 		return false
