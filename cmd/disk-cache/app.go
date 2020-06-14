@@ -59,7 +59,7 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 
 // 6. Thick client
 
-func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) error {
+func startGrpcServer(log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) error {
 	lis, err := net.Listen("tcp", ":9099")
 	if err != nil {
 		return err
@@ -94,8 +94,7 @@ func main() {
 	}
 
 	f := core.RunAsync(func() error {
-		msgHandler := &ss.MsgHandler{Router: router}
-		return startGrpcServer(router, zap.L(), chanSize, msgHandler)
+		return startGrpcServer(zap.L(), chanSize, &ss.MsgHandler{Router: router})
 	})
 	err = f.Wait()
 	if err != nil {
