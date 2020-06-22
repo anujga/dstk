@@ -48,3 +48,7 @@ spec:
 status:
   pod1: primary
 ```
+
+Note that this is similar to how a pod runs on a node in k8s. `kube-scheduler` populates `node` field in `PodSpec` which is watched by `kubelet`. `kubelet` makes sure the assigned pods are run on the corresponding node. In our case, `Assigner` plays the role of `kube-scheduler` and `Assignment Reconciler` plays the role of `kubelet`, but not at a node level.
+
+Also, we can think about running an `Assignment Reconciler` in every worker pod as a side car and make it responsible for just that pod, but I haven't worked out pros and cons in that case yet.
