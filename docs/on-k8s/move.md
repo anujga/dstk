@@ -1,11 +1,12 @@
-## Moving a partition from pod to another pod
+## Moving a partition from one pod to another
 
-Moving is a multi-phase operation with the following phases:
+Moving would be a multi-phase operation with the following phases:
 1. Make the new pod a follower of existing partition
-1. Once the new pod is caught up, we make the new pod primary and old pod as a proxy to new pod so that stale clients don't see any errors.
-1. After a threshold time, remove the old pod from assignments of partition.
+1. Once the new pod is caught up, we make the new pod primary and old pod as a proxy to new pod so that the service is available to stale clients as well.
+1. After a threshold time, old pod is removed from assignments of partition.
 
 Consider a case where `Assigner` decided to move the partition `part1` from pod `srcPod` to `dstPod`.
+
 Current `Partition` definition:
 ```yaml
 metadata:
@@ -45,7 +46,7 @@ status:
   dstPod: starting
 ```
 
-Once the state is loaded (by interacting with pod), Assignment Reconciler would update the status of new pod as follower.
+Once the state is loaded, Assignment Reconciler would update the status of new pod as follower.
 ```yaml
 status:
   srcPod: primary
