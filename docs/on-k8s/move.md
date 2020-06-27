@@ -9,109 +9,120 @@ Consider a case where `Assigner` decided to move the partition `part1` from pod 
 
 Current `Partition` definition:
 ```yaml
+kind: Partition
 metadata:
   name: part1
 spec:
   range:
     start: a
     end: o
-  assignedPods:
-    - name: srcPod
-      status: primary
+  primary: srcPod
 status:
-  srcPod: primary
+  ready
 ```
 
-`Assigner` would update the `assignments` field as follows:
+`Assigner` would generate an `Assignment` object as shown:
 ```yaml
+kind: Assignment
 metadata:
-  name: part1
+  name: a1
 spec:
-  range:
-    start: a
-    end: o
-  assignedPods:
-    - name: srcPod
-      type: primary
-    - name: dstPod
-      type: follower
+  # Move could be simpler it makes sense only inter-worker, but picking an explicit name
+  type: InterWorkerMove
+  moveParams:
+    partition: part1
+    from: srcPod
+    to: dstPod
 status:
-  srcPod: primary
 ```
 
-Assignment Reconciler will make a request to dstPod to start following part1 and will mark its status as starting.
+`AssignmentReconciler` will make a request to dstPod to start following part1 and will mark its status accordingly.
 ```yaml
+kind: Assignment
+metadata:
+  name: a1
+spec:
+  type: InterWorkerMove
+  moveParams:
+    partition: part1
+    from: srcPod
+    to: dstPod
 status:
-  srcPod: primary
-  dstPod: starting
+  move:
+    status: loading
+    fromPod: primary
+    toPod: loading
 ```
 
 Once the state is loaded, Assignment Reconciler would update the status of new pod as follower.
 ```yaml
 status:
-  srcPod: primary
-  dstPod: follower
+  move:
+    status: following
+    fromPod: primary
+    toPod: following
 ```
 
-Assigner would make dstPod primary when it sees that the new pod is following and will make the old pod a proxy.
+`AssignmentReconciler` would make srcPod proxy requests to dstPod for a while.
 ```yaml
+kind: Partition
 metadata:
   name: part1
 spec:
   range:
     start: a
     end: o
-  assignedPods:
-    - name: srcPod
-      type: proxy
-    - name: dstPod
-      type: primary
+  primary: dstPod
+  proxy: srcPod
 status:
-  srcPod: primary
-  dstPod: follower
+  ready
 ```
 
-Assignment Reconciler would interact with corresponding pods and reconcile them.
 ```yaml
+kind: Assignment
+metadata:
+  name: a1
+spec:
+  type: InterWorkerMove
+  moveParams:
+    partition: part1
+    from: srcPod
+    to: dstPod
 status:
-  srcPod: proxy
-  dstPod: primary
+  move:
+    status: proxying
+    fromPod: proxy
+    toPod: primary
 ```
 
-After a specified time, old pod would be removed from assignments.
+Eventually it makes the dstPod primary
 ```yaml
+kind: Assignment
+metadata:
+  name: a1
+spec:
+  type: InterWorkerMove
+  moveParams:
+    partition: part1
+    from: srcPod
+    to: dstPod
+status:
+  move:
+    status: completed
+    # is there a better word to say srcPod doesn't handle part1 anymore? decommissioned?
+    fromPod: disconnected
+    toPod: primary
+```
+
+```yaml
+kind: Partition
 metadata:
   name: part1
 spec:
   range:
     start: a
     end: o
-  assignedPods:
-    - name: dstPod
-      type: primary
+  primary: dstPod
 status:
-  srcPod: proxy
-  dstPod: primary
-```
-
-Assignment Reconciler would make the old pod not handle the partition.
-```yaml
-status:
-  srcPod: unassigning
-  dstPod: primary
-```
-
-Eventually:
-```yaml
-metadata:
-  name: part1
-spec:
-  range:
-    start: a
-    end: o
-  assignedPods:
-    - name: dstPod
-      type: primary
-status:
-  dstPod: primary
+  ready
 ```

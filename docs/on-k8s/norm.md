@@ -8,6 +8,7 @@ Requirements/Assumptions:
 
 `Partition` would be modelled as a `CustomResourceDefinition` and the following is how a newly created one would look.
 ```yaml
+kind: Partition
 metadata:
   name: part1
 spec:
@@ -18,37 +19,49 @@ status:
 ```
 
 # Assigner
-Assigner would monitor metrics of the workers and also watches `Partition` objects to assing pods for partitions. It populates `assignments` fields in the spec of partition as shown:
+`Assigner` would monitor metrics of the workers(pods) and also watches `Partition` objects to assign pods for partitions. It generates an `Assignment` object as shown:
 
 ```yaml
+kind: Assignment
 metadata:
-  name: part1
+  name: a1
 spec:
-  range:
-    start: a
-    end: o
-  assignments:
-    - name: pod1
-      type: primary
+  type: New
+  newParams:
+    partition: part
+    primary: pod1
 status:
 ```
 
 # Assignment Reconciler
-This would be a kubernetes custom controller that watches `Partition` objects for changes in `assignments` field of `Spec`. On a change, it tries to make the pod respect the specified assignment. It updates the `Status` field of the `Partition` object based on the status of assignment. I made `status` show pod level status so that we can make it more clear when we add replication of data plane etc.
+This would be a kubernetes custom controller that watches `Assignment` objects and tries to reconcile it. In this case, it interacts with pod1 and makes it handle part1.
 ```yaml
+kind: Assignment
+metadata:
+  name: a1
+spec:
+  type: New
+  newParams:
+    partition: part
+    primary: pod1
+status:
+  new: 
+    status: completed
+```
+
+```yaml
+kind: Partition
 metadata:
   name: part1
 spec:
   range:
     start: a
     end: o
-  assignments:
-    - name: pod1
-      type: primary
+  primary: pod1
 status:
-  pod1: primary
+  ready
 ```
 
-Note that this is similar to how a pod runs on a node in k8s. `kube-scheduler` populates `node` field in `PodSpec` which is watched by `kubelet`. `kubelet` makes sure the assigned pods are run on the corresponding node. In our case, `Assigner` plays the role of `kube-scheduler` and `Assignment Reconciler` plays the role of `kubelet`, but not at a node level.
+Note that this is similar to how a pod runs on a node in k8s. `kube-scheduler` populates `node` field in `PodSpec` which is watched by `kubelet`. `kubelet` makes sure the assigned pods are run on the corresponding node. In our case, `Assigner` plays the role of `kube-scheduler` and `AssignmentReconciler` plays the role of `kubelet`, but not at a node level.
 
-Also, we can think about running an `Assignment Reconciler` in every worker pod as a side car and make it responsible for just that pod, but I haven't worked out pros and cons in that case yet.
+Also, we can think about running an `AssignmentReconciler` in every worker pod as a side car and make it responsible for just that pod, but I haven't worked out pros and cons in that case yet.
