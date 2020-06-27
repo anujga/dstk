@@ -18,7 +18,7 @@ spec:
 status:
 ```
 
-# Assigner
+## Assigner
 `Assigner` would monitor metrics of the workers(pods) and also watches `Partition` objects to assign pods for partitions. It generates an `Assignment` object as shown:
 
 ```yaml
@@ -33,7 +33,7 @@ spec:
 status:
 ```
 
-# Assignment Reconciler
+## Assignment Reconciler
 This would be a kubernetes custom controller that watches `Assignment` objects and tries to reconcile it. In this case, it interacts with pod1 and makes it handle part1.
 ```yaml
 kind: Assignment
