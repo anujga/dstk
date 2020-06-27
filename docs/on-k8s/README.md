@@ -66,10 +66,13 @@ Note that this is similar to how a pod runs on a node in k8s. `kube-scheduler` p
 
 Also, we can think about running an `AssignmentReconciler` in every worker pod as a side car and make it responsible for just that pod, but I haven't worked out pros and cons in that case yet.
 
-Following has links to how other operations are modelled:
+
+## Partition split, merge, move
+
+Following has links to how those operations are modelled:
 
 Note that the following operations have a common theme:
-1. Make new partitions follow the existing partitions
+1. Make new partitions follow (load the state) the existing partitions
 1. Make the old ones proxy the requests to new ones so that the service is available to stale clients as well.
 1. Flip after a while
 
