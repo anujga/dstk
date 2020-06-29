@@ -20,10 +20,10 @@ type stateHolder struct {
 
 func (s *stateHolder) Clear() {
 	a := state{
-		m:   rangemap.New(1),
+		m:   rangemap.New(2),
 		pbs: []*pb.Partition{},
 	}
-	s.r.Store(a)
+	s.r.Store(&a)
 }
 
 func (s *stateHolder) Parts() ([]*pb.Partition, error) {

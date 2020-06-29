@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,7 +36,6 @@ func (m *partitionCounter) get(req *Request) bool {
 
 func (m *partitionCounter) remove(req *Request) bool {
 	if err := m.pc.Remove(req.K); err == nil {
-		req.C <- fmt.Sprintf("%s removed", req.K)
 		return true
 	} else {
 		req.C <- err
@@ -55,9 +53,7 @@ func (m *partitionCounter) inc(req *Request) bool {
 		ttl = secondsInDay
 	}
 	e := m.pc.Inc(req.K, req.V, ttl)
-	if e == nil {
-		req.C <- fmt.Sprintf("%s incremented", req.K)
-	} else {
+	if e != nil {
 		req.C <- e
 	}
 	return e == nil

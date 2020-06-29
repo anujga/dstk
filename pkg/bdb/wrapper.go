@@ -27,7 +27,7 @@ func (w *Wrapper) Get(key []byte) ([]byte, error) {
 }
 
 // thread safe
-func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float64) error {
+func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float32) error {
 	return w.Update(func(txn *badger.Txn) error {
 		entry := badger.NewEntry(key, value).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)
