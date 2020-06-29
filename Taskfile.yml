@@ -33,7 +33,12 @@ tasks:
   se:
     desc: Build and run SE
     cmds:
-      - go run cmd/se/se_app.go --conf=cmd/se/conf
+      - go run ./cmd/se --conf=cmd/se/conf
+
+  dc:
+    desc: Build and run Disk Cache
+    cmds:
+      - go run ./cmd/disk-cache --conf=cmd/disk-cache/config.yaml
 
   build:
     desc: Build the web app

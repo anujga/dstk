@@ -51,6 +51,6 @@ func (d DiskCacheServer) Remove(ctx context.Context, req *pb.DcRemoveReq) (*pb.D
 	panic("implement me")
 }
 
-func MakeServer(rh *ss.MsgHandler, log *zap.Logger, resBufSize int64) *DiskCacheServer {
-	return &DiskCacheServer{reqHandler: rh, log: log, resBufSize: resBufSize}
+func MakeServer(rh *ss.MsgHandler, resBufSize int64) *DiskCacheServer {
+	return &DiskCacheServer{reqHandler: rh, log: zap.L(), resBufSize: resBufSize}
 }

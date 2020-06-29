@@ -59,13 +59,13 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 
 // 6. Thick client
 
-func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) error {
+func startGrpcServer(resBufSize int64, rh *ss.MsgHandler) error {
 	lis, err := net.Listen("tcp", ":9099")
 	if err != nil {
 		return err
 	}
 	s := grpc.NewServer()
-	cacheServer := MakeServer(rh, log, resBufSize)
+	cacheServer := MakeServer(rh, resBufSize)
 	dstk.RegisterDcRpcServer(s, cacheServer)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
@@ -95,7 +95,7 @@ func main() {
 
 	f := core.RunAsync(func() error {
 		msgHandler := &ss.MsgHandler{Router: router}
-		return startGrpcServer(router, zap.L(), chanSize, msgHandler)
+		return startGrpcServer(zap.L(), chanSize, msgHandler)
 	})
 	err = f.Wait()
 	if err != nil {
@@ -105,9 +105,9 @@ func main() {
 
 func init() {
 	var conf = flag.String(
-		"conf", "./cmd/disk-cache", "config file")
+		"conf", "config.yaml", "config file")
 	flag.Parse()
-	viper.AddConfigPath(*conf)
+	viper.SetConfigFile(*conf)
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err)
 	}
