@@ -8,14 +8,22 @@
 
 ## Workflow
 
+0. Precondition
+    ```yaml
+    desired:
+        W1: Primary
+    current:
+        W1: Primary
+    ```
+
 1. AC
 
     1. Update  State
     ```yaml
-    workers:
+    desired:
         W1: Primary
         W2: follower
-    status:
+    current:
         W1: Primary
     ```    
 
@@ -28,10 +36,10 @@
        5. If timeout or disk runs out, `status.W2: abort`
     
     ```yaml
-    workers:
+    desired:
         W1: primary + repeater
         W2: follower
-    status:
+    current:
         W1: Primary
         W2: follower
 
@@ -40,14 +48,13 @@
 3. W1
    1. Replicate  all writes to `W2`
       1. Ordering is decided by `W1`
-      2. Take snapshot and send to `W1`
+   2. Take snapshot and send to `W1`
 
-   2. State
     ```yaml
-    workers:
+    desired:
         W1: primary + repeater
         W2: CaughtUp
-    status:
+    current:
         W1: primary + repeater
         W2: follower
     ```
@@ -59,10 +66,10 @@
    4. Start serving reads
 
     ```yaml
-    workers:
-        W1: NoticePeriod
+    desired:
+        W1: Retire
         W2: Primary
-    status:
+    current:
         W1: Primary
         W2: Read4Primary
     ```
@@ -73,11 +80,11 @@
    3. Delete the partition data
 
     ```yaml
-    workers:
+    desired:
         W1: Die
         W2: Primary
-    status:
-        W1: Retired
+    current:
+        W1: Retire
         W2: Primary
     ```
 
@@ -86,19 +93,19 @@
 
 
     ```yaml
-    workers:
+    desired:
         W2: Primary
-    status:
+    current:
         W1: Die
         W2: Primary
     ```
 
-6. W1
+7. W1
    1. unregister partition
 
     ```yaml
-    workers:
+    desired:
         W2: Primary
-    status:
+    current:
         W2: Primary
     ```
