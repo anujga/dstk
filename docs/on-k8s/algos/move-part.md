@@ -61,8 +61,7 @@
 
 4. W2
    1. Apply Snapshot
-   2. Apply writes
-   3. Caughtup
+   2. Apply writes after the snapshot timestamp
    4. Start serving reads
 
     ```yaml
@@ -70,8 +69,8 @@
         W1: Retire
         W2: Primary
     current:
-        W1: Primary
-        W2: Read4Primary
+        W1: primary + repeater
+        W2: CaughtUp
     ```
  
 5. W1
@@ -81,7 +80,7 @@
 
     ```yaml
     desired:
-        W1: Die
+        W1: Retire
         W2: Primary
     current:
         W1: Retire
@@ -96,7 +95,7 @@
     desired:
         W2: Primary
     current:
-        W1: Die
+        W1: Retire
         W2: Primary
     ```
 
