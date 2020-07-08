@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"io"
 )
 
 func ParseYaml(filename string) (*viper.Viper, error) {
@@ -93,4 +94,13 @@ func ZapGlobalLevel(l zapcore.Level) {
 	}
 
 	zap.ReplaceGlobals(log)
+}
+
+func CloseLogErr(c io.Closer) {
+	err := c.Close()
+	if err != nil {
+		zap.S().Error("Close failed",
+			"item", c,
+			"err", err)
+	}
 }

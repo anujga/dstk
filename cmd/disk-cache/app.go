@@ -95,7 +95,7 @@ func main() {
 
 	f := core.RunAsync(func() error {
 		msgHandler := &ss.MsgHandler{Router: router}
-		return startGrpcServer(zap.L(), chanSize, msgHandler)
+		return startGrpcServer(chanSize, msgHandler)
 	})
 	err = f.Wait()
 	if err != nil {
