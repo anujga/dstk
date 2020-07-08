@@ -54,6 +54,7 @@ func (d DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcRe
 	req := &DcRequest{
 		grpcRequest: rpcReq,
 		C:           ch,
+		Ctx:         ctx,
 	}
 	if responses, err := d.reqHandler.Handle(req); err != nil {
 		return nil, err

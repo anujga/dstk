@@ -36,7 +36,7 @@ import (
 //}
 
 // 4. glue it up together
-func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
+func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.WorkerActor, error) {
 	factory, err := newConsumerMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
@@ -44,7 +44,10 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 		return nil, err
 	}
 	// 4.1 Make the Partition Manager
-	pm := ss.NewPartitionMgr2(workerId, factory, rpc)
+	wa := ss.NewPartitionMgr2(workerId, factory, rpc, func() interface{} {
+		return nil
+	})
+	wa.Start()
 	// 4.2 Register predefined partitions.
 	//parts := new(Parts)
 	//err = viper.Unmarshal(&parts)
@@ -54,7 +57,7 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 	//slog := zap.S()
 	//slog.Infow("Adding partitions", "keys", parts)
 	//err = addPartitions(parts, slog, pm)
-	return pm, err
+	return wa, err
 }
 
 // 6. Thick client
@@ -94,7 +97,7 @@ func main() {
 	}
 
 	f := core.RunAsync(func() error {
-		return startGrpcServer(zap.L(), chanSize, &ss.MsgHandler{Router: router})
+		return startGrpcServer(zap.L(), chanSize, &ss.MsgHandler{WorkerActor: router})
 	})
 	err = f.Wait()
 	if err != nil {

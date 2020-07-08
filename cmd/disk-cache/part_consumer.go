@@ -14,6 +14,17 @@ type partitionConsumer struct {
 	pc *bdb.Wrapper
 }
 
+func (m *partitionConsumer) GetSnapshot() ss.AppState {
+	return nil
+}
+
+func (m *partitionConsumer) ApplySnapshot(as ss.AppState) error {
+	if as.State() == nil {
+		return nil
+	}
+	return errors.New("unexpected state")
+}
+
 func (m *partitionConsumer) Meta() *dstk.Partition {
 	return m.p
 }
