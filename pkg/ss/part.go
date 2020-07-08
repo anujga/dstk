@@ -67,6 +67,7 @@ func (p *PartRange) becomeLoadingHandler() error {
 }
 
 func (p *PartRange) Run() *core.FutureErr {
+	// ensure state is not mutated in other threads
 	return p.Done.Complete(p.becomeLoadingHandler)
 }
 
