@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
+	"github.com/anujga/dstk/cmd/disk-cache/verify"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
 )
 
@@ -74,23 +75,27 @@ func startGrpcServer(resBufSize int64, rh *ss.MsgHandler) error {
 	return nil
 }
 
-func main() {
-	core.ZapGlobalLevel(zap.InfoLevel)
+func mainRunner(conf string) error {
+	viper.SetConfigFile(conf)
+	if err := viper.ReadInConfig(); err != nil {
+		return err
+	}
+
 	chanSize := viper.GetInt64("response_buffer_size")
 	wid := viper.GetInt64("worker_id")
 	if wid <= 0 {
-		panic(fmt.Sprintf("Bad worker id %s", viper.Get("worker_id")))
+		return errors.Newf("Bad worker id %s", viper.Get("worker_id"))
 	}
 	workerId := se.WorkerId(wid)
 	targetUrl := viper.GetString("se_url")
 	rpc, err := se.NewSeWorker(context.TODO(), targetUrl, grpc.WithInsecure())
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	router, err := glue(workerId, rpc)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	f := core.RunAsync(func() error {
@@ -99,16 +104,30 @@ func main() {
 	})
 	err = f.Wait()
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
-func init() {
+func main() {
+	core.ZapGlobalLevel(zap.InfoLevel)
 	var conf = flag.String(
 		"conf", "config.yaml", "config file")
+
+	var verifyFlag = flag.Bool(
+		"verify", false, "run program in verification mode")
+
 	flag.Parse()
-	viper.SetConfigFile(*conf)
-	if err := viper.ReadInConfig(); err != nil {
+
+	var err error = nil
+	if *verifyFlag {
+		err = verify.RunVerifier(*conf)
+	} else {
+		err = mainRunner(*conf)
+	}
+
+	if err != nil {
 		panic(err)
 	}
+
 }

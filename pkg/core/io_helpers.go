@@ -11,6 +11,17 @@ import (
 	"io"
 )
 
+func UnmarshalYaml(filename string, obj interface{}) error {
+	v, err := ParseYaml(filename)
+	if err != nil {
+		return err
+	}
+	err = v.Unmarshal(obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func ParseYaml(filename string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigFile(filename)
