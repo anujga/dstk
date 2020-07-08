@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 )
@@ -8,6 +9,7 @@ import (
 type DcRequest struct {
 	grpcRequest interface{}
 	C           chan interface{}
+	Ctx         context.Context
 }
 
 func (r *DcRequest) ResponseChannel() chan interface{} {
