@@ -33,7 +33,17 @@ tasks:
   se:
     desc: Build and run SE
     cmds:
-      - go run cmd/se/se_app.go --conf=cmd/se/conf
+      - go run ./cmd/se --conf=cmd/se/conf
+
+  dc-clean:
+    desc: Build and run Disk Cache
+    cmds:
+      - go run ./cmd/disk-cache --conf=cmd/disk-cache/config.yaml --clean-db=true
+
+  dc-verify:
+    desc: Verify Disk Cache
+    cmds:
+      - go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify-config.yaml
 
   build:
     desc: Build the web app
@@ -55,6 +65,11 @@ tasks:
   test:
     cmds:
       - go test ./...
+
+  load-test:
+    cmds:
+      - goreman -f cmd/disk-cache/Procfile start
+
 
   protos:
     desc: compile protobuf files
@@ -112,6 +127,8 @@ tasks:
     cmds:
       - task: go-get
         vars: {REPO: github.com/golang/protobuf/protoc-gen-go@v1.4.2}
+      - task: go-get
+        vars: {REPO: github.com/mattn/goreman@v0.3.5}
 
   go-get:
     cmds:

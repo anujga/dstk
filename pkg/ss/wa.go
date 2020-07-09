@@ -33,10 +33,9 @@ func (w *WaImpl) clientReq(msg ClientMsg) {
 	select {
 	case p.Mailbox() <- msg:
 	default:
-		msg.ResponseChannel() <-
-			core.ErrInfo(codes.ResourceExhausted, "Partition Busy",
-				"capacity", cap(p.Mailbox()),
-				"partition", p.Id()).Err()
+		msg.ResponseChannel() <- core.ErrInfo(codes.ResourceExhausted, "Partition Busy",
+			"capacity", cap(p.Mailbox()),
+			"partition", p.Id()).Err()
 		close(msg.ResponseChannel())
 	}
 }

@@ -1,6 +1,7 @@
 package bdb
 
 import (
+	"github.com/anujga/dstk/pkg/rangemap"
 	"github.com/dgraph-io/badger/v2"
 	"time"
 )
@@ -21,6 +22,9 @@ func (w *Wrapper) Get(key []byte) ([]byte, error) {
 		}
 	})
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, rangemap.ErrKeyAbsent(key).Err()
+		}
 		return nil, err
 	}
 	return res, nil
