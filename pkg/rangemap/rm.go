@@ -10,7 +10,7 @@ import (
 
 func ErrKeyAbsent(k core.KeyT) *status.Status {
 	return core.ErrInfo(
-		codes.InvalidArgument,
+		codes.NotFound,
 		"key absent",
 		"key", k)
 }

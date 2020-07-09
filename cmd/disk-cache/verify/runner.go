@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/verify"
@@ -91,7 +92,8 @@ func verifyAll(c *Config) error {
 					views := binary.LittleEndian.Uint64(res.GetValue())
 					expected := uint64(c.Copies) * c.Views
 					if views != expected {
-						log.Error("Mismatch",
+						log.Errorw("Mismatch",
+							"userId", hex.EncodeToString(uidSer),
 							"views", views,
 							"expected", expected)
 					}

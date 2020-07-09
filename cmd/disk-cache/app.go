@@ -14,27 +14,8 @@ import (
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
+	"os"
 )
-
-//type Parts struct {
-//	Parts []struct {
-//		Start string
-//		End   string
-//	}
-//}
-
-//func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
-//	i := 0
-//	for i, p := range (*partitions).Parts {
-//		slog.Infow("Adding Partition", "id", i, "end", p)
-//		pv := dstk.Partition{Id: int64(i), End: []byte(p.End), Start: []byte(p.Start)}
-//		if err := pm.Add(&pv); err != nil {
-//			return err
-//		}
-//	}
-//	slog.Infof("partitions count = %d\n", i+1)
-//	return nil
-//}
 
 // 4. glue it up together
 func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
@@ -46,22 +27,14 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 	}
 	// 4.1 Make the Partition Manager
 	pm := ss.NewPartitionMgr2(workerId, factory, rpc)
-	// 4.2 Register predefined partitions.
-	//parts := new(Parts)
-	//err = viper.Unmarshal(&parts)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//slog := zap.S()
-	//slog.Infow("Adding partitions", "keys", parts)
-	//err = addPartitions(parts, slog, pm)
+
 	return pm, err
 }
 
 // 6. Thick client
 
-func startGrpcServer(resBufSize int64, rh *ss.MsgHandler) error {
-	lis, err := net.Listen("tcp", ":9099")
+func startGrpcServer(url string, resBufSize int64, rh *ss.MsgHandler) error {
+	lis, err := net.Listen("tcp", url)
 	if err != nil {
 		return err
 	}
@@ -75,7 +48,7 @@ func startGrpcServer(resBufSize int64, rh *ss.MsgHandler) error {
 	return nil
 }
 
-func mainRunner(conf string) error {
+func mainRunner(conf string, cleanDb bool) error {
 	viper.SetConfigFile(conf)
 	if err := viper.ReadInConfig(); err != nil {
 		return err
@@ -93,6 +66,13 @@ func mainRunner(conf string) error {
 		return err
 	}
 
+	if cleanDb {
+		dbPath := viper.GetString("db_path")
+		zap.S().Infow("Cleaning existing db", "path", dbPath)
+		if err := os.RemoveAll(dbPath); err != nil {
+			return err
+		}
+	}
 	router, err := glue(workerId, rpc)
 	if err != nil {
 		return err
@@ -100,7 +80,7 @@ func mainRunner(conf string) error {
 
 	f := core.RunAsync(func() error {
 		msgHandler := &ss.MsgHandler{Router: router}
-		return startGrpcServer(chanSize, msgHandler)
+		return startGrpcServer(viper.GetString("url"), chanSize, msgHandler)
 	})
 	err = f.Wait()
 	if err != nil {
@@ -110,20 +90,27 @@ func mainRunner(conf string) error {
 }
 
 func main() {
-	core.ZapGlobalLevel(zap.InfoLevel)
 	var conf = flag.String(
 		"conf", "config.yaml", "config file")
+
+	var logLevel = zap.LevelFlag(
+		"log", zap.InfoLevel, "debug, info, warn, error, dpanic, panic, fatal")
 
 	var verifyFlag = flag.Bool(
 		"verify", false, "run program in verification mode")
 
+	var cleanData = flag.Bool(
+		"clean-db", false, "delete existing db")
+
 	flag.Parse()
+
+	core.ZapGlobalLevel(*logLevel)
 
 	var err error = nil
 	if *verifyFlag {
 		err = verify.RunVerifier(*conf)
 	} else {
-		err = mainRunner(*conf)
+		err = mainRunner(*conf, *cleanData)
 	}
 
 	if err != nil {

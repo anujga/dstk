@@ -1,5 +1,6 @@
 max_outstanding: 1000
 db_path: /tmp/mkv-db
 response_buffer_size: 5
+url: localhost:6011
 se_url: localhost:6001
 worker_id: 1
