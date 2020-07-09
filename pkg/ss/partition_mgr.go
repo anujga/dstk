@@ -7,7 +7,6 @@ import (
 	"github.com/anujga/dstk/pkg/rangemap"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
 	"sync/atomic"
 	"time"
 )
@@ -15,16 +14,29 @@ import (
 // todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
 type PartitionMgr struct {
-	consumer ConsumerFactory
-	state    atomic.Value //[state]
-	rpc      pb.SeWorkerApiClient
-	id       se.WorkerId
-	slog     *zap.SugaredLogger
+	consumer       ConsumerFactory
+	state          atomic.Value //[state]
+	rpc            pb.SeWorkerApiClient
+	id             se.WorkerId
+	slog           *zap.SugaredLogger
+	initStateMaker func() interface{}
 }
 
 type state struct {
 	m            *rangemap.RangeMap
 	lastModified int64
+}
+
+type appState struct {
+	s interface{}
+}
+
+func (a *appState) ResponseChannel() chan interface{} {
+	return nil
+}
+
+func (a *appState) State() interface{} {
+	return a.s
 }
 
 func (pm *PartitionMgr) Map() *rangemap.RangeMap {
@@ -58,46 +70,17 @@ func CloseConsumers(rs *rangemap.RangeMap) {
 	for i := range rs.Iter(core.MinKey) {
 		p := i.(*PartRange)
 		//the consumer will continue to work till mailbox is empty
-		close(p.mailBox)
+		p.Stop()
 	}
 }
 
 // Path = data
-func (pm *PartitionMgr) Find(key core.KeyT) (*PartRange, error) {
+func (pm *PartitionMgr) Find(key core.KeyT) (PartitionActor, error) {
 	if rng, err := pm.Map().Get(key); err == nil {
-		return rng.(*PartRange), nil
+		return rng.(PartitionActor), nil
 	} else {
 		return nil, err
 	}
-}
-
-//todo: ensure there is at least 1 partition during construction
-func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeWorkerApiClient) *PartitionMgr {
-	pm := &PartitionMgr{
-		consumer: consumer,
-		rpc:      rpc,
-		id:       workerId,
-		slog:     zap.S().With("workerId", workerId),
-	}
-
-	core.Repeat(5*time.Second, func(timestamp time.Time) bool {
-		err := pm.syncSe()
-		if err != nil {
-			pm.slog.Errorw("fetch updates from SE",
-				"err", err)
-		} else {
-			delay := timestamp.UnixNano() - pm.State().lastModified
-			pm.slog.Infow("fetch updates from SE",
-				"time", timestamp,
-				"delay", delay)
-		}
-		return true
-	})
-	pm.ResetMap(&state{
-		m:            rangemap.New(15),
-		lastModified: 0,
-	})
-	return pm
 }
 
 //todo: should indicate whether changes were applied or not
@@ -132,7 +115,7 @@ func newMap(pm *PartitionMgr, rs *pb.PartList) (*state, error) {
 	}
 
 	for _, p := range rs.GetParts() {
-		err := s.add(p, pm.slog, pm.consumer)
+		err := s.add(p, pm.slog, pm.consumer, pm.initStateMaker)
 		if err != nil {
 			return nil, err
 		}
@@ -141,7 +124,7 @@ func newMap(pm *PartitionMgr, rs *pb.PartList) (*state, error) {
 }
 
 // path=control
-func (s *state) add(p *pb.Partition, slog *zap.SugaredLogger, consumer ConsumerFactory) error {
+func (s *state) add(p *pb.Partition, slog *zap.SugaredLogger, consumer ConsumerFactory, initStateMaker func() interface{}) error {
 	var err error
 	slog.Info("AddPartition Start", "part", p)
 	defer slog.Info("AddPartition Status", "part", p, "err", err)
@@ -153,25 +136,7 @@ func (s *state) add(p *pb.Partition, slog *zap.SugaredLogger, consumer ConsumerF
 	if err = s.m.Put(part); err != nil {
 		return err
 	}
-
+	part.Mailbox() <- &appState{s: initStateMaker()}
 	part.Run()
 	return nil
-}
-
-// Single threaded router. 1 channel per partition
-// path=data
-func (pm *PartitionMgr) OnMsg(msg Msg) error {
-	p, err := pm.Find(msg.Key())
-	if err != nil {
-		return err
-	}
-	select {
-	case p.mailBox <- msg:
-		return nil
-	default:
-		return core.ErrInfo(codes.ResourceExhausted, "Partition Busy",
-			"capacity", cap(p.mailBox),
-			"partition", p.Id()).Err()
-
-	}
 }
