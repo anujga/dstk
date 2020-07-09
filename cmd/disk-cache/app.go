@@ -18,7 +18,7 @@ import (
 )
 
 // 4. glue it up together
-func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
+func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.WorkerActor, error) {
 	factory, err := newConsumerMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
