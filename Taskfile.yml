@@ -66,6 +66,11 @@ tasks:
     cmds:
       - go test ./...
 
+  load-test:
+    cmds:
+      - goreman -f cmd/disk-cache/Procfile start
+
+
   protos:
     desc: compile protobuf files
     cmds:
