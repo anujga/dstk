@@ -1,0 +1,6 @@
+# Use goreman to run `go get github.com/mattn/goreman`
+se: task se
+dc: task dc-clean
+verify: task dc-verify
+
+
