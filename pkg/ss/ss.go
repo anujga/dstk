@@ -6,13 +6,23 @@ import (
 )
 
 type Msg interface {
+	ResponseChannel() chan interface{}
+}
+
+type ClientMsg interface {
+	Msg
 	ReadOnly() bool
 	Key() core.KeyT
-	ResponseChannel() chan interface{}
+}
+
+type AppState interface {
+	State() interface{}
 }
 
 type PartHandler interface {
 	Process(msg Msg) bool
+	GetSnapshot() AppState
+	ApplySnapshot(as AppState) error
 	//Meta() *dstk.Partition
 }
 
