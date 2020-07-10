@@ -11,10 +11,13 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+<<<<<<< HEAD
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"net"
 	"os"
+=======
+>>>>>>> Support partition split
 )
 
 // 4. glue it up together
@@ -31,6 +34,7 @@ func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
 	return pm, err
 }
 
+<<<<<<< HEAD
 // 6. Thick client
 
 func startGrpcServer(url string, resBufSize int64, rh *ss.MsgHandler) error {
@@ -54,13 +58,21 @@ func mainRunner(conf string, cleanDb bool) error {
 		return err
 	}
 
+=======
+func main() {
+	core.ZapGlobalLevel(zap.InfoLevel)
+>>>>>>> Support partition split
 	chanSize := viper.GetInt64("response_buffer_size")
 	wid := viper.GetInt64("worker_id")
 	if wid <= 0 {
 		return errors.Newf("Bad worker id %s", viper.Get("worker_id"))
 	}
 	workerId := se.WorkerId(wid)
-	targetUrl := viper.GetString("se_url")
+	seUrl := viper.GetString("se_url")
+	factory, err := newConsumerMaker(
+		viper.GetString("db_path"),
+		viper.GetInt("max_outstanding"))
+
 	rpc, err := se.NewSeWorker(context.TODO(), targetUrl, grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -79,8 +91,20 @@ func mainRunner(conf string, cleanDb bool) error {
 	}
 
 	f := core.RunAsync(func() error {
+<<<<<<< HEAD
 		msgHandler := &ss.MsgHandler{Router: router}
 		return startGrpcServer(viper.GetString("url"), chanSize, msgHandler)
+=======
+		ws, err := ss.NewWorkerServer(seUrl, workerId, factory, zap.L())
+		if err != nil {
+			panic(err)
+		}
+		return ws.Start()
+		return ss.StartServer(func(server *grpc.Server, msh *ss.MsgHandler) {
+			cacheServer := MakeServer(msh, zap.L(), chanSize)
+			dstk.RegisterDcRpcServer(server, cacheServer)
+		})
+>>>>>>> Support partition split
 	})
 	err = f.Wait()
 	if err != nil {
