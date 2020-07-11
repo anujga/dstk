@@ -22,23 +22,6 @@ type PartitionMgr struct {
 	initStateMaker func() interface{}
 }
 
-type state struct {
-	m            *rangemap.RangeMap
-	lastModified int64
-}
-
-type appState struct {
-	s interface{}
-}
-
-func (a *appState) ResponseChannel() chan interface{} {
-	return nil
-}
-
-func (a *appState) State() interface{} {
-	return a.s
-}
-
 func (pm *PartitionMgr) Map() *rangemap.RangeMap {
 	return pm.State().m
 }
@@ -112,31 +95,15 @@ func newMap(pm *PartitionMgr, rs *pb.PartList) (*state, error) {
 	s := &state{
 		m:            rangemap.New(15),
 		lastModified: rs.GetLastModified(),
+		logger: pm.slog,
 	}
 
 	for _, p := range rs.GetParts() {
-		err := s.add(p, pm.slog, pm.consumer, pm.initStateMaker)
+		part, err := s.add(p, pm.consumer, nil)
 		if err != nil {
 			return nil, err
 		}
+		part.Mailbox() <- &appState{s: pm.initStateMaker()}
 	}
 	return s, nil
-}
-
-// path=control
-func (s *state) add(p *pb.Partition, slog *zap.SugaredLogger, consumer ConsumerFactory, initStateMaker func() interface{}) error {
-	var err error
-	slog.Info("AddPartition Start", "part", p)
-	defer slog.Info("AddPartition Status", "part", p, "err", err)
-	c, maxOutstanding, err := consumer.Make(p)
-	if err != nil {
-		return err
-	}
-	part := NewPartRange(p, c, maxOutstanding)
-	if err = s.m.Put(part); err != nil {
-		return err
-	}
-	part.Mailbox() <- &appState{s: initStateMaker()}
-	part.Run()
-	return nil
 }

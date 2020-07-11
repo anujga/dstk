@@ -28,6 +28,7 @@ type PartRange struct {
 	mailBox   chan interface{}
 	Done      *core.FutureErr
 	logger    zap.Logger
+	stateListener chan<- interface{}
 }
 
 func (p *PartRange) Mailbox() chan<- interface{} {
@@ -70,12 +71,15 @@ func (p *PartRange) becomeRunningHandler() error {
 
 func (p *PartRange) becomeLoadingHandler() error {
 	p.smState = Loading
-	// pass capacity as a parameter
-	msgList := make([]ClientMsg, 1024)
+	// todo pass capacity as a parameter
+	msgList := make([]ClientMsg, 0, 1024)
 	for m := range p.mailBox {
 		switch m.(type) {
 		case AppState:
 			if err := p.consumer.ApplySnapshot(m.(AppState)); err == nil {
+				if p.stateListener != nil {
+					p.stateListener <- &FollowerCaughtup{p: p}
+				}
 				for _, msg := range msgList {
 					p.consumer.Process(msg)
 				}
@@ -107,12 +111,13 @@ func (p *PartRange) Stop() {
 	p.smState = Completed
 }
 
-func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int) *PartRange {
+func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int, stateListener chan<- interface{}) *PartRange {
 	return &PartRange{
 		smState:   Init,
 		partition: p,
 		consumer:  c,
 		mailBox:   make(chan interface{}, maxOutstanding),
 		Done:      core.NewPromise(),
+		stateListener: stateListener,
 	}
 }

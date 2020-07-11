@@ -6,11 +6,11 @@ import (
 )
 
 type MsgHandler struct {
-	WorkerActor
+	w WorkerActor
 }
 
 func (mh *MsgHandler) Handle(req Msg) ([]interface{}, error) {
-	mh.Mailbox() <- req
+	mh.w.Mailbox() <- req
 	responses := make([]interface{}, 0)
 	for {
 		select {
