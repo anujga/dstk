@@ -11,16 +11,16 @@ import (
 )
 
 type WorkerActor interface {
-	Mailbox() chan<- Msg
+	Mailbox() chan<- interface{}
 	Start() *core.FutureErr
 }
 
 type WaImpl struct {
-	mailbox chan Msg
+	mailbox chan interface{}
 	pm      *PartitionMgr
 }
 
-func (w *WaImpl) Mailbox() chan<- Msg {
+func (w *WaImpl) Mailbox() chan<- interface{} {
 	return w.mailbox
 }
 
@@ -50,6 +50,10 @@ func (w *WaImpl) Start() *core.FutureErr {
 			switch msg.(type) {
 			case ClientMsg:
 				w.clientReq(msg.(ClientMsg))
+			case *CtrlMsg:
+				w.ctrlReq(msg.(*CtrlMsg))
+			case *FollowerCaughtup:
+				w.caughtUp(msg.(*FollowerCaughtup))
 			default:
 				// todo handle this
 			}
@@ -57,6 +61,17 @@ func (w *WaImpl) Start() *core.FutureErr {
 		return nil
 	})
 	return fut
+}
+
+func (w *WaImpl) ctrlReq(msg *CtrlMsg) {
+	switch msg.grpcReq.(type) {
+	case *pb.SplitPartReq:
+		// todo
+	}
+}
+
+func (w *WaImpl) caughtUp(caughtup *FollowerCaughtup) {
+	// todo
 }
 
 //todo: ensure there is at least 1 partition during construction
@@ -88,7 +103,7 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 	})
 	return &WaImpl{
 		// take size as param
-		mailbox: make(chan Msg, 10000),
+		mailbox: make(chan interface{}, 10000),
 		pm:      pm,
 	}
 }

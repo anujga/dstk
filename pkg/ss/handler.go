@@ -2,15 +2,22 @@ package ss
 
 import (
 	"errors"
+	"github.com/anujga/dstk/pkg/core"
+	"google.golang.org/grpc/codes"
 	"time"
 )
 
 type MsgHandler struct {
-	WorkerActor
+	w WorkerActor
 }
 
 func (mh *MsgHandler) Handle(req Msg) ([]interface{}, error) {
-	mh.Mailbox() <- req
+	select {
+	case mh.w.Mailbox() <- req:
+	default:
+		return nil, core.ErrInfo(codes.ResourceExhausted, "Worker busy",
+			"capacity", cap(mh.w.Mailbox())).Err()
+	}
 	responses := make([]interface{}, 0)
 	for {
 		select {

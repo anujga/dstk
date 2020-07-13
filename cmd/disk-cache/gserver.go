@@ -15,7 +15,7 @@ type DiskCacheServer struct {
 	log        *zap.Logger
 }
 
-func (d DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcGetRes, error) {
+func (d *DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcGetRes, error) {
 	if rpcReq.GetKey() == nil {
 		return nil, status.Error(
 			codes.InvalidArgument,
@@ -44,7 +44,7 @@ func (d DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcGe
 	}
 }
 
-func (d DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcRes, error) {
+func (d *DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcRes, error) {
 	if rpcReq.GetKey() == nil || rpcReq.GetValue() == nil {
 		return nil, status.Error(
 			codes.InvalidArgument,
@@ -68,7 +68,7 @@ func (d DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcRe
 	}
 }
 
-func (d DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*pb.DcRes, error) {
+func (d *DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*pb.DcRes, error) {
 	if rpcReq.GetKey() == nil {
 		return nil, status.Error(
 			codes.InvalidArgument,
