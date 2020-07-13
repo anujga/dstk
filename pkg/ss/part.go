@@ -63,7 +63,7 @@ func (p *PartRange) becomeRunningHandler() error {
 			followerMailbox = fr.followerMailbox
 			followerMailbox <- p.consumer.GetSnapshot()
 		default:
-			p.logger.Info("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
+			p.logger.Warn("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	return nil
@@ -93,7 +93,7 @@ func (p *PartRange) becomeLoadingHandler() error {
 			}
 			msgList[len(msgList)] = m.(ClientMsg)
 		default:
-			p.logger.Info("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
+			p.logger.Warn("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	return nil
