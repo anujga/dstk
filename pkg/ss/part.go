@@ -1,9 +1,10 @@
 package ss
 
 import (
-	"errors"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"go.uber.org/zap"
+	"reflect"
 )
 
 type State int
@@ -16,7 +17,7 @@ const (
 )
 
 type PartitionActor interface {
-	Mailbox() chan<- Msg
+	Mailbox() chan<- interface{}
 	Id() int64
 }
 
@@ -24,11 +25,13 @@ type PartRange struct {
 	smState   State
 	partition *pb.Partition
 	consumer  PartHandler
-	mailBox   chan Msg
+	mailBox   chan interface{}
 	Done      *core.FutureErr
+	logger    zap.Logger
+	stateListener chan<- interface{}
 }
 
-func (p *PartRange) Mailbox() chan<- Msg {
+func (p *PartRange) Mailbox() chan<- interface{} {
 	return p.mailBox
 }
 
@@ -46,24 +49,54 @@ func (p *PartRange) Id() int64 {
 
 func (p *PartRange) becomeRunningHandler() error {
 	p.smState = Running
+	var followerMailbox chan<- interface{}
 	for m := range p.mailBox {
-		p.consumer.Process(m)
+		switch m.(type) {
+		case ClientMsg:
+			cm := m.(ClientMsg)
+			p.consumer.Process(cm)
+			if !m.(ClientMsg).ReadOnly() && followerMailbox != nil {
+				followerMailbox <- cm
+			}
+		case *FollowRequest:
+			fr := m.(*FollowRequest)
+			followerMailbox = fr.followerMailbox
+			followerMailbox <- p.consumer.GetSnapshot()
+		default:
+			p.logger.Warn("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
+		}
 	}
 	return nil
 }
 
 func (p *PartRange) becomeLoadingHandler() error {
 	p.smState = Loading
-	s := <-p.mailBox
-	var err error
-	if appState, ok := s.(AppState); ok {
-		if err = p.consumer.ApplySnapshot(appState); err == nil {
-			return p.becomeRunningHandler()
+	// todo pass capacity as a parameter
+	msgList := make([]ClientMsg, 0, 1024)
+	for m := range p.mailBox {
+		switch m.(type) {
+		case AppState:
+			if err := p.consumer.ApplySnapshot(m.(AppState)); err == nil {
+				if p.stateListener != nil {
+					p.stateListener <- &FollowerCaughtup{p: p}
+				}
+				for _, msg := range msgList {
+					p.consumer.Process(msg)
+				}
+				return p.becomeRunningHandler()
+			} else {
+				return err
+			}
+		case ClientMsg:
+			if len(msgList) == cap(msgList) {
+				// todo handle
+			}
+			msgList[len(msgList)] = m.(ClientMsg)
+		default:
+			p.logger.Warn("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
-	} else {
-		err = errors.New("invalid message received")
 	}
-	return err
+	return nil
 }
 
 func (p *PartRange) Run() *core.FutureErr {
@@ -78,12 +111,13 @@ func (p *PartRange) Stop() {
 	p.smState = Completed
 }
 
-func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int) *PartRange {
+func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int, stateListener chan<- interface{}) *PartRange {
 	return &PartRange{
 		smState:   Init,
 		partition: p,
 		consumer:  c,
-		mailBox:   make(chan Msg, maxOutstanding),
+		mailBox:   make(chan interface{}, maxOutstanding),
 		Done:      core.NewPromise(),
+		stateListener: stateListener,
 	}
 }

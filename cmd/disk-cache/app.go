@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"github.com/anujga/dstk/cmd/disk-cache/verify"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
@@ -10,43 +9,9 @@ import (
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 	"gopkg.in/errgo.v2/fmt/errors"
-	"net"
 	"os"
 )
-
-// 4. glue it up together
-func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
-	factory, err := newConsumerMaker(
-		viper.GetString("db_path"),
-		viper.GetInt("max_outstanding"))
-	if err != nil {
-		return nil, err
-	}
-	// 4.1 Make the Partition Manager
-	pm := ss.NewPartitionMgr2(workerId, factory, rpc)
-
-	return pm, err
-}
-
-// 6. Thick client
-
-func startGrpcServer(url string, resBufSize int64, rh *ss.MsgHandler) error {
-	lis, err := net.Listen("tcp", url)
-	if err != nil {
-		return err
-	}
-	s := grpc.NewServer()
-	cacheServer := MakeServer(rh, resBufSize)
-	dstk.RegisterDcRpcServer(s, cacheServer)
-	reflection.Register(s)
-	if err := s.Serve(lis); err != nil {
-		return err
-	}
-	return nil
-}
 
 func mainRunner(conf string, cleanDb bool) error {
 	viper.SetConfigFile(conf)
@@ -61,11 +26,6 @@ func mainRunner(conf string, cleanDb bool) error {
 	}
 	workerId := se.WorkerId(wid)
 	targetUrl := viper.GetString("se_url")
-	rpc, err := se.NewSeWorker(context.TODO(), targetUrl, grpc.WithInsecure())
-	if err != nil {
-		return err
-	}
-
 	if cleanDb {
 		dbPath := viper.GetString("db_path")
 		zap.S().Infow("Cleaning existing db", "path", dbPath)
@@ -73,20 +33,24 @@ func mainRunner(conf string, cleanDb bool) error {
 			return err
 		}
 	}
-	router, err := glue(workerId, rpc)
+	factory, err := newConsumerMaker(
+		viper.GetString("db_path"),
+		viper.GetInt("max_outstanding"))
 	if err != nil {
 		return err
 	}
-
 	f := core.RunAsync(func() error {
-		msgHandler := &ss.MsgHandler{Router: router}
-		return startGrpcServer(viper.GetString("url"), chanSize, msgHandler)
+		ws, err := ss.NewWorkerServer(targetUrl, workerId, factory, func() interface{} {
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+		dcServer := MakeServer(ws.MsgHandler, chanSize)
+		dstk.RegisterDcRpcServer(ws.Server, dcServer)
+		return ws.Start("tcp", viper.GetString("url"))
 	})
-	err = f.Wait()
-	if err != nil {
-		return err
-	}
-	return nil
+	return f.Wait()
 }
 
 func main() {
