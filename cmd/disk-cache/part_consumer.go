@@ -30,48 +30,30 @@ func (m *partitionConsumer) Meta() *dstk.Partition {
 }
 
 // thread safe
-func (m *partitionConsumer) get(req *dstk.DcGetReq, ch chan interface{}) bool {
-	if val, err := m.pc.Get(req.GetKey()); err == nil {
-		ch <- val
-		return true
-	} else {
-		ch <- err
-		return false
-	}
+func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
+	return m.pc.Get(req.GetKey())
 }
 
-func (m *partitionConsumer) put(req *dstk.DcPutReq, ch chan interface{}) bool {
-	if err := m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds()); err == nil {
-		return true
-	} else {
-		ch <- err
-		return false
-	}
+func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
+	return nil, m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds())
 }
 
-func (m *partitionConsumer) remove(req *dstk.DcRemoveReq, ch chan interface{}) bool {
-	if err := m.pc.Remove(req.GetKey()); err == nil {
-		return true
-	} else {
-		ch <- err
-		return false
-	}
+func (m *partitionConsumer) remove(req *dstk.DcRemoveReq) (interface{}, error) {
+	return nil, m.pc.Remove(req.GetKey())
 }
 
 /// this method does not have to be thread safe
-func (m *partitionConsumer) Process(msg0 ss.Msg) bool {
+func (m *partitionConsumer) Process(msg0 ss.Msg) (interface{}, error) {
 	msg := msg0.(*DcRequest)
-	c := msg0.ResponseChannel()
-	defer close(c)
-	switch msg.grpcRequest.(type) {
+	request := msg.grpcRequest
+	switch request.(type) {
 	case *dstk.DcGetReq:
-		return m.get(msg.grpcRequest.(*dstk.DcGetReq), msg.C)
+		return m.get(request.(*dstk.DcGetReq))
 	case *dstk.DcPutReq:
-		return m.put(msg.grpcRequest.(*dstk.DcPutReq), msg.C)
+		return m.put(request.(*dstk.DcPutReq))
 	case *dstk.DcRemoveReq:
-		return m.remove(msg.grpcRequest.(*dstk.DcRemoveReq), msg.C)
+		return m.remove(request.(*dstk.DcRemoveReq))
 	default:
-		c <- errors.New(fmt.Sprintf("invalid message %v", msg))
-		return false
+		return nil, errors.New(fmt.Sprintf("invalid message %v", msg))
 	}
 }

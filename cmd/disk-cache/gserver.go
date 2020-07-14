@@ -26,22 +26,16 @@ func (d *DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcG
 		grpcRequest: rpcReq,
 		C:           ch,
 	}
-	if responses, err := d.reqHandler.Handle(req); err != nil {
-		return nil, err
-	} else {
-		res := responses[0]
-		switch res.(type) {
-		case error:
-			return nil, res.(error)
-		case []byte:
-			return &pb.DcGetRes{
-				Value: responses[0].([]byte),
-			}, err
-		default:
-			d.log.Error("invalid response", zap.Any("response", res))
-			return nil, status.Error(codes.Internal, "internal")
-		}
+
+	responses, err := d.reqHandler.HandleBlocking(req)
+	if err != nil {
+		return nil, err.Err()
 	}
+
+	res := responses.([]byte)
+	return &pb.DcGetRes{
+		Value: res,
+	}, nil
 }
 
 func (d *DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcRes, error) {
@@ -56,16 +50,12 @@ func (d *DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcR
 		C:           ch,
 		Ctx:         ctx,
 	}
-	if responses, err := d.reqHandler.Handle(req); err != nil {
-		return nil, err
-	} else {
-		if len(responses) == 0 {
-			return &pb.DcRes{}, nil
-		} else {
-			d.log.Error("invalid response", zap.Any("responses", responses))
-			return nil, status.Error(codes.Internal, "internal")
-		}
+	_, err := d.reqHandler.HandleBlocking(req)
+	if err != nil {
+		return nil, err.Err()
 	}
+
+	return &pb.DcRes{}, nil
 }
 
 func (d *DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*pb.DcRes, error) {
@@ -79,16 +69,12 @@ func (d *DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*
 		grpcRequest: rpcReq,
 		C:           ch,
 	}
-	if responses, err := d.reqHandler.Handle(req); err != nil {
-		return nil, err
-	} else {
-		if len(responses) == 0 {
-			return &pb.DcRes{}, nil
-		} else {
-			d.log.Error("invalid response", zap.Any("responses", responses))
-			return nil, status.Error(codes.Internal, "internal")
-		}
+	_, err := d.reqHandler.HandleBlocking(req)
+	if err != nil {
+		return nil, err.Err()
 	}
+
+	return &pb.DcRes{}, nil
 }
 
 func MakeServer(rh *ss.MsgHandler, resBufSize int64) *DiskCacheServer {
