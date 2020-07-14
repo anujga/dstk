@@ -27,8 +27,8 @@ type state struct {
 // path=control
 func (s *state) add(p *pb.Partition, consumer ConsumerFactory, stateListener chan<- interface{}) (*PartRange, error) {
 	var err error
-	s.logger.Info("AddPartition Start", "part", p)
-	defer s.logger.Info("AddPartition Status", "part", p, "err", err)
+	s.logger.Infow("AddPartition Start", "part", p)
+	defer s.logger.Infow("AddPartition Status", "part", p, "err", err)
 	c, maxOutstanding, err := consumer.Make(p)
 	if err != nil {
 		return nil, err

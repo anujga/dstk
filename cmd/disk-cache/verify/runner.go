@@ -7,7 +7,9 @@ import (
 	"encoding/hex"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/verify"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"math/rand"
@@ -15,17 +17,22 @@ import (
 )
 
 type Config struct {
-	Start  int64
-	Size   int64
-	Count  int64
-	Seed   int64
-	Views  uint64
-	Copies int64
-	Url    string
+	Start     int64
+	Size      int64
+	Count     int64
+	Seed      int64
+	Views     uint64
+	Copies    int64
+	Url       string
+	MetricUrl string
 }
 
 func runMany(c *Config) error {
-	conn, err := grpc.Dial(c.Url, grpc.WithInsecure())
+	conn, err := grpc.Dial(
+		c.Url, grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+	)
 	if err != nil {
 		return err
 	}
@@ -67,7 +74,12 @@ func runMany(c *Config) error {
 }
 
 func verifyAll(c *Config) error {
-	conn, err := grpc.Dial(c.Url, grpc.WithInsecure())
+	conn, err := grpc.Dial(
+		c.Url,
+		grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+	)
 	if err != nil {
 		return err
 	}
@@ -118,6 +130,7 @@ func RunVerifier(conf string) error {
 	if err := core.UnmarshalYaml(conf, c); err != nil {
 		return err
 	}
+	s := helpers.ExposePrometheus(c.MetricUrl)
 
 	if err := runMany(c); err != nil {
 		return err
@@ -127,5 +140,5 @@ func RunVerifier(conf string) error {
 		return err
 	}
 
-	return nil
+	return s.Close()
 }
