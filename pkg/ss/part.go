@@ -22,12 +22,12 @@ type PartitionActor interface {
 }
 
 type PartRange struct {
-	smState   State
-	partition *pb.Partition
-	consumer  PartHandler
-	mailBox   chan interface{}
-	Done      *core.FutureErr
-	logger    zap.Logger
+	smState       State
+	partition     *pb.Partition
+	consumer      PartHandler
+	mailBox       chan interface{}
+	Done          *core.FutureErr
+	logger        zap.Logger
 	stateListener chan<- interface{}
 }
 
@@ -51,11 +51,18 @@ func (p *PartRange) becomeRunningHandler() error {
 	p.smState = Running
 	var followerMailbox chan<- interface{}
 	for m := range p.mailBox {
-		switch m.(type) {
+		switch m0 := m.(type) {
 		case ClientMsg:
 			cm := m.(ClientMsg)
-			p.consumer.Process(cm)
-			if !m.(ClientMsg).ReadOnly() && followerMailbox != nil {
+			res, err := p.consumer.Process(cm)
+			resC := cm.ResponseChannel()
+			if err != nil {
+				resC <- err
+			} else {
+				resC <- res
+			}
+
+			if !m0.ReadOnly() && followerMailbox != nil {
 				followerMailbox <- cm
 			}
 		case *FollowRequest:
@@ -81,7 +88,13 @@ func (p *PartRange) becomeLoadingHandler() error {
 					p.stateListener <- &FollowerCaughtup{p: p}
 				}
 				for _, msg := range msgList {
-					p.consumer.Process(msg)
+					res, err := p.consumer.Process(msg)
+					resC := msg.ResponseChannel()
+					if err != nil {
+						resC <- err
+					} else {
+						resC <- res
+					}
 				}
 				return p.becomeRunningHandler()
 			} else {
@@ -113,11 +126,11 @@ func (p *PartRange) Stop() {
 
 func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int, stateListener chan<- interface{}) *PartRange {
 	return &PartRange{
-		smState:   Init,
-		partition: p,
-		consumer:  c,
-		mailBox:   make(chan interface{}, maxOutstanding),
-		Done:      core.NewPromise(),
+		smState:       Init,
+		partition:     p,
+		consumer:      c,
+		mailBox:       make(chan interface{}, maxOutstanding),
+		Done:          core.NewPromise(),
 		stateListener: stateListener,
 	}
 }

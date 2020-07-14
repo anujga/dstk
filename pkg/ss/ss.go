@@ -20,7 +20,7 @@ type AppState interface {
 }
 
 type PartHandler interface {
-	Process(msg Msg) bool
+	Process(msg Msg) (interface{}, error)
 	GetSnapshot() AppState
 	ApplySnapshot(as AppState) error
 	//Meta() *dstk.Partition

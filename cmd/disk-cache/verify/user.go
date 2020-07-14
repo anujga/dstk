@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/verify"
@@ -30,13 +31,14 @@ type user struct {
 type ProcessFactory = func(id int64) *user
 
 func NewUserFactory(totalViews uint64, rpc dstk.DcRpcClient) ProcessFactory {
-	bytes8 := make([]byte, 8)
 	fn := func(id int64) *user {
+		bytes8 := make([]byte, 8)
 		binary.LittleEndian.PutUint64(bytes8, uint64(id))
-
+		idSer := md5.New().Sum(bytes8)
+		zap.S().Debugw("Creating user", "id", id, "idSer", idSer)
 		return &user{
 			id:                 id,
-			idSer:              md5.New().Sum(bytes8),
+			idSer:              idSer,
 			totalViews:         totalViews,
 			maxViewsPerSession: 5,
 			ttlSeconds:         float32(1 * time.Minute),
@@ -54,28 +56,32 @@ func (u *user) Invoke(ctx context.Context) error {
 	if u.Done(ctx) {
 		return errors.New("Called after done")
 	}
-	var v1 = 1 + uint64(u.rnd.Int63()%u.maxViewsPerSession)
-	if v1 > u.totalViews {
-		v1 = u.totalViews
+	var delta = 1 + uint64(u.rnd.Int63()%u.maxViewsPerSession)
+	if delta > u.totalViews {
+		delta = u.totalViews
 	}
 
 	res, err := u.rpc.Get(ctx, &dstk.DcGetReq{Key: u.idSer})
 
-	var v2 = v1
-
+	var v0 = uint64(0)
 	if err != nil {
 		e0 := status.Convert(err)
 		if e0.Code() == codes.NotFound {
-			log.Debugw("adding", "existing", "absent", "new", v2)
+			log.Debugw("adding new key", "uid", hex.EncodeToString(u.idSer))
 		} else {
 			return err
 		}
 	} else {
 
-		v0 := binary.LittleEndian.Uint64(res.Value)
-		v2 += v0
-		log.Debugw("adding", "existing", v0, "new", v2)
+		v0 = binary.LittleEndian.Uint64(res.Value)
 	}
+	v2 := v0 + delta
+
+	log.Debugw("adding",
+		"uid", hex.EncodeToString(u.idSer),
+		"existing", v0,
+		"new", v2,
+		"total", u.totalViews)
 
 	binary.LittleEndian.PutUint64(u.bytes8, v2)
 	_, err = u.rpc.Put(ctx, &dstk.DcPutReq{
@@ -87,7 +93,7 @@ func (u *user) Invoke(ctx context.Context) error {
 		return err
 	}
 
-	u.totalViews -= v1
+	u.totalViews -= delta
 	return nil
 }
 

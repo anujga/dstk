@@ -6,9 +6,7 @@ import (
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 	"net"
 )
 
@@ -19,20 +17,16 @@ type WorkerCtrlServerImpl struct {
 
 func (w *WorkerCtrlServerImpl) SplitPartition(ctx context.Context, req *dstk.SplitPartReq) (*dstk.SplitPartResponse, error) {
 	cm := &CtrlMsg{
-		grpcReq:   req,
-		ctx:       ctx,
-		ch: make(chan interface{}, 0),
+		grpcReq: req,
+		ctx:     ctx,
+		ch:      make(chan interface{}, 0),
 	}
-	if responses, err := w.MsgHandler.Handle(cm); err != nil {
-		return nil, err
-	} else {
-		if len(responses) == 0 {
-			return &dstk.SplitPartResponse{}, nil
-		} else {
-			w.logger.Error("invalid response", zap.Any("responses", responses))
-			return nil, status.Error(codes.Internal, "internal")
-		}
+	_, err := w.MsgHandler.HandleBlocking(cm)
+	if err != nil {
+		return nil, err.Err()
 	}
+
+	return &dstk.SplitPartResponse{}, nil
 }
 
 type WorkerGrpcServer struct {
