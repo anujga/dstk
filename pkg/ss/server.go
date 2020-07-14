@@ -4,6 +4,8 @@ import (
 	"context"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -57,8 +59,26 @@ func NewWorkerServer(seUrl string, wid se.WorkerId, consumerFactory ConsumerFact
 		MsgHandler: mh,
 		logger:     logger,
 	}
-	s := grpc.NewServer()
+
+	//s := grpc.NewServer()
+
+	grpc_prometheus.EnableHandlingTimeHistogram()
+	//https://github.com/grpc-ecosystem/go-grpc-middleware
+	s := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			//grpc_ctxtags.StreamServerInterceptor(),
+			//grpc_opentracing.StreamServerInterceptor(),
+			grpc_prometheus.StreamServerInterceptor,
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			//grpc_ctxtags.UnaryServerInterceptor(),
+			//grpc_opentracing.UnaryServerInterceptor(),
+			grpc_prometheus.UnaryServerInterceptor,
+		)),
+	)
+
 	dstk.RegisterWorkerCtrlServer(s, ws)
+
 	return &WorkerGrpcServer{
 		Server:     s,
 		MsgHandler: mh,

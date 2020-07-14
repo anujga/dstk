@@ -5,6 +5,7 @@ import (
 	"github.com/anujga/dstk/cmd/disk-cache/verify"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/helpers"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/spf13/viper"
@@ -50,7 +51,10 @@ func mainRunner(conf string, cleanDb bool) error {
 		dstk.RegisterDcRpcServer(ws.Server, dcServer)
 		return ws.Start("tcp", viper.GetString("url"))
 	})
-	return f.Wait()
+	metrics := helpers.ExposePrometheus(viper.GetString("metric_url"))
+	err = f.Wait()
+	metrics.Close()
+	return err
 }
 
 func main() {
