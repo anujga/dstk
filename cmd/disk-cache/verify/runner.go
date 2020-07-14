@@ -43,15 +43,20 @@ func runMany(c *Config) error {
 		go func() {
 			defer wg.Done()
 			ps, err := CreateUsers(beg, c.Size, fn)
+			log := zap.S()
 			if err != nil {
-				zap.S().Error("Error creating users", "err", err)
+				log.Error("Error creating users", "err", err)
 				return
 			}
 
-			verify.RunProcess(&verify.SampledProcess{
+			stats := verify.RunProcess(&verify.SampledProcess{
 				Ps:  ps,
 				Rnd: rnd,
 			})
+
+			log.Infow("stats",
+				"beg", beg,
+				"stats", stats)
 
 		}()
 	}

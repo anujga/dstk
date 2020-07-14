@@ -29,11 +29,16 @@ func (w *WaImpl) clientReq(msg ClientMsg) {
 	if err != nil {
 		msg.ResponseChannel() <- err
 		close(msg.ResponseChannel())
+		return
+	}
+	if p == nil {
+		panic("partition should not be null here")
 	}
 	select {
 	case p.Mailbox() <- msg:
 	default:
-		msg.ResponseChannel() <- core.ErrInfo(codes.ResourceExhausted, "Partition Busy",
+		msg.ResponseChannel() <- core.ErrInfo(
+			codes.ResourceExhausted, "Partition Busy",
 			"capacity", cap(p.Mailbox()),
 			"partition", p.Id()).Err()
 		close(msg.ResponseChannel())
