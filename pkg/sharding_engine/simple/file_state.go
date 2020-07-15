@@ -48,7 +48,7 @@ func (r *fileSe) MyParts(_ context.Context, req *pb.MyPartsReq) (*pb.PartList, e
 	}, nil
 }
 
-func UsingLocalFolder(path string, watch bool) (*fileSe, error) {
+func UsingLocalFolder(path string, watch bool) (WorkerAndClient, error) {
 	r := &fileSe{
 		path: path,
 	}
