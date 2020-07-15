@@ -95,7 +95,7 @@ func newMap(pm *PartitionMgr, rs *pb.PartList) (*state, error) {
 	s := &state{
 		m:            rangemap.New(15),
 		lastModified: rs.GetLastModified(),
-		logger: pm.slog,
+		logger:       pm.slog,
 	}
 
 	for _, p := range rs.GetParts() {

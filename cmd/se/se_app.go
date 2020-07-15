@@ -14,7 +14,12 @@ func main() {
 
 	core.ZapGlobalLevel(zap.InfoLevel)
 
-	f, err := simple.StartServer(*port, *confPath)
+	server, err := simple.UsingLocalFolder(*confPath, true)
+	if err != nil {
+		panic(err)
+	}
+
+	f, err := simple.StartServer(*port, server)
 	if err != nil {
 		panic(err)
 	}
