@@ -1,6 +1,6 @@
 # Use goreman to run `go get github.com/mattn/goreman`
-se: task se
-dc: task dc-clean
-verify: task dc-verify
+se: go run ./cmd/se --mode=sql --conn="user=postgres dbname=postgres password=se sslmode=disable"
+dc: go run ./cmd/disk-cache --conf=cmd/disk-cache/config.yaml --clean-db=true --log=info
+verify: go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify-config.yaml
 
 

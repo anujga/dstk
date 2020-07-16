@@ -11,7 +11,8 @@ require (
 	github.com/google/go-cmp v0.4.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/jmoiron/sqlx v1.2.0
+	github.com/lib/pq v1.7.0
 	github.com/prometheus/client_golang v0.9.3
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.0
