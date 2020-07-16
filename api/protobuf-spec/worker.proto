@@ -1,9 +1,11 @@
 syntax = "proto3";
 package dstk;
 
+import "common.proto";
+
 message SplitPartReq {
-  int64 id = 1;
-  repeated bytes splits = 2;
+  Partition sourcePartition = 1;
+  Partitions targetPartitions = 2;
 }
 
 message SplitPartResponse {

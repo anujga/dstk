@@ -25,7 +25,7 @@ type state struct {
 }
 
 // path=control
-func (s *state) add(p *pb.Partition, consumer ConsumerFactory, stateListener chan<- interface{}) (*PartRange, error) {
+func (s *state) add(p *pb.Partition, consumer ConsumerFactory, caughtUpListener func(*PartRange)) (*PartRange, error) {
 	var err error
 	s.logger.Infow("AddPartition Start", "part", p)
 	defer s.logger.Infow("AddPartition Status", "part", p, "err", err)
@@ -33,7 +33,7 @@ func (s *state) add(p *pb.Partition, consumer ConsumerFactory, stateListener cha
 	if err != nil {
 		return nil, err
 	}
-	part := NewPartRange(p, c, maxOutstanding, stateListener)
+	part := NewPartRange(p, c, maxOutstanding, caughtUpListener)
 	if err = s.m.Put(part); err != nil {
 		return nil, err
 	}

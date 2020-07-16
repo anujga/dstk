@@ -28,7 +28,7 @@ type PartRange struct {
 	mailBox       chan interface{}
 	Done          *core.FutureErr
 	logger        zap.Logger
-	stateListener chan<- interface{}
+	caughtUpListener func(*PartRange)
 }
 
 func (p *PartRange) Mailbox() chan<- interface{} {
@@ -84,8 +84,8 @@ func (p *PartRange) becomeLoadingHandler() error {
 		switch m.(type) {
 		case AppState:
 			if err := p.consumer.ApplySnapshot(m.(AppState)); err == nil {
-				if p.stateListener != nil {
-					p.stateListener <- &FollowerCaughtup{p: p}
+				if p.caughtUpListener != nil {
+					p.caughtUpListener(p)
 				}
 				for _, msg := range msgList {
 					res, err := p.consumer.Process(msg)
@@ -124,13 +124,13 @@ func (p *PartRange) Stop() {
 	p.smState = Completed
 }
 
-func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int, stateListener chan<- interface{}) *PartRange {
+func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int, caughtUpListener func(*PartRange)) *PartRange {
 	return &PartRange{
 		smState:       Init,
 		partition:     p,
 		consumer:      c,
 		mailBox:       make(chan interface{}, maxOutstanding),
 		Done:          core.NewPromise(),
-		stateListener: stateListener,
+		caughtUpListener: caughtUpListener,
 	}
 }

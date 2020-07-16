@@ -69,10 +69,25 @@ func (w *WaImpl) Start() *core.FutureErr {
 	return fut
 }
 
+func (w *WaImpl) startNewPart(partition *pb.Partition, cl func(*PartRange)) (*core.FutureErr, error) {
+	c, maxOutstanding, err := w.pm.consumer.Make(partition)
+	if err != nil {
+		return nil, err
+	}
+	part := NewPartRange(partition, c, maxOutstanding, cl)
+	return part.Run(), nil
+}
+
 func (w *WaImpl) ctrlReq(msg *CtrlMsg) {
 	switch msg.grpcReq.(type) {
 	case *pb.SplitPartReq:
-		// todo
+		sr := msg.grpcReq.(*pb.SplitPartReq)
+		cl := func(partRange *PartRange) {
+
+		}
+		for _, p := range sr.TargetPartitions.GetParts() {
+			_, _ = w.startNewPart(p, cl)
+		}
 	}
 }
 
