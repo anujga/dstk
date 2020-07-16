@@ -7,6 +7,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
+      POSTGRES_DB: se
       POSTGRES_PASSWORD: se
     volumes:
       - se-data2:/var/lib/postgresql/data/
