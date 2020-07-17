@@ -44,7 +44,7 @@ func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
 	return itemInTree
 }
 
-func (rm *RangeMap) Iter(start core.KeyT) chan Range {
+func (rm *RangeMap) Iter(start core.KeyT) <-chan Range {
 	item := NewKeyRange(start)
 	ch := make(chan Range)
 	go func() {

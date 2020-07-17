@@ -62,18 +62,6 @@ func (i *impl) Remove(ctx context.Context, in *pb.DcRemoveReq, opts ...grpc.Call
 	return out, err
 }
 
-//func (i *impl) Get(key core.KeyT) ([]byte, error) {
-//	panic("implement me")
-//}
-//
-//func (i *impl) Put(key, value core.KeyT, ttlSeconds float32) error {
-//	panic("implement me")
-//}
-//
-//func (i *impl) Remove(key core.KeyT) error {
-//	panic("implement me")
-//}
-
 func NewClient(ctx context.Context, clientId string, seUrl string, opts ...grpc.DialOption) (pb.DcRpcClient, error) {
 	seClient, err := se.NewSeClient(ctx, seUrl, opts...)
 	if err != nil {
