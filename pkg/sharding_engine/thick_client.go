@@ -5,6 +5,8 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"time"
 )
 
@@ -27,14 +29,14 @@ func (t *tc) Parts() ([]*pb.Partition, error) {
 	return t.cache.Parts()
 }
 
-func NewThickClient(clientId string, rpc pb.SeClientApiClient) ThickClient {
+func NewThickClient(clientId string, rpc pb.SeClientApiClient) (ThickClient, *status.Status) {
 	t := tc{
 		notifications: make(chan interface{}, 2),
 		rpc:           rpc,
 		clientId:      clientId,
 	}
 
-	core.Repeat(5*time.Second, func(timestamp time.Time) bool {
+	rep := core.Repeat(5*time.Second, func(timestamp time.Time) bool {
 		err := t.syncSe()
 		if err != nil {
 			zap.S().Errorw("fetch updates from SE",
@@ -46,9 +48,17 @@ func NewThickClient(clientId string, rpc pb.SeClientApiClient) ThickClient {
 				"delay", delay)
 		}
 		return true
-	})
+	}, true)
+
+	if rep == nil {
+		return nil, core.ErrInfo(
+			codes.Internal,
+			"failed to initialize via se",
+			"se", rpc)
+	}
+
 	t.cache.Clear()
-	return &t
+	return &t, nil
 }
 
 //todo: this should be a push instead of poll

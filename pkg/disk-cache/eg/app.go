@@ -9,7 +9,11 @@ import (
 )
 
 func main() {
-	client, err := diskcache.NewClient(context.TODO(), "localhost:6001", grpc.WithInsecure())
+	client, err := diskcache.NewClient(
+		context.TODO(),
+		"c1",
+		"localhost:6001",
+		grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}

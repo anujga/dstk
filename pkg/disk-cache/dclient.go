@@ -74,13 +74,14 @@ func (i *impl) Remove(ctx context.Context, in *pb.DcRemoveReq, opts ...grpc.Call
 //	panic("implement me")
 //}
 
-func NewClient(ctx context.Context, seUrl string, opts ...grpc.DialOption) (pb.DcRpcClient, error) {
+func NewClient(ctx context.Context, clientId string, seUrl string, opts ...grpc.DialOption) (pb.DcRpcClient, error) {
 	seClient, err := se.NewSeClient(ctx, seUrl, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	clientPool := partrpc.NewPartitionClientPool(
+	clientPool, _ := partrpc.NewPartitionClientPool(
+		clientId,
 		dcClientFactory,
 		seClient,
 		opts...)

@@ -6,6 +6,7 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 type PartitionClientPool interface {
@@ -32,9 +33,12 @@ func (c *clientPool) GetClient(ctx context.Context, key []byte) (PartitionClient
 	return pc.(PartitionClient), nil
 }
 
-func NewPartitionClientPool(rpcClientFactory RpcClientFactory, seClient dstk.SeClientApiClient, connectionOpts ...grpc.DialOption) PartitionClientPool {
-	tc := se.NewThickClient("c1", seClient)
-	// wait till state syncs once. any other better way?
-	//time.Sleep(time.Second*80)
-	return &clientPool{pool: core.NonExpiryPool(newRpcConnFactory(rpcClientFactory, connectionOpts...)), tc: tc}
+func NewPartitionClientPool(clientId string, rpcClientFactory RpcClientFactory, seClient dstk.SeClientApiClient, connectionOpts ...grpc.DialOption) (PartitionClientPool, *status.Status) {
+	tc, err := se.NewThickClient(clientId, seClient)
+	if err != nil {
+		return nil, err
+	}
+	factory := newRpcConnFactory(rpcClientFactory, connectionOpts...)
+	pool := core.NonExpiryPool(factory)
+	return &clientPool{pool: pool, tc: tc}, nil
 }

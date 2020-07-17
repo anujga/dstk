@@ -1,8 +1,10 @@
 Start: 0
-Size: 10
-Count: 10
+Size: 1
+Count: 1
 Seed: 1
 Views: 10
 Copies: 1
 Url: "localhost:6011"
-MetricUrl: ":6013"
+SeUrl: "localhost:6001"
+MetricUrl: "localhost:6013"
+ClientId: "c1"
