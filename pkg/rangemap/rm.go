@@ -44,12 +44,13 @@ func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
 	return itemInTree
 }
 
-func (rm *RangeMap) Iter(start core.KeyT) chan interface{} {
+func (rm *RangeMap) Iter(start core.KeyT) chan Range {
 	item := NewKeyRange(start)
-	ch := make(chan interface{})
+	ch := make(chan Range)
 	go func() {
 		rm.root.AscendGreaterOrEqual(item, func(i btree.Item) bool {
-			ch <- i
+			i0 := i.(*rangeItem)
+			ch <- i0.Range
 			return true
 		})
 		close(ch)
