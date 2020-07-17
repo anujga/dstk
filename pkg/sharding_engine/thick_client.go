@@ -34,7 +34,7 @@ func NewThickClient(clientId string, rpc pb.SeClientApiClient) ThickClient {
 		clientId:      clientId,
 	}
 
-	core.Repeat(1*time.Minute, func(timestamp time.Time) bool {
+	core.Repeat(5*time.Second, func(timestamp time.Time) bool {
 		err := t.syncSe()
 		if err != nil {
 			zap.S().Errorw("fetch updates from SE",
