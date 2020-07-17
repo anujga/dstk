@@ -6,7 +6,7 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"google.golang.org/grpc"
-	"time"
+	"google.golang.org/grpc/status"
 )
 
 type PartitionClientPool interface {
@@ -14,25 +14,31 @@ type PartitionClientPool interface {
 }
 
 type clientPool struct {
-	tc se.ThickClient
+	tc   se.ThickClient
 	pool core.ConnPool
 }
 
 func (c *clientPool) GetClient(ctx context.Context, key []byte) (PartitionClient, error) {
-	if part, err := c.tc.Get(ctx, key); err == nil {
-		if pc, err := c.pool.Get(ctx, part.GetUrl()); err == nil {
-			return pc.(PartitionClient), nil
-		} else {
-			return nil, err
-		}
-	} else {
+	part, err := c.tc.Get(ctx, key)
+
+	if err != nil {
 		return nil, err
 	}
+
+	pc, err := c.pool.Get(ctx, part.GetUrl())
+	if err != nil {
+		return nil, err
+	}
+
+	return pc.(PartitionClient), nil
 }
 
-func NewPartitionClientPool(rpcClientFactory func(*grpc.ClientConn) interface{}, seClient dstk.SeClientApiClient, connectionOpts ...grpc.DialOption) PartitionClientPool {
-	tc := se.NewThickClient("c1", seClient)
-	// wait till state syncs once. any other better way?
-	time.Sleep(time.Second*80)
-	return &clientPool{pool: core.NonExpiryPool(newRpcConnFactory(rpcClientFactory, connectionOpts...)), tc: tc}
+func NewPartitionClientPool(clientId string, rpcClientFactory RpcClientFactory, seClient dstk.SeClientApiClient, connectionOpts ...grpc.DialOption) (PartitionClientPool, *status.Status) {
+	tc, err := se.NewThickClient(clientId, seClient)
+	if err != nil {
+		return nil, err
+	}
+	factory := newRpcConnFactory(rpcClientFactory, connectionOpts...)
+	pool := core.NonExpiryPool(factory)
+	return &clientPool{pool: pool, tc: tc}, nil
 }

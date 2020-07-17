@@ -5,6 +5,7 @@ import "google.golang.org/grpc"
 type PartitionClient interface {
 	RpcClient() interface{}
 	Close() error
+	RawConnection() grpc.ClientConnInterface
 }
 
 type partClient struct {
@@ -21,4 +22,8 @@ func (pc *partClient) Close() error {
 
 func (pc *partClient) RpcClient() interface{} {
 	return pc.grpcClient
+}
+
+func (pc *partClient) RawConnection() grpc.ClientConnInterface {
+	return pc.conn
 }

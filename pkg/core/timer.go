@@ -1,6 +1,7 @@
 package core
 
 import (
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -10,7 +11,7 @@ type Repeater struct {
 	done   chan bool
 }
 
-func Repeat(freq time.Duration, fn func(time.Time) bool) *Repeater {
+func Repeat(freq time.Duration, fn func(time.Time) bool, firstRunSync bool) *Repeater {
 	ticker := time.NewTicker(freq)
 	r := &Repeater{
 		fn:     fn,
@@ -18,7 +19,18 @@ func Repeat(freq time.Duration, fn func(time.Time) bool) *Repeater {
 		done:   make(chan bool),
 	}
 
+	if firstRunSync {
+		if !r.fn(time.Now()) {
+			CloseLogErr(r)
+			zap.S().Warnw("Repeater breaking on first run",
+				"fn", fn)
+			return nil
+		}
+	}
+
 	go func() {
+		defer CloseLogErr(r)
+
 		for {
 			select {
 			case <-r.done:
@@ -34,7 +46,8 @@ func Repeat(freq time.Duration, fn func(time.Time) bool) *Repeater {
 	return r
 }
 
-func (r *Repeater) Stop() {
+func (r *Repeater) Close() error {
 	r.ticker.Stop()
 	r.done <- true
+	return nil
 }

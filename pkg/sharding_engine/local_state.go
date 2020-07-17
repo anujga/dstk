@@ -5,6 +5,7 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
 	"sync/atomic"
 )
 
@@ -27,11 +28,22 @@ func (s *stateHolder) Clear() {
 }
 
 func (s *stateHolder) Parts() ([]*pb.Partition, error) {
-	return s.r.Load().(*state).pbs, nil
+	a := s.r.Load()
+	if a == nil {
+		return nil, core.ErrInfo(
+			codes.Internal,
+			"Reading partitions from uninitialized cache",
+			"s", s).Err()
+	}
+	return a.(*state).pbs, nil
 }
 
 func (s *stateHolder) LastModified() int64 {
-	return s.r.Load().(*state).lastModified
+	a := s.r.Load()
+	if a == nil {
+		return 0
+	}
+	return a.(*state).lastModified
 }
 
 func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, error) {

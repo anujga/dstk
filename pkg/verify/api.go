@@ -2,7 +2,9 @@ package verify
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"math/rand"
+	"time"
 )
 
 type Process interface {
@@ -22,6 +24,9 @@ func RunProcess(p Process) *ProcessStats {
 		err := p.Invoke(ctx)
 		if err != nil {
 			s.Failure += 1
+			zap.S().Errorw("invoke failed",
+				"err", err)
+			time.Sleep(1 * time.Second)
 		} else {
 			s.Success += 1
 		}

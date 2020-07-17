@@ -53,7 +53,11 @@ func NewWorkerServer(seUrl string, wid se.WorkerId, consumerFactory ConsumerFact
 	if err != nil {
 		panic(err)
 	}
-	wa := NewPartitionMgr2(wid, consumerFactory, seClient, initStateMaker)
+	wa, err2 := NewPartitionMgr2(wid, consumerFactory, seClient, initStateMaker)
+
+	if err2 != nil {
+		return nil, err2.Err()
+	}
 	mh := &MsgHandler{wa}
 	ws := &WorkerCtrlServerImpl{
 		MsgHandler: mh,

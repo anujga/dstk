@@ -8,7 +8,6 @@ import (
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"go.uber.org/zap"
 	"sync/atomic"
-	"time"
 )
 
 // todo: this is the 4th implementation of the range map.
@@ -34,19 +33,10 @@ func (pm *PartitionMgr) State() *state {
 	return s.(*state)
 }
 
-func (pm *PartitionMgr) ResetMap(s *state) {
+func (pm *PartitionMgr) ResetMap(s *state) *state {
 	old := pm.State()
 	pm.state.Store(s)
-	//todo: we need to close old gracefully. correct algorithm
-	//would be to ref count state and then close. here we just
-	// sleep for 1 minute
-	go func() {
-		<-time.NewTimer(1 * time.Minute).C
-		if old != nil {
-			CloseConsumers(old.m)
-		}
-	}()
-
+	return old
 }
 
 func CloseConsumers(rs *rangemap.RangeMap) {
@@ -79,7 +69,7 @@ func (pm *PartitionMgr) syncSe() error {
 
 	newTime := rs.GetLastModified()
 	s := pm.State()
-	if newTime <= s.lastModified {
+	if s != nil && newTime <= s.lastModified {
 		return nil
 	}
 	newState, err := newMap(pm, rs)

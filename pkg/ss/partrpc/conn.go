@@ -6,9 +6,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+type RpcClientFactory = func(*grpc.ClientConn) interface{}
+
 type rpcConnFactory struct {
-	opts []grpc.DialOption
-	rpcClientFactory func(*grpc.ClientConn)interface{}
+	opts             []grpc.DialOption
+	rpcClientFactory RpcClientFactory
 }
 
 func (scf *rpcConnFactory) Open(ctx context.Context, url string) (interface{}, error) {
@@ -27,6 +29,6 @@ func (scf *rpcConnFactory) Close(i interface{}) error {
 	return i.(PartitionClient).Close()
 }
 
-func newRpcConnFactory(rpcClientFactory func(*grpc.ClientConn) interface{}, opts ...grpc.DialOption) core.ConnectionFactory {
+func newRpcConnFactory(rpcClientFactory RpcClientFactory, opts ...grpc.DialOption) core.ConnectionFactory {
 	return &rpcConnFactory{rpcClientFactory: rpcClientFactory, opts: opts}
 }

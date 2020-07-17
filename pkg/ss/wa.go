@@ -7,6 +7,7 @@ import (
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"time"
 )
 
@@ -80,7 +81,7 @@ func (w *WaImpl) caughtUp(caughtup *FollowerCaughtup) {
 }
 
 //todo: ensure there is at least 1 partition during construction
-func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeWorkerApiClient, maker func() interface{}) WorkerActor {
+func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeWorkerApiClient, maker func() interface{}) (WorkerActor, *status.Status) {
 	pm := &PartitionMgr{
 		consumer:       consumer,
 		rpc:            rpc,
@@ -89,7 +90,7 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 		initStateMaker: maker,
 	}
 
-	core.Repeat(5*time.Second, func(timestamp time.Time) bool {
+	rep := core.Repeat(5*time.Second, func(timestamp time.Time) bool {
 		err := pm.syncSe()
 		if err != nil {
 			pm.slog.Errorw("fetch updates from SE",
@@ -101,14 +102,33 @@ func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeW
 				"delay", delay)
 		}
 		return true
-	})
-	pm.ResetMap(&state{
+	}, true)
+
+	if rep == nil {
+		return nil, core.ErrInfo(
+			codes.Internal,
+			"failed to initialize via se",
+			"se", rpc)
+	}
+
+	old := pm.ResetMap(&state{
 		m:            rangemap.New(15),
 		lastModified: 0,
 	})
+
+	//todo: we need to close old gracefully. correct algorithm
+	//would be to ref count state and then close. here we just
+	// sleep for 1 minute
+	go func() {
+		<-time.NewTimer(1 * time.Minute).C
+		if old != nil {
+			CloseConsumers(old.m)
+		}
+	}()
+
 	return &WaImpl{
 		// take size as param
 		mailbox: make(chan interface{}, 10000),
 		pm:      pm,
-	}
+	}, nil
 }

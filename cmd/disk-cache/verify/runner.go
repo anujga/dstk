@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	diskcache "github.com/anujga/dstk/pkg/disk-cache"
 	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/verify"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -17,28 +18,37 @@ import (
 )
 
 type Config struct {
-	Start     int64
-	Size      int64
-	Count     int64
-	Seed      int64
-	Views     uint64
-	Copies    int64
-	Url       string
-	MetricUrl string
+	Start      int64
+	Size       int64
+	Count      int64
+	Seed       int64
+	Views      uint64
+	Copies     int64
+	Url, SeUrl string
+	MetricUrl  string
+	ClientId   string
 }
 
 func runMany(c *Config) error {
-	conn, err := grpc.Dial(
-		c.Url, grpc.WithInsecure(),
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
-	)
+	}
+
+	conn, err := grpc.Dial(c.Url, opts...)
 	if err != nil {
 		return err
 	}
 	defer core.CloseLogErr(conn)
 
-	rpc := dstk.NewDcRpcClient(conn)
+	//rpc := dstk.NewDcRpcClient(conn)
+	rpc, err := diskcache.NewClient(
+		context.TODO(),
+		c.ClientId,
+		c.SeUrl,
+		opts...)
+
 	fn := NewUserFactory(c.Views, rpc)
 
 	wg := &sync.WaitGroup{}
