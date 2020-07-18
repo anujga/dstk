@@ -73,13 +73,14 @@ func (r *fileSe) RefreshFile(v *viper.Viper) error {
 	return nil
 }
 
-type startEnd struct {
+type partConf struct {
 	Start, End string
+	Id int64
 }
 
 type config struct {
 	Id    int64
-	Parts []startEnd
+	Parts []partConf
 	Url   string
 }
 
@@ -143,7 +144,7 @@ func parseConfig(v *viper.Viper) (*seState, *status.Status) {
 			}
 
 			part := pb.Partition{
-				Id:         0,
+				Id:         p.Id,
 				ModifiedOn: now,
 				Active:     true,
 				Start:      []byte(p.Start),

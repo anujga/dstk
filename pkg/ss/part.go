@@ -19,6 +19,8 @@ const (
 type PartitionActor interface {
 	Mailbox() chan<- interface{}
 	Id() int64
+	Stop()
+	Run() *core.FutureErr
 }
 
 type PartRange struct {
@@ -27,7 +29,7 @@ type PartRange struct {
 	consumer      PartHandler
 	mailBox       chan interface{}
 	Done          *core.FutureErr
-	logger        zap.Logger
+	logger        *zap.Logger
 	caughtUpListener func(*PartRange)
 }
 
@@ -49,7 +51,7 @@ func (p *PartRange) Id() int64 {
 
 func (p *PartRange) becomeRunningHandler() error {
 	p.smState = Running
-	var followerMailbox chan<- interface{}
+	var followers []PartitionActor
 	for m := range p.mailBox {
 		switch m0 := m.(type) {
 		case ClientMsg:
@@ -62,13 +64,17 @@ func (p *PartRange) becomeRunningHandler() error {
 				resC <- res
 			}
 
-			if !m0.ReadOnly() && followerMailbox != nil {
-				followerMailbox <- cm
+			if !m0.ReadOnly() {
+				for _, f := range followers {
+					f.Mailbox() <- cm
+				}
 			}
 		case *FollowRequest:
 			fr := m.(*FollowRequest)
-			followerMailbox = fr.followerMailbox
-			followerMailbox <- p.consumer.GetSnapshot()
+			followers = fr.followers
+			for _, f := range followers {
+				f.Mailbox() <- &appState{s: p.consumer.GetSnapshot()}
+			}
 		default:
 			p.logger.Warn("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
@@ -78,8 +84,9 @@ func (p *PartRange) becomeRunningHandler() error {
 
 func (p *PartRange) becomeLoadingHandler() error {
 	p.smState = Loading
+	p.logger.Info("partition new state", zap.String("state", string(Loading)))
 	// todo pass capacity as a parameter
-	msgList := make([]ClientMsg, 0, 1024)
+	msgList := make([]ClientMsg, 0)
 	for m := range p.mailBox {
 		switch m.(type) {
 		case AppState:
@@ -101,10 +108,10 @@ func (p *PartRange) becomeLoadingHandler() error {
 				return err
 			}
 		case ClientMsg:
-			if len(msgList) == cap(msgList) {
+			if len(msgList) == 1024 {
 				// todo handle
 			}
-			msgList[len(msgList)] = m.(ClientMsg)
+			msgList = append(msgList, m.(ClientMsg))
 		default:
 			p.logger.Warn("not handled", zap.Any("state", p.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
@@ -132,5 +139,6 @@ func NewPartRange(p *pb.Partition, c PartHandler, maxOutstanding int, caughtUpLi
 		mailBox:       make(chan interface{}, maxOutstanding),
 		Done:          core.NewPromise(),
 		caughtUpListener: caughtUpListener,
+		logger: zap.L(),
 	}
 }

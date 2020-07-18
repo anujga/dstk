@@ -3,7 +3,7 @@ package ss
 import "context"
 
 type FollowRequest struct {
-	followerMailbox chan<- interface{}
+	followers []PartitionActor
 }
 
 type CtrlMsg struct {
@@ -16,6 +16,11 @@ func (c *CtrlMsg) ResponseChannel() chan interface{} {
 	return c.ch
 }
 
-type FollowerCaughtup struct {
-	p *PartRange
+type SplitsCaughtup struct {
+	parentRange *PartRange
+	splitRanges []*PartRange
+}
+
+type PurgePart struct {
+	pa PartitionActor
 }

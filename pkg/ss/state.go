@@ -40,3 +40,15 @@ func (s *state) add(p *pb.Partition, consumer ConsumerFactory, caughtUpListener 
 	part.Run()
 	return part, nil
 }
+
+func (s *state) addPart(pa *PartRange) error {
+	return s.m.Put(pa)
+}
+
+func (s *state) removePart(pa *PartRange) (*PartRange, error) {
+	if pr, err := s.m.Remove(pa); err == nil {
+		return pr.(*PartRange), err
+	} else {
+		return nil, err
+	}
+}

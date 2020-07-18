@@ -4,8 +4,9 @@ package dstk;
 import "common.proto";
 
 message SplitPartReq {
-  Partition sourcePartition = 1;
-  Partitions targetPartitions = 2;
+  int64 id = 1;
+  Partition sourcePartition = 2;
+  Partitions targetPartitions = 3;
 }
 
 message SplitPartResponse {
