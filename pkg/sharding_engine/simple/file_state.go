@@ -75,7 +75,8 @@ func (r *fileSe) RefreshFile(v *viper.Viper) error {
 
 type partConf struct {
 	Start, End string
-	Id int64
+	Id         int64
+	LeaderId   int64
 }
 
 type config struct {
@@ -150,6 +151,7 @@ func parseConfig(v *viper.Viper) (*seState, *status.Status) {
 				Start:      []byte(p.Start),
 				End:        []byte(p.End),
 				Url:        c.Url,
+				LeaderId:   p.LeaderId,
 			}
 			ps = append(ps, &part)
 		}
