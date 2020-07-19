@@ -1,4 +1,4 @@
-package pactors
+package partition
 
 import (
 	"github.com/anujga/dstk/pkg/ss/common"
@@ -13,7 +13,7 @@ type primaryActor struct {
 func (pa *primaryActor) become() error {
 	pa.smState = Primary
 	pa.logger.Info("became", zap.String("smstate", pa.smState.String()), zap.Int64("id", pa.Id()))
-	followers := make([]PartitionActor, 0)
+	followers := make([]Actor, 0)
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case *FollowRequest:

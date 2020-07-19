@@ -11,7 +11,7 @@ import (
 )
 
 type PartManager interface {
-	Find(key core.KeyT) (pactors.PartitionActor, error)
+	Find(key core.KeyT) (partition.PartitionActor, error)
 	Reset(plist *pb.PartList) error
 }
 
@@ -23,7 +23,7 @@ type PartManagerImpl struct {
 	slog            *zap.SugaredLogger
 }
 
-func (pm *PartManagerImpl) Find(key core.KeyT) (pactors.PartitionActor, error) {
+func (pm *PartManagerImpl) Find(key core.KeyT) (partition.PartitionActor, error) {
 	return pm.store.find(key)
 }
 
@@ -35,11 +35,11 @@ func (pm *PartManagerImpl) Reset(plist *pb.PartList) error {
 			currPa.Mailbox() <- part
 		} else {
 			if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
-				var leader pactors.PartitionActor
+				var leader partition.PartitionActor
 				if part.GetLeaderId() != 0 {
 					leader = pm.store.partIdMap[part.GetLeaderId()]
 				}
-				pa := pactors.NewPartActor(part, c, maxOutstanding, leader)
+				pa := partition.NewPartActor(part, c, maxOutstanding, leader)
 				pa.Run()
 				if e := pm.store.add(pa); e != nil {
 					pm.slog.Errorw("failed to add part", "part", pa)
@@ -59,7 +59,7 @@ func NewPartitionMgr(factory common.ConsumerFactory) (PartManager, *status.Statu
 		slog:            zap.S(),
 		store: &PartRangeStore{
 			partRoot:     btree.New(16),
-			partIdMap:    make(map[int64]pactors.PartitionActor),
+			partIdMap:    make(map[int64]partition.PartitionActor),
 			lastModified: 0,
 		},
 	}, nil

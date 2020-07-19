@@ -1,4 +1,4 @@
-package pactors
+package partition
 
 
 const (

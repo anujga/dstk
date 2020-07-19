@@ -1,4 +1,4 @@
-package pactors
+package partition
 
 import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
@@ -10,7 +10,7 @@ import (
 type State int
 
 
-type PartitionActor interface {
+type Actor interface {
 	Start() core.KeyT
 	End() core.KeyT
 	Mailbox() chan<- interface{}
@@ -27,7 +27,7 @@ type PartRange struct {
 	mailBox   chan interface{}
 	Done      *core.FutureErr
 	logger    *zap.Logger
-	leader    PartitionActor
+	leader    Actor
 }
 
 func (p *PartRange) CanServe() bool {
@@ -62,7 +62,7 @@ func (p *PartRange) Stop() {
 	close(p.mailBox)
 }
 
-func NewPartActor(p *pb.Partition, c common.Consumer, maxOutstanding int, leader PartitionActor) PartitionActor {
+func NewPartActor(p *pb.Partition, c common.Consumer, maxOutstanding int, leader Actor) Actor {
 	return &PartRange{
 		partition: p,
 		smState:   Init,

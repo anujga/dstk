@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"github.com/anujga/dstk/pkg/core"
-	"github.com/anujga/dstk/pkg/ss/pactors"
+	"github.com/anujga/dstk/pkg/ss/partition"
 	"github.com/google/btree"
 )
 
 type partsItem struct {
 	StartBytes []byte
-	Parts map[int64]pactors.PartitionActor
+	Parts      map[int64]partition.Actor
 }
 
 func (p *partsItem) Less(than btree.Item) bool {
@@ -18,15 +18,15 @@ func (p *partsItem) Less(than btree.Item) bool {
 	return bytes.Compare(p.StartBytes, that.StartBytes) < 0
 }
 
-// todo clean up the impl
+// todo clean up the impl. separate btree logic and business logic
 type PartRangeStore struct {
-	partRoot *btree.BTree
-	partIdMap    map[int64]pactors.PartitionActor
+	partRoot     *btree.BTree
+	partIdMap    map[int64]partition.Actor
 	lastModified int64
 }
 
 // Path = control
-func (pms *PartRangeStore) add(pa pactors.PartitionActor) error {
+func (pms *PartRangeStore) add(pa partition.Actor) error {
 	var appended bool
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: pa.Start(),
@@ -41,7 +41,7 @@ func (pms *PartRangeStore) add(pa pactors.PartitionActor) error {
 	if !appended {
 		pms.partRoot.ReplaceOrInsert(&partsItem{
 			StartBytes: pa.Start(),
-			Parts: map[int64]pactors.PartitionActor{pa.Id(): pa},
+			Parts:      map[int64]partition.Actor{pa.Id(): pa},
 		})
 	}
 	pms.partIdMap[pa.Id()] = pa
@@ -49,7 +49,7 @@ func (pms *PartRangeStore) add(pa pactors.PartitionActor) error {
 }
 
 // Path = control
-func (pms *PartRangeStore) remove(pa pactors.PartitionActor) (pactors.PartitionActor, error) {
+func (pms *PartRangeStore) remove(pa partition.Actor) (partition.Actor, error) {
 	var delItem *partsItem
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: pa.Start(),
@@ -75,8 +75,8 @@ func (pms *PartRangeStore) remove(pa pactors.PartitionActor) (pactors.PartitionA
 }
 
 // Path = data
-func (pms *PartRangeStore) find(key core.KeyT) (pactors.PartitionActor, error) {
-	var pa pactors.PartitionActor
+func (pms *PartRangeStore) find(key core.KeyT) (partition.Actor, error) {
+	var pa partition.Actor
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: key,
 	}, func(i btree.Item) bool {

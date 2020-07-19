@@ -1,4 +1,4 @@
-package pactors
+package partition
 
 import (
 	"github.com/anujga/dstk/pkg/ss/common"
