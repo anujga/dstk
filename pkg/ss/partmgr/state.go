@@ -19,14 +19,14 @@ func (p *partsItem) Less(than btree.Item) bool {
 }
 
 // todo clean up the impl. separate btree logic and business logic
-type PartRangeStore struct {
+type partRangeStore struct {
 	partRoot     *btree.BTree
 	partIdMap    map[int64]partition.Actor
 	lastModified int64
 }
 
 // Path = control
-func (pms *PartRangeStore) add(pa partition.Actor) error {
+func (pms *partRangeStore) add(pa partition.Actor) error {
 	var appended bool
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: pa.Start(),
@@ -49,7 +49,7 @@ func (pms *PartRangeStore) add(pa partition.Actor) error {
 }
 
 // Path = control
-func (pms *PartRangeStore) remove(pa partition.Actor) (partition.Actor, error) {
+func (pms *partRangeStore) remove(pa partition.Actor) (partition.Actor, error) {
 	var delItem *partsItem
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: pa.Start(),
@@ -75,7 +75,7 @@ func (pms *PartRangeStore) remove(pa partition.Actor) (partition.Actor, error) {
 }
 
 // Path = data
-func (pms *PartRangeStore) find(key core.KeyT) (partition.Actor, error) {
+func (pms *partRangeStore) find(key core.KeyT) (partition.Actor, error) {
 	var pa partition.Actor
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: key,

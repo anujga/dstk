@@ -4,26 +4,26 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
-	"github.com/anujga/dstk/pkg/ss/pactors"
+	"github.com/anujga/dstk/pkg/ss/partition"
 	"github.com/google/btree"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/status"
 )
 
 type PartManager interface {
-	Find(key core.KeyT) (partition.PartitionActor, error)
+	Find(key core.KeyT) (partition.Actor, error)
 	Reset(plist *pb.PartList) error
 }
 
 // todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
 type PartManagerImpl struct {
-	store           *PartRangeStore
+	store           *partRangeStore
 	consumerFactory common.ConsumerFactory
 	slog            *zap.SugaredLogger
 }
 
-func (pm *PartManagerImpl) Find(key core.KeyT) (partition.PartitionActor, error) {
+func (pm *PartManagerImpl) Find(key core.KeyT) (partition.Actor, error) {
 	return pm.store.find(key)
 }
 
@@ -35,7 +35,7 @@ func (pm *PartManagerImpl) Reset(plist *pb.PartList) error {
 			currPa.Mailbox() <- part
 		} else {
 			if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
-				var leader partition.PartitionActor
+				var leader partition.Actor
 				if part.GetLeaderId() != 0 {
 					leader = pm.store.partIdMap[part.GetLeaderId()]
 				}
@@ -57,9 +57,9 @@ func NewPartitionMgr(factory common.ConsumerFactory) (PartManager, *status.Statu
 	return &PartManagerImpl{
 		consumerFactory: factory,
 		slog:            zap.S(),
-		store: &PartRangeStore{
+		store: &partRangeStore{
 			partRoot:     btree.New(16),
-			partIdMap:    make(map[int64]partition.PartitionActor),
+			partIdMap:    make(map[int64]partition.Actor),
 			lastModified: 0,
 		},
 	}, nil
