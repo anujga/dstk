@@ -20,7 +20,7 @@ type Actor interface {
 	CanServe() bool
 }
 
-type PartRange struct {
+type actorImpl struct {
 	partition *pb.Partition
 	smState   State
 	consumer  common.Consumer
@@ -30,27 +30,27 @@ type PartRange struct {
 	leader    Actor
 }
 
-func (p *PartRange) CanServe() bool {
+func (p *actorImpl) CanServe() bool {
 	return p.smState == Primary || p.smState == Proxy
 }
 
-func (p *PartRange) Mailbox() chan<- interface{} {
+func (p *actorImpl) Mailbox() chan<- interface{} {
 	return p.mailBox
 }
 
-func (p *PartRange) Start() core.KeyT {
+func (p *actorImpl) Start() core.KeyT {
 	return p.partition.GetStart()
 }
 
-func (p *PartRange) End() core.KeyT {
+func (p *actorImpl) End() core.KeyT {
 	return p.partition.GetEnd()
 }
 
-func (p *PartRange) Id() int64 {
+func (p *actorImpl) Id() int64 {
 	return p.partition.GetId()
 }
 
-func (p *PartRange) Run() *core.FutureErr {
+func (p *actorImpl) Run() *core.FutureErr {
 	// ensure state is not mutated in other threads
 	ia := initActor{p}
 	return p.Done.Complete(ia.become)
@@ -58,12 +58,12 @@ func (p *PartRange) Run() *core.FutureErr {
 
 //this will not be effective till the consumer
 //has read all the messages from the channel
-func (p *PartRange) Stop() {
+func (p *actorImpl) Stop() {
 	close(p.mailBox)
 }
 
-func NewPartActor(p *pb.Partition, c common.Consumer, maxOutstanding int, leader Actor) Actor {
-	return &PartRange{
+func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int, leader Actor) Actor {
+	return &actorImpl{
 		partition: p,
 		smState:   Init,
 		consumer:  c,

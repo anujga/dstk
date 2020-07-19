@@ -7,7 +7,7 @@ import (
 )
 
 type catchingUpActor struct {
-	*PartRange
+	*actorImpl
 }
 
 func (fa *catchingUpActor) become() error {
@@ -30,7 +30,7 @@ func (fa *catchingUpActor) become() error {
 					}
 					close(resC)
 				}
-				fa := followingActor{fa.PartRange}
+				fa := followingActor{fa.actorImpl}
 				return fa.become()
 			} else {
 				return err

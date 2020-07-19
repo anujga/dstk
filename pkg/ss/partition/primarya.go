@@ -7,7 +7,7 @@ import (
 )
 
 type primaryActor struct {
-	*PartRange
+	*actorImpl
 }
 
 func (pa *primaryActor) become() error {

@@ -10,28 +10,28 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-type WorkerActor interface {
+type Actor interface {
 	Mailbox() chan<- interface{}
 	Start() *core.FutureErr
 	Id() se.WorkerId
 }
 
-type WaImpl struct {
+type actorImpl struct {
 	id      se.WorkerId
 	mailbox chan interface{}
-	partMgr partmgr.PartManager
+	partMgr partition.Manager
 	logger  *zap.Logger
 }
 
-func (w *WaImpl) Id() se.WorkerId {
+func (w *actorImpl) Id() se.WorkerId {
 	return w.id
 }
 
-func (w *WaImpl) Mailbox() chan<- interface{} {
+func (w *actorImpl) Mailbox() chan<- interface{} {
 	return w.mailbox
 }
 
-func (w *WaImpl) clientReq(msg common.ClientMsg) {
+func (w *actorImpl) clientReq(msg common.ClientMsg) {
 	p, err := w.partMgr.Find(msg.Key())
 	if err != nil {
 		msg.ResponseChannel() <- err
@@ -54,7 +54,7 @@ func (w *WaImpl) clientReq(msg common.ClientMsg) {
 
 // Single threaded router. 1 channel per partition
 // path=data
-func (w *WaImpl) Start() *core.FutureErr {
+func (w *actorImpl) Start() *core.FutureErr {
 	fut := core.NewPromise()
 	fut.Complete(func() error {
 		// ensure state is not mutated in other threads
@@ -74,12 +74,12 @@ func (w *WaImpl) Start() *core.FutureErr {
 	return fut
 }
 
-func NewWorker(factory common.ConsumerFactory, id se.WorkerId) (WorkerActor, error) {
-	p, err := partmgr.NewPartitionMgr(factory)
+func NewActor(factory common.ConsumerFactory, id se.WorkerId) (Actor, error) {
+	p, err := partition.NewManager(factory)
 	if err != nil {
 		return nil, err.Err()
 	}
-	w := &WaImpl{
+	w := &actorImpl{
 		// take size as param
 		mailbox: make(chan interface{}, 10000),
 		partMgr: p,

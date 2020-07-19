@@ -6,7 +6,7 @@ import (
 )
 
 type followingActor struct {
-	*PartRange
+	*actorImpl
 }
 
 func (fa *followingActor) become() error {

@@ -11,7 +11,7 @@ import (
 )
 
 type MsgHandler struct {
-	w node.WorkerActor
+	w node.Actor
 }
 
 func (mh *MsgHandler) Handle(req common.Msg) ([]interface{}, error) {

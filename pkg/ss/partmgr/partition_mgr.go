@@ -1,4 +1,4 @@
-package partmgr
+package partition
 
 import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
@@ -10,24 +10,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type PartManager interface {
+type Manager interface {
 	Find(key core.KeyT) (partition.Actor, error)
 	Reset(plist *pb.PartList) error
 }
 
 // todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
-type PartManagerImpl struct {
-	store           *partRangeStore
+type managerImpl struct {
+	store           *actorStore
 	consumerFactory common.ConsumerFactory
 	slog            *zap.SugaredLogger
 }
 
-func (pm *PartManagerImpl) Find(key core.KeyT) (partition.Actor, error) {
+func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, error) {
 	return pm.store.find(key)
 }
 
-func (pm *PartManagerImpl) Reset(plist *pb.PartList) error {
+func (pm *managerImpl) Reset(plist *pb.PartList) error {
 	for _, part := range plist.GetParts() {
 		if currPa, ok := pm.store.partIdMap[part.GetId()]; ok {
 			// todo these are not handled by various partition actors. this notifies the existing actor to
@@ -39,7 +39,7 @@ func (pm *PartManagerImpl) Reset(plist *pb.PartList) error {
 				if part.GetLeaderId() != 0 {
 					leader = pm.store.partIdMap[part.GetLeaderId()]
 				}
-				pa := partition.NewPartActor(part, c, maxOutstanding, leader)
+				pa := partition.NewActor(part, c, maxOutstanding, leader)
 				pa.Run()
 				if e := pm.store.add(pa); e != nil {
 					pm.slog.Errorw("failed to add part", "part", pa)
@@ -53,11 +53,11 @@ func (pm *PartManagerImpl) Reset(plist *pb.PartList) error {
 }
 
 //todo: ensure there is at least 1 partition during construction
-func NewPartitionMgr(factory common.ConsumerFactory) (PartManager, *status.Status) {
-	return &PartManagerImpl{
+func NewManager(factory common.ConsumerFactory) (Manager, *status.Status) {
+	return &managerImpl{
 		consumerFactory: factory,
 		slog:            zap.S(),
-		store: &partRangeStore{
+		store: &actorStore{
 			partRoot:     btree.New(16),
 			partIdMap:    make(map[int64]partition.Actor),
 			lastModified: 0,

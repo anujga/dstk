@@ -6,7 +6,7 @@ import (
 )
 
 type proxyActor struct {
-	*PartRange
+	*actorImpl
 }
 
 func (pa *proxyActor) become() error {

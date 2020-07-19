@@ -11,7 +11,7 @@ import (
 )
 
 type PartsSyncer struct {
-	wa    WorkerActor
+	wa    Actor
 	seRpc pb.SeWorkerApiClient
 	slog  *zap.SugaredLogger
 }
@@ -45,7 +45,7 @@ func (ps *PartsSyncer) syncFromSe() error {
 	return nil
 }
 
-func NewSyncer(wa WorkerActor, seRpc pb.SeWorkerApiClient) *PartsSyncer {
+func NewSyncer(wa Actor, seRpc pb.SeWorkerApiClient) *PartsSyncer {
 	return &PartsSyncer{
 		wa:    wa,
 		seRpc: seRpc,
