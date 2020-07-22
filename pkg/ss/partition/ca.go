@@ -15,7 +15,7 @@ func (fa *catchingUpActor) become() error {
 	fa.logger.Info("became", zap.String("smstate", fa.smState.String()), zap.Int64("id", fa.Id()))
 	fa.leader.Mailbox() <- &FollowRequest{Follower: fa}
 	// todo pass capacity as a parameter
-	msgList := make([]common.ClientMsg, 0, 1024)
+	msgList := make([]common.ClientMsg, 0)
 	for m := range fa.mailBox {
 		switch m.(type) {
 		case common.AppState:
@@ -36,10 +36,10 @@ func (fa *catchingUpActor) become() error {
 				return err
 			}
 		case common.ClientMsg:
-			if len(msgList) == cap(msgList) {
+			if len(msgList) == 1024 {
 				// todo handle
 			}
-			msgList[len(msgList)] = m.(common.ClientMsg)
+			msgList = append(msgList, m.(common.ClientMsg))
 		default:
 			fa.logger.Warn("not handled", zap.Any("state", fa.smState), zap.Any("type", reflect.TypeOf(m)))
 		}

@@ -21,6 +21,21 @@ func (pa *primaryActor) become() error {
 			followers = append(followers, fr.Follower)
 			pa.logger.Info("adding follower", zap.Int64("added part", fr.Follower.Id()), zap.Int64("to part", pa.Id()))
 			fr.Follower.Mailbox() <- &common.AppStateImpl{S: pa.consumer.GetSnapshot()}
+		case *common.ClientMsg:
+			cm := m.(common.ClientMsg)
+			res, err := pa.consumer.Process(cm)
+			resC := cm.ResponseChannel()
+			if err != nil {
+				resC <- err
+			} else {
+				resC <- res
+			}
+			close(resC)
+			if !cm.ReadOnly() && len(followers) > 0 {
+				for _, f := range followers {
+					f.Mailbox() <- cm
+				}
+			}
 		default:
 			pa.logger.Warn("not handled", zap.Any("state", pa.smState), zap.Any("type", reflect.TypeOf(m)))
 		}

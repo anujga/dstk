@@ -18,4 +18,3 @@ func (fa *followingActor) become() error {
 	fa.smState = Completed
 	return nil
 }
-
