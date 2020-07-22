@@ -38,6 +38,14 @@ func NewPromise() *FutureErr {
 	}
 }
 
+func WaitMany(fs []*FutureErr) []error {
+	var es []error
+	for _, f := range fs {
+		es = append(es, f.Wait())
+	}
+	return es
+}
+
 func RunAsync(fn func() error) *FutureErr {
 	return NewPromise().Complete(fn)
 }

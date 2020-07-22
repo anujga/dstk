@@ -3,7 +3,6 @@ package dc
 import (
 	"github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
-	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/spf13/viper"
@@ -12,16 +11,16 @@ import (
 	"os"
 )
 
-func MainRunner(conf string, cleanDb bool) error {
+func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 	viper.SetConfigFile(conf)
 	if err := viper.ReadInConfig(); err != nil {
-		return err
+		return nil, err
 	}
 
 	chanSize := viper.GetInt64("response_buffer_size")
 	wid := viper.GetInt64("worker_id")
 	if wid <= 0 {
-		return errors.Newf("Bad worker id %s", viper.Get("worker_id"))
+		return nil, errors.Newf("Bad worker id %s", viper.Get("worker_id"))
 	}
 	workerId := se.WorkerId(wid)
 	targetUrl := viper.GetString("se_url")
@@ -29,15 +28,19 @@ func MainRunner(conf string, cleanDb bool) error {
 		dbPath := viper.GetString("db_path")
 		zap.S().Infow("Cleaning existing db", "path", dbPath)
 		if err := os.RemoveAll(dbPath); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	factory, err := newConsumerMaker(
 		viper.GetString("db_path"),
 		viper.GetInt("max_outstanding"))
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	url := viper.GetString("url")
+
+	//metrics := helpers.ExposePrometheus(viper.GetString("metric_url"))
 	f := core.RunAsync(func() error {
 		ws, err := ss.NewWorkerServer(targetUrl, workerId, factory, func() interface{} {
 			return nil
@@ -47,10 +50,11 @@ func MainRunner(conf string, cleanDb bool) error {
 		}
 		dcServer := MakeServer(ws.MsgHandler, chanSize)
 		dstk.RegisterDcRpcServer(ws.Server, dcServer)
-		return ws.Start("tcp", viper.GetString("url"))
+		err = ws.Start("tcp", url)
+		var err2 error = nil
+		//err2 := metrics.Close()
+		return core.Errs(err, err2)
+
 	})
-	metrics := helpers.ExposePrometheus(viper.GetString("metric_url"))
-	err = f.Wait()
-	metrics.Close()
-	return err
+	return f, nil
 }

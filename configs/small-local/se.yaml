@@ -9,3 +9,5 @@ Init:
   Workers:
     - Id: 1
       Url: "localhost: 6011"
+    - Id: 2
+      Url: "localhost: 6021"
