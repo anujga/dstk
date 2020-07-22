@@ -10,7 +10,7 @@ import (
 )
 
 type state struct {
-	m            *rangemap.RangeMap
+	rangeMap     *rangemap.RangeMap
 	pbs          []*pb.Partition
 	lastModified int64
 }
@@ -21,8 +21,8 @@ type stateHolder struct {
 
 func (s *stateHolder) Clear() {
 	a := state{
-		m:   rangemap.New(2),
-		pbs: []*pb.Partition{},
+		rangeMap: rangemap.New(2),
+		pbs:      []*pb.Partition{},
 	}
 	s.r.Store(&a)
 }
@@ -47,8 +47,8 @@ func (s *stateHolder) LastModified() int64 {
 }
 
 func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, error) {
-	m := s.r.Load().(*state)
-	p, err := m.m.Get(key)
+	state := s.r.Load().(*state)
+	p, err := state.rangeMap.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *stateHolder) UpdateTree(parts []*pb.Partition, lastModified int64) erro
 	zap.S().Infow("Partitions found", "count", len(parts))
 
 	s.r.Store(&state{
-		m:            t,
+		rangeMap:     t,
 		pbs:          parts,
 		lastModified: lastModified,
 	})

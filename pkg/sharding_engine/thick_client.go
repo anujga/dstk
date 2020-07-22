@@ -57,7 +57,6 @@ func NewThickClient(clientId string, rpc pb.SeClientApiClient) (ThickClient, *st
 			"se", rpc)
 	}
 
-	t.cache.Clear()
 	return &t, nil
 }
 
