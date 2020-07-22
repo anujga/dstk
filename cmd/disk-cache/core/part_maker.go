@@ -1,4 +1,4 @@
-package main
+package dc
 
 import (
 	dstk "github.com/anujga/dstk/pkg/api/proto"
