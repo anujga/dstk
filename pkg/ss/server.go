@@ -41,6 +41,7 @@ func (wgs *WorkerGrpcServer) Start(network, address string) error {
 	wgs.MsgHandler.w.Start()
 	reflection.Register(wgs.Server)
 	if lis, err := net.Listen(network, address); err == nil {
+		zap.S().Infow("Opened socket", "address", address)
 		return wgs.Server.Serve(lis)
 	} else {
 		return err

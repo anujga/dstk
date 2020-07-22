@@ -7,8 +7,12 @@ import (
 )
 
 func ExposePrometheus(address string) *http.Server {
-	http.Handle("/metrics", promhttp.Handler())
-	server := &http.Server{Addr: address}
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	server := &http.Server{
+		Addr:    address,
+		Handler: mux,
+	}
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil {

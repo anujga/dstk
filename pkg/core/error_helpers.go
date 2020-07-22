@@ -22,6 +22,28 @@ const (
 	ErrMaxErrorCode = iota
 )
 
+type MultiErr struct {
+	errs []error
+}
+
+func Errs(errs ...error) error {
+	var es []error
+	for _, e := range errs {
+		if e != nil {
+			es = append(es, e)
+		}
+	}
+	if es == nil {
+		return nil
+	}
+
+	return &MultiErr{errs: es}
+}
+
+func (e *MultiErr) Error() string {
+	return fmt.Sprintf("%+q", e.errs)
+}
+
 type Errr struct {
 	*dstk.Ex
 }
@@ -43,9 +65,9 @@ var ExOK = &dstk.Ex{Id: dstk.Ex_SUCCESS}
 func values2Map(keyValues ...interface{}) map[string]string {
 	n := len(keyValues)
 	kv := make(map[string]string, n/2)
-	for i := 0; i < n; i+=2 {
+	for i := 0; i < n; i += 2 {
 		var v = ""
-		if i + 1 < n {
+		if i+1 < n {
 			v = fmt.Sprintf("%#v", keyValues[i+1])
 		}
 		k := fmt.Sprintf("%#v", keyValues[i])

@@ -25,7 +25,7 @@ type Bootstrap struct {
 }
 
 func main() {
-	var conf = flag.String("conf", "conf.yaml", "conf file")
+	var conf = flag.String("config", "conf.yaml", "conf file")
 	core.ZapGlobalLevel(zap.InfoLevel)
 	flag.Parse()
 

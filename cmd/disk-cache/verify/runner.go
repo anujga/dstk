@@ -8,7 +8,6 @@ import (
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	diskcache "github.com/anujga/dstk/pkg/disk-cache"
-	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/verify"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"go.uber.org/zap"
@@ -18,36 +17,38 @@ import (
 )
 
 type Config struct {
-	Start      int64
-	Size       int64
-	Count      int64
-	Seed       int64
-	Views      uint64
-	Copies     int64
-	Url, SeUrl string
-	MetricUrl  string
-	ClientId   string
+	Start     int64
+	Size      int64
+	Count     int64
+	Seed      int64
+	Views     uint64
+	Copies    int64
+	SeUrl     string
+	MetricUrl string
+	ClientId  string
 }
 
-func runMany(c *Config) error {
-	opts := []grpc.DialOption{
+var opts []grpc.DialOption
+
+func init() {
+	opts = []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 	}
+}
 
-	conn, err := grpc.Dial(c.Url, opts...)
-	if err != nil {
-		return err
-	}
-	defer core.CloseLogErr(conn)
+func runMany(c *Config) error {
 
-	//rpc := dstk.NewDcRpcClient(conn)
 	rpc, err := diskcache.NewClient(
 		context.TODO(),
 		c.ClientId,
 		c.SeUrl,
 		opts...)
+
+	if err != nil {
+		return err
+	}
 
 	//time.Sleep(5 * time.Second)
 	fn := NewUserFactory(c.Views, rpc)
@@ -85,18 +86,16 @@ func runMany(c *Config) error {
 }
 
 func verifyAll(c *Config) error {
-	conn, err := grpc.Dial(
-		c.Url,
-		grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
-	)
+	rpc, err := diskcache.NewClient(
+		context.TODO(),
+		c.ClientId,
+		c.SeUrl,
+		opts...)
+
 	if err != nil {
 		return err
 	}
-	defer core.CloseLogErr(conn)
 
-	rpc := dstk.NewDcRpcClient(conn)
 	wg := &sync.WaitGroup{}
 
 	log := zap.S()
@@ -141,7 +140,7 @@ func RunVerifier(conf string) error {
 	if err := core.UnmarshalYaml(conf, c); err != nil {
 		return err
 	}
-	s := helpers.ExposePrometheus(c.MetricUrl)
+	//s := helpers.ExposePrometheus(c.MetricUrl)
 
 	if err := runMany(c); err != nil {
 		return err
@@ -151,5 +150,6 @@ func RunVerifier(conf string) error {
 		return err
 	}
 
-	return s.Close()
+	//return s.Close()
+	return nil
 }
