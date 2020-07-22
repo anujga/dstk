@@ -5,6 +5,7 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/partrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 type ClientBase struct {
@@ -28,7 +29,10 @@ func (i *ClientBase) Fwd(ctx context.Context, key core.KeyT, in interface{}, out
 func (i *ClientBase) RawClient(ctx context.Context, k []byte) (grpc.ClientConnInterface, error) {
 	client, err := i.Pool.GetClient(ctx, k)
 	if err != nil {
-		return nil, err
+		return nil, core.ErrInfo(codes.Internal,
+			"Thick client could not locate partition",
+			"k", k,
+			"nester error", err).Err()
 	}
 
 	rpc := client.RawConnection()

@@ -49,6 +49,7 @@ func runMany(c *Config) error {
 		c.SeUrl,
 		opts...)
 
+	//time.Sleep(5 * time.Second)
 	fn := NewUserFactory(c.Views, rpc)
 
 	wg := &sync.WaitGroup{}
