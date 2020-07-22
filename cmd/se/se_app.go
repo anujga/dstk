@@ -1,40 +1,38 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/sharding_engine/simple"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"math/rand"
 )
 
+type Conf struct {
+	Port          int
+	ConnUrl, Mode string
+	Driver        string
+	Init          *Bootstrap
+}
+
+type Bootstrap struct {
+	CleanExisting bool
+	NumParts      int
+	Seed          int64
+	Workers       []*simple.Worker
+}
+
 func main() {
-	var port = flag.Int("port", 6001, "grpc port")
-	var mode = flag.String("mode", "disk", "sql, disk")
-	var connUrl = flag.String("conn", "", "connectionUrl")
-	var confPath = flag.String("conf", "./conf", "path of the config folder")
+	var conf = flag.String("conf", "conf.yaml", "conf file")
+	core.ZapGlobalLevel(zap.InfoLevel)
 	flag.Parse()
 
-	core.ZapGlobalLevel(zap.InfoLevel)
+	c := &Conf{}
+	core.MustUnmarshalYaml(*conf, c)
 
-	var (
-		server simple.WorkerAndClient
-		err    error
-	)
-
-	switch *mode {
-	case "disk":
-		server, err = simple.UsingLocalFolder(*confPath, true)
-	case "sql":
-		if len(*connUrl) == 0 {
-			panic("connection url missing")
-		}
-		server, err = simple.UsingSql("postgres", *connUrl)
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	f, err := simple.StartServer(*port, server)
+	f, _, err := run(c)
 	if err != nil {
 		panic(err)
 	}
@@ -43,5 +41,57 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	//s.GracefulStop()
+}
 
+func run(c *Conf) (*core.FutureErr, *grpc.Server, error) {
+
+	var (
+		server simple.WorkerAndClient
+		err    error
+	)
+
+	switch c.Mode {
+	case "sql":
+		if len(c.ConnUrl) == 0 {
+			return nil, nil, errors.New("connection url missing")
+		}
+		server, err = simple.UsingSql(c.Driver, c.ConnUrl)
+		if err != nil {
+			return nil, nil, err
+		}
+
+	default:
+		return nil, nil, errors.New("sql is the only supported mode")
+	}
+
+	init := c.Init
+	if init != nil && init.CleanExisting {
+		err := bootstrap(c)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	f, s, err := simple.StartServer(c.Port, server)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return f, s, nil
+}
+
+func bootstrap(c *Conf) error {
+	init := c.Init
+
+	ps, err := simple.GenerateParts(
+		init.NumParts,
+		init.Workers,
+		rand.NewSource(init.Seed))
+	if err != nil {
+		return err.Err()
+	}
+
+	err2 := simple.InitDb(c.Driver, c.ConnUrl, ps)
+	return err2
 }

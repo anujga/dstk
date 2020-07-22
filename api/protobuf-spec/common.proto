@@ -9,6 +9,7 @@ message Partition {
     bytes start = 4;
     bytes end = 5;
     string url = 6;
+    int64 workerId = 7;
 }
 
 message Partitions {

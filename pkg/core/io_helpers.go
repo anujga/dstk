@@ -22,6 +22,14 @@ func UnmarshalYaml(filename string, obj interface{}) error {
 	}
 	return nil
 }
+
+func MustUnmarshalYaml(filename string, obj interface{}) {
+	err := UnmarshalYaml(filename, obj)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func ParseYaml(filename string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigFile(filename)
