@@ -1,7 +1,16 @@
 package core
 
+import "io"
+
 type FutureErr struct {
-	done chan error
+	done   chan error
+	closer io.Closer
+
+	io.Closer
+}
+
+func (f *FutureErr) Close() error {
+	return f.closer.Close()
 }
 
 func (f *FutureErr) Done() <-chan error {
@@ -31,4 +40,11 @@ func NewPromise() *FutureErr {
 
 func RunAsync(fn func() error) *FutureErr {
 	return NewPromise().Complete(fn)
+}
+
+func RunAsync2(fn func() error, close io.Closer) *FutureErr {
+	return &FutureErr{
+		done:   make(chan error, 1),
+		closer: close,
+	}
 }

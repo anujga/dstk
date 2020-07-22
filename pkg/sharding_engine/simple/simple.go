@@ -14,10 +14,10 @@ type WorkerAndClient interface {
 	pb.SeClientApiServer
 }
 
-func StartServer(port int, server WorkerAndClient) (*core.FutureErr, error) {
+func StartServer(port int, server WorkerAndClient) (*core.FutureErr, *grpc.Server, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	sock := grpc.NewServer()
@@ -29,5 +29,5 @@ func StartServer(port int, server WorkerAndClient) (*core.FutureErr, error) {
 		return sock.Serve(lis)
 	})
 
-	return f, nil
+	return f, sock, nil
 }
