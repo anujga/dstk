@@ -3,6 +3,7 @@ package dc
 import (
 	"github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/spf13/viper"
@@ -40,7 +41,12 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 
 	url := viper.GetString("url")
 
-	//metrics := helpers.ExposePrometheus(viper.GetString("metric_url"))
+	metricUrl := viper.GetString("metric_url")
+	if metricUrl != "" {
+		s := helpers.ExposePrometheus(metricUrl)
+		defer core.CloseLogErr(s)
+	}
+
 	f := core.RunAsync(func() error {
 		ws, err := ss.NewWorkerServer(targetUrl, workerId, factory, func() interface{} {
 			return nil

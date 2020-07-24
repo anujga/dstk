@@ -12,7 +12,17 @@ Distributed System Toolkit. Collection of modules and reference designs to
     ```
 - [Dev Guidlines](docs/dev.md)
 - Start SE on port 6001
-    `task se`
+    - `task se`
+    - postgres
+    - `helm repo add bitnami https://charts.bitnami.com/bitnami`
+- dev tools
+    - k9s
+    - stern
+    - kubectl
+    - helm3(not helm 2)
+    - kube_ps1
+    - krew
+    - kubectx
 
 ## Reference Architectures
 - [Stateful Services](pkg/ss/README.md)

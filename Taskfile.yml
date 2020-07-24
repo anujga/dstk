@@ -28,11 +28,8 @@ tasks:
 
   docker:
     desc: Build docker
-    vars:
-      GIT_COMMIT:
-        sh: git log -n 1 --format=%h
     cmds:
-      - docker build -f deploy/Dockerfile . -t dstk:"{{.GIT_COMMIT}}"
+      - ./scripts/docker.sh
 
 
   se:

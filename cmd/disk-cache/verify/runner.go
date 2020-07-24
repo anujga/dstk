@@ -8,6 +8,7 @@ import (
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	diskcache "github.com/anujga/dstk/pkg/disk-cache"
+	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/verify"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"go.uber.org/zap"
@@ -140,7 +141,11 @@ func RunVerifier(conf string) error {
 	if err := core.UnmarshalYaml(conf, c); err != nil {
 		return err
 	}
-	//s := helpers.ExposePrometheus(c.MetricUrl)
+
+	if c.MetricUrl != "" {
+		s := helpers.ExposePrometheus(c.MetricUrl)
+		defer core.CloseLogErr(s)
+	}
 
 	if err := runMany(c); err != nil {
 		return err
@@ -150,6 +155,5 @@ func RunVerifier(conf string) error {
 		return err
 	}
 
-	//return s.Close()
 	return nil
 }
