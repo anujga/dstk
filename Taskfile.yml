@@ -18,17 +18,22 @@ vars:
 tasks:
   default:
     cmds:
-      - task: run
+      - task: docker
 
   os-deps:
     cmds:
       - echo "unknown os {{.GOOS}}"
 
-  run:
-    desc: Build and run the web app
+
+
+  docker:
+    desc: Build docker
+    vars:
+      GIT_COMMIT:
+        sh: git log -n 1 --format=%h
     cmds:
-      - task: build
-      - ./{{.EXE}}
+      - docker build -f deploy/Dockerfile . -t dstk:"{{.GIT_COMMIT}}"
+
 
   se:
     desc: Build and run SE
@@ -45,22 +50,23 @@ tasks:
     cmds:
       - go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify-config.yaml
 
-  build:
-    desc: Build the web app
-    deps: [assets, templates]
-    cmds:
-      - go build -v -o {{.EXE}} ./app.go
-
   apps:
     deps:
       - protos
     cmds:
       - task: app
-        vars: {EXE: mkv}
+        vars: {EXE: se}
+
+      - task: app
+        vars: {EXE: "disk-cache"}
+
   app:
     desc: Build the app
+    vars:
+      GIT_COMMIT:
+        sh: git log -n 1 --format=%h
     cmds:
-      - go build -o bin/{{.EXE}} ./cmd/{{.EXE}}/
+      - go build -o bin/{{.EXE}} -ldflags="-X main.Version={{.GIT_COMMIT}}" ./cmd/{{.EXE}}/
 
   test:
     cmds:
@@ -73,52 +79,10 @@ tasks:
 
   protos:
     desc: compile protobuf files
+    deps:
+      - dl-deps
     cmds:
       - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
-
-
-  #  assets:
-  #    desc: Bundle assets and generate box for it
-  #    deps: [js, css]
-  #    cmds:
-  #      - fileb0x assets_box.yml
-  #    sources:
-  #      - public/**/*
-  #    generates:
-  #      - boxes/assets/ab0x.go
-  #      - assets_box.yml
-  #    method: checksum
-  #
-  #  js:
-  #    desc: Bundle JS
-  #    cmds:
-  #      - minify -o public/app.js {{.JS_FILES}}
-  #    sources:
-  #      - assets/js/**/*.js
-  #    generates:
-  #      - public/app.js
-  #    method: checksum
-  #
-  #  css:
-  #    desc: Bundle CSS
-  #    cmds:
-  #      - minify -o public/app.css {{.CSS_FILES}}
-  #    sources:
-  #      - assets/css/**/*.css
-  #    generates:
-  #      - public/app.css
-  #    method: checksum
-  #
-  #  templates:
-  #    desc: Generate box for HTML templates
-  #    cmds:
-  #      - fileb0x templates_box.yml
-  #    sources:
-  #      - templates/**/*
-  #      - templates_box.yml
-  #    generates:
-  #      - boxes/templates/ab0x.go
-  #    method: checksum
 
   dl-deps:
     desc: Install tools required to build this app

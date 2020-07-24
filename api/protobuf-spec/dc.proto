@@ -51,5 +51,5 @@ service DcRpc {
   rpc Get (DcGetReq) returns (DcGetRes);
   rpc Put (DcPutReq) returns (DcRes);
   rpc Remove (DcRemoveReq) returns (DcRes);
-  rpc Scan (ScanReq) returns (ScanRes);
+  //  rpc Scan (ScanReq) returns (ScanRes);
 }
