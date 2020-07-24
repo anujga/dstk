@@ -7,20 +7,24 @@ import (
 )
 
 type primaryActor struct {
-	*actorImpl
+	actorBase
 }
 
 func (pa *primaryActor) become() error {
-	pa.smState = Primary
-	pa.logger.Info("became", zap.String("smstate", pa.smState.String()), zap.Int64("id", pa.Id()))
-	followers := make([]Actor, 0)
+	pa.smState.Store(Primary)
+	pa.logger.Info("became", zap.String("smstate", pa.getState().String()), zap.Int64("id", pa.id))
+	followers := make([]common.Mailbox, 0)
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case *FollowRequest:
 			fr := m.(*FollowRequest)
-			followers = append(followers, fr.Follower)
-			pa.logger.Info("adding follower", zap.Int64("added part", fr.Follower.Id()), zap.Int64("to part", pa.Id()))
-			fr.Follower.Mailbox() <- &common.AppStateImpl{S: pa.consumer.GetSnapshot()}
+			followers = append(followers, fr.FollowerMailbox)
+			pa.logger.Info("adding follower", zap.Int64("to part", pa.id), zap.Int64("follower id", fr.FollowerId))
+			select {
+			case fr.FollowerMailbox <- &common.AppStateImpl{S: pa.consumer.GetSnapshot()}:
+			default:
+				// todo
+			}
 		case *common.ClientMsg:
 			cm := m.(common.ClientMsg)
 			res, err := pa.consumer.Process(cm)
@@ -33,13 +37,22 @@ func (pa *primaryActor) become() error {
 			close(resC)
 			if !cm.ReadOnly() && len(followers) > 0 {
 				for _, f := range followers {
-					f.Mailbox() <- cm
+					select {
+					case f <- cm:
+					default:
+						// todo
+					}
 				}
 			}
+		case *BecomeProxy:
+			bp := m.(*BecomeProxy)
+			prx := &proxyActor{pa.actorBase}
+			pa.logger.Info("becoming proxy", zap.Int64("part", pa.id))
+			return prx.become(bp.ProxyTo)
 		default:
 			pa.logger.Warn("not handled", zap.Any("state", pa.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	pa.smState = Completed
+	pa.setState(Completed)
 	return nil
 }

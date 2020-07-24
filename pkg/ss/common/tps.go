@@ -4,8 +4,10 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 )
 
+type Mailbox chan interface{}
+
 type Msg interface {
-	ResponseChannel() chan interface{}
+	ResponseChannel() Mailbox
 }
 
 type ClientMsg interface {

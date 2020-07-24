@@ -14,6 +14,7 @@ message Partition {
     // todo should we deprecate active in favor of this?
     string desiredState = 9;
     string currentState = 10;
+    int64 proxyTo = 11;
 }
 
 message Partitions {

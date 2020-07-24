@@ -7,13 +7,17 @@ import (
 )
 
 type catchingUpActor struct {
-	*actorImpl
+	actorBase
 }
 
-func (fa *catchingUpActor) become() error {
-	fa.smState = CatchingUp
-	fa.logger.Info("became", zap.String("smstate", fa.smState.String()), zap.Int64("id", fa.Id()))
-	fa.leader.Mailbox() <- &FollowRequest{Follower: fa}
+func (fa *catchingUpActor) become(leaderMailbox common.Mailbox) error {
+	fa.setState(CatchingUp)
+	fa.logger.Info("became", zap.String("smstate", fa.getState().String()), zap.Int64("id", fa.id))
+	select {
+	case leaderMailbox <- &FollowRequest{FollowerMailbox: fa.mailBox}:
+	default:
+		// todo
+	}
 	// todo pass capacity as a parameter
 	msgList := make([]common.ClientMsg, 0)
 	for m := range fa.mailBox {
@@ -30,7 +34,7 @@ func (fa *catchingUpActor) become() error {
 					}
 					close(resC)
 				}
-				fa := followingActor{fa.actorImpl}
+				fa := followingActor{fa.actorBase}
 				return fa.become()
 			} else {
 				return err
@@ -44,6 +48,6 @@ func (fa *catchingUpActor) become() error {
 			fa.logger.Warn("not handled", zap.Any("state", fa.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	fa.smState = Completed
+	fa.setState(Completed)
 	return nil
 }

@@ -17,7 +17,7 @@ type PartsSyncer struct {
 }
 
 func (ps *PartsSyncer) Start() *status.Status {
-	rep := core.Repeat(5*time.Hour, func(timestamp time.Time) bool {
+	rep := core.Repeat(1*time.Minute, func(timestamp time.Time) bool {
 		if err := ps.syncFromSe(); err == nil {
 			ps.slog.Infow("fetch updates from SE",
 				"time", timestamp)

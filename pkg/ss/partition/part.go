@@ -5,33 +5,32 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"go.uber.org/zap"
+	"sync/atomic"
 )
-
-type State int
-
 
 type Actor interface {
 	Start() core.KeyT
 	End() core.KeyT
-	Mailbox() chan<- interface{}
+	Mailbox() common.Mailbox
 	Id() int64
 	Stop()
 	Run() *core.FutureErr
 	CanServe() bool
+	State() State
 }
 
 type actorImpl struct {
 	partition *pb.Partition
-	smState   State
+	smState   *atomic.Value
 	consumer  common.Consumer
 	mailBox   chan interface{}
 	Done      *core.FutureErr
 	logger    *zap.Logger
-	leader    Actor
 }
 
 func (p *actorImpl) CanServe() bool {
-	return p.smState == Primary || p.smState == Proxy
+	s := p.State()
+	return s == Primary || s == Proxy
 }
 
 func (p *actorImpl) Mailbox() chan<- interface{} {
@@ -46,13 +45,23 @@ func (p *actorImpl) End() core.KeyT {
 	return p.partition.GetEnd()
 }
 
+func (p *actorImpl) State() State {
+	return p.smState.Load().(State)
+}
+
 func (p *actorImpl) Id() int64 {
 	return p.partition.GetId()
 }
 
 func (p *actorImpl) Run() *core.FutureErr {
 	// ensure state is not mutated in other threads
-	ia := initActor{p}
+	ia := initActor{actorBase{
+		id:      p.Id(),
+		logger:  p.logger,
+		smState: p.smState,
+		mailBox: p.mailBox,
+		consumer: p.consumer,
+	}}
 	return p.Done.Complete(ia.become)
 }
 
@@ -62,14 +71,15 @@ func (p *actorImpl) Stop() {
 	close(p.mailBox)
 }
 
-func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int, leader Actor) Actor {
-	return &actorImpl{
+func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int) Actor {
+	ai := &actorImpl{
 		partition: p,
-		smState:   Init,
 		consumer:  c,
+		smState:   &atomic.Value{},
 		mailBox:   make(chan interface{}, maxOutstanding),
 		Done:      core.NewPromise(),
-		leader:    leader,
 		logger:    zap.L(),
 	}
+	ai.smState.Store(Init)
+	return ai
 }

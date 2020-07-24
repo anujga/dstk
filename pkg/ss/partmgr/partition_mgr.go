@@ -28,28 +28,7 @@ func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, error) {
 }
 
 func (pm *managerImpl) Reset(plist *pb.PartList) error {
-	for _, part := range plist.GetParts() {
-		if currPa, ok := pm.store.partIdMap[part.GetId()]; ok {
-			// todo these are not handled by various partition actors. this notifies the existing actor to
-			// become the actor in the partition sent
-			currPa.Mailbox() <- part
-		} else {
-			if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
-				var leader partition.Actor
-				if part.GetLeaderId() != 0 {
-					leader = pm.store.partIdMap[part.GetLeaderId()]
-				}
-				pa := partition.NewActor(part, c, maxOutstanding, leader)
-				pa.Run()
-				if e := pm.store.add(pa); e != nil {
-					pm.slog.Errorw("failed to add part", "part", pa)
-				}
-			} else {
-				pm.slog.Errorw("failed to make consumer", "part", part)
-			}
-		}
-	}
-	return nil
+	return resetParts(plist, pm, pm.slog.Desugar())
 }
 
 //todo: ensure there is at least 1 partition during construction

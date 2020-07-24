@@ -9,27 +9,26 @@ import (
 )
 
 type proxyActor struct {
-	*actorImpl
+	actorBase
 }
 
-func (pa *proxyActor) become(primaryActor primaryActor) error {
-	pa.smState = Proxy
-	pa.logger.Info("became", zap.String("smstate", pa.smState.String()), zap.Int64("id", pa.Id()))
+func (pa *proxyActor) become(mb common.Mailbox) error {
+	pa.setState(Proxy)
+	pa.logger.Info("became", zap.String("smstate", pa.getState().String()), zap.Int64("id", pa.id))
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case common.ClientMsg:
 			select {
-			case primaryActor.Mailbox() <- m:
+			case mb <- m:
 			default:
 				cm := m.(common.ClientMsg)
 				cm.ResponseChannel() <- core.ErrInfo(codes.ResourceExhausted, "Worker busy",
-					"capacity", cap(primaryActor.Mailbox()))
+					"capacity", cap(mb))
 			}
-
 		default:
 			pa.logger.Warn("not handled", zap.Any("state", pa.smState), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	pa.smState = Completed
+	pa.setState(Completed)
 	return nil
 }
