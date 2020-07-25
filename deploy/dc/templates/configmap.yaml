@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dc.fullname" . }}
+  labels:
+    {{- include "dc.labels" . | nindent 4 }}
+data:
+  dc.yaml: |-
+    se_url: {{ .Values.seUrl }}
+
+    max_outstanding: 1000
+    response_buffer_size: 5
+
+    db_path: /data
+    worker_id: 1
+    url: localhost:6011
+    metric_url: localhost:6012

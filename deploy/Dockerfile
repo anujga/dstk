@@ -1,17 +1,18 @@
 # Build the manager binary
-FROM golang:1.14 as builder
+FROM golang:1.14-buster as builder
+
+WORKDIR /
+
+RUN curl -sL https://taskfile.dev/install.sh | sh
 
 WORKDIR /workspace
-COPY go.mod go.mod
-COPY go.sum go.sum
+COPY . .
 
-COPY examples/ examples/
-COPY pkg pkg/
-COPY vendor vendor/
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o counter github.com/anujga/dstk/examples/persistent-counters
+RUN /bin/task apps
 
-FROM golang:1.14.2-alpine
+FROM ubuntu:20.04
 WORKDIR /
-COPY --from=builder /workspace/counter .
-COPY --from=builder /workspace/examples/persistent-counters/config.yaml .
-ENTRYPOINT ["/counter", "-conf", "/"]
+COPY --from=builder /workspace/bin /dstk
+#COPY --from=builder /workspace/examples/persistent-counters/config.yaml .
+#ENTRYPOINT ["/bin/bash"]
+#ENTRYPOINT ["/counter", "-conf", "/"]

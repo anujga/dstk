@@ -18,8 +18,8 @@ CREATE TABLE partition
 
 -- drop table partition
 
-insert into partition (id, modified_on, worker_id, start, "end", url)
-values (1, now(), 1, E'\\x00', E'\\x90', 'localhost:9099');
-
-insert into partition (id, modified_on, worker_id, start, "end", url)
-values (2, now(), 1, E'\\x90', E'\\xFFFFFFFFFF', 'localhost:9099');
+-- insert into partition (id, modified_on, worker_id, start, "end", url)
+-- values (1, now(), 1, E'\\x00', E'\\x90', 'localhost:9099');
+--
+-- insert into partition (id, modified_on, worker_id, start, "end", url)
+-- values (2, now(), 1, E'\\x90', E'\\xFFFFFFFFFF', 'localhost:9099');
