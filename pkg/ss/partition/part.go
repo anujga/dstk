@@ -33,7 +33,7 @@ func (p *actorImpl) CanServe() bool {
 	return s == Primary || s == Proxy
 }
 
-func (p *actorImpl) Mailbox() chan<- interface{} {
+func (p *actorImpl) Mailbox() common.Mailbox {
 	return p.mailBox
 }
 

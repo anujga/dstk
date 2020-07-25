@@ -1,3 +1,5 @@
+drop table partition;
+
 CREATE TABLE partition
 (
     id          bigint,
@@ -5,7 +7,10 @@ CREATE TABLE partition
     worker_id   bigint,
     start       bytea,
     "end"       bytea,
-    url         text
+    url         text,
+    desired_state text,
+    leader_id    bigint,
+    proxy_to bigint
 );
 
 -- Id: 1
@@ -17,9 +22,3 @@ CREATE TABLE partition
 -- End: "z"
 
 -- drop table partition
-
--- insert into partition (id, modified_on, worker_id, start, "end", url)
--- values (1, now(), 1, E'\\x00', E'\\x90', 'localhost:9099');
---
--- insert into partition (id, modified_on, worker_id, start, "end", url)
--- values (2, now(), 1, E'\\x90', E'\\xFFFFFFFFFF', 'localhost:9099');

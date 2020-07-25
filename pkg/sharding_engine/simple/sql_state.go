@@ -87,32 +87,41 @@ func add(tx *sqlx.Tx, parts []*pb.Partition) error {
 }
 
 type sqlPart struct {
-	Id         int64
-	ModifiedOn time.Time `db:"modified_on"`
-	WorkerId   int64     `db:"worker_id"`
-	Start, End core.KeyT
-	Url        string
+	Id           int64
+	ModifiedOn   time.Time `db:"modified_on"`
+	WorkerId     int64     `db:"worker_id"`
+	Start, End   core.KeyT
+	Url          string
+	LeaderId     int64  `db:"leader_id"`
+	ProxyTo      int64  `db:"proxy_to"`
+	DesiredState string `db:"desired_state"`
 }
 
 func FromProto(p *pb.Partition) *sqlPart {
 	return &sqlPart{
-		Id:         p.GetId(),
-		ModifiedOn: time.Unix(0, p.GetModifiedOn()),
-		WorkerId:   p.GetWorkerId(),
-		Start:      p.GetStart(),
-		End:        p.GetEnd(),
-		Url:        p.GetUrl(),
+		Id:           p.GetId(),
+		ModifiedOn:   time.Unix(0, p.GetModifiedOn()),
+		WorkerId:     p.GetWorkerId(),
+		Start:        p.GetStart(),
+		End:          p.GetEnd(),
+		Url:          p.GetUrl(),
+		LeaderId:     p.GetLeaderId(),
+		DesiredState: p.GetDesiredState(),
+		ProxyTo:      p.GetProxyTo(),
 	}
 }
 
 func (s *sqlPart) toProto() *pb.Partition {
 	return &pb.Partition{
-		Id:         s.Id,
-		ModifiedOn: s.ModifiedOn.UnixNano(),
-		Active:     true,
-		Start:      s.Start,
-		End:        s.End,
-		Url:        s.Url,
+		Id:           s.Id,
+		ModifiedOn:   s.ModifiedOn.UnixNano(),
+		Active:       true,
+		Start:        s.Start,
+		End:          s.End,
+		Url:          s.Url,
+		LeaderId:     s.LeaderId,
+		DesiredState: s.DesiredState,
+		ProxyTo:      s.ProxyTo,
 	}
 }
 
