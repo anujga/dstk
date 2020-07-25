@@ -36,7 +36,10 @@ are already sorted. 2 use cases would be
     1. elk integration with zap logs
     1. partition level stats
     1. sentry for errors
-        
+1. proper labels in line of https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
+we might have to merge the helm charts for better integration. eg: based on
+ replica counts of dc, we can create a for loop and generate 
+ [configmap](../deploy/se/templates/configmap.yaml#18)
 
 ### Features
 1. backup, restore - spark job that makes bulk rpc calls
