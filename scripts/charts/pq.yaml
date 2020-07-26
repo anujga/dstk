@@ -1,0 +1,16 @@
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: psql
+  namespace: dstk
+spec:
+  chart:
+    repository: https://charts.bitnami.com/bitnami
+    name: postgresql
+    version: 9.1.1
+  values:
+    persistence:
+      size: 30Gi
+
+#todo: schedule a backup on lines of
+# https://github.com/rinormaloku/postgres-backup-container

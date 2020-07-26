@@ -36,6 +36,8 @@ Common labels
 */}}
 {{- define "dc.labels" -}}
 helm.sh/chart: {{ include "dc.chart" . }}
+app.kubernetes.io/part-of: dstk
+app.kubernetes.io/component: dc
 {{ include "dc.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}

@@ -6,7 +6,7 @@ data:
   storageClassName: standard
   storage: 1Gi
 
-seUrl: "se.default.svc.cluster.local:6001"
+seUrl: "se.dstk.svc.cluster.local:6001"
 logLevel: info
 cleanDb: false
 
@@ -14,9 +14,9 @@ replicaCount: 2
 
 image:
   repository: localhost:5000/dstk
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 90f7117
+  tag: latest
 
 imagePullSecrets: []
 nameOverride: ""

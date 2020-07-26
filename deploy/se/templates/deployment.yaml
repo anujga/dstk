@@ -6,73 +6,80 @@ metadata:
     {{- include "se.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
-replicas: {{ .Values.replicaCount }}
-  {{- end }}
-selector:
-  matchLabels:
-    {{- include "se.selectorLabels" . | nindent 6 }}
-template:
-  metadata:
-  {{- with .Values.podAnnotations }}
-  annotations:
-    {{- toYaml . | nindent 8 }}
-  {{- end }}
-  labels:
-    {{- include "se.selectorLabels" . | nindent 8 }}
-  spec:
-    {{- with .Values.imagePullSecrets }}
-    imagePullSecrets:
-      {{- toYaml . | nindent 8 }}
+  replicas: {{ .Values.replicaCount }}
     {{- end }}
-    serviceAccountName: {{ include "se.serviceAccountName" . }}
-    securityContext:
-      {{- toYaml .Values.podSecurityContext | nindent 8 }}
+  selector:
+    matchLabels:
+      {{- include "se.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "se.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "se.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
 
-    volumes:
-      - name: config-volume
-        configMap:
-          name: {{ include "se.fullname" . }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "se.fullname" . }}
+        - name: pgsecret
+          secret:
+            secretName: {{.Values.pgSecret }}
 
-    containers:
-      - name: {{ .Chart.Name }}
-        securityContext:
-          {{- toYaml .Values.securityContext | nindent 12 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        volumeMounts:
-          - name: config-volume
-            mountPath: /etc/config
-        command: ["/dstk/se"]
-        args:
-          - "--conf=/etc/config/se.yaml"
-        #            - "--log=debug"
-        ports:
-          - name: grpc
-            containerPort: 6001
-            protocol: TCP
-        #            - name: metrics
-        #              containerPort:
-        #              protocol: TCP
-        #          livenessProbe:
-        #            httpGet:
-        #              path: /
-        #              port: http
-        #          readinessProbe:
-        #            httpGet:
-        #              path: /
-        #              port: http
 
-        resources:
-          {{- toYaml .Values.resources | nindent 12 }}
-    {{- with .Values.nodeSelector }}
-    nodeSelector:
-      {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.affinity }}
-    affinity:
-      {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
-    tolerations:
-      {{- toYaml . | nindent 8 }}
-    {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+            - name: pgsecret
+              mountPath: /secrets/se
+
+          command: ["/dstk/se"]
+          args:
+            - "--conf=/etc/config/se.yaml"
+          #            - "--log=debug"
+          ports:
+            - name: grpc
+              containerPort: 6001
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.metricPort }}
+              protocol: TCP
+          #          livenessProbe:
+          #            httpGet:
+          #              path: /
+          #              port: http
+          #          readinessProbe:
+          #            httpGet:
+          #              path: /
+          #              port: http
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

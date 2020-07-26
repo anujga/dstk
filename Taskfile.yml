@@ -29,8 +29,7 @@ tasks:
   docker:
     desc: Build docker
     cmds:
-      - ./scripts/docker.sh
-
+      - ./scripts/docker.sh deploy/Dockerfile
 
   se:
     desc: Build and run SE
@@ -51,11 +50,17 @@ tasks:
     deps:
       - protos
     cmds:
+      - task: app-local
+
+  local:
+    cmds:
       - task: app
         vars: {EXE: se}
 
       - task: app
         vars: {EXE: "disk-cache"}
+
+      - scripts/docker.sh deploy/Dockerfile-local
 
   app:
     desc: Build the app
