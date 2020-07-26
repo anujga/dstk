@@ -20,6 +20,6 @@ func ExposePrometheus(address string) *http.Server {
 				"err", err)
 		}
 	}()
-	return server
 
+	return server
 }

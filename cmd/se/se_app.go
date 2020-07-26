@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/sharding_engine/simple"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -16,6 +17,8 @@ type Conf struct {
 	Driver        string
 	Init          *Bootstrap
 }
+
+var metricUrl = "localhost:6002"
 
 type Bootstrap struct {
 	CleanExisting bool
@@ -37,11 +40,13 @@ func main() {
 		panic(err)
 	}
 
+	s := helpers.ExposePrometheus(metricUrl)
+	defer core.CloseLogErr(s)
+
 	err = f.Wait()
 	if err != nil {
 		panic(err)
 	}
-	//s.GracefulStop()
 }
 
 func run(c *Conf) (*core.FutureErr, *grpc.Server, error) {

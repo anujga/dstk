@@ -11,5 +11,10 @@ spec:
       targetPort: grpc
       protocol: TCP
       name: grpc
+    - port: {{ .Values.metricPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+
   selector:
     {{- include "se.selectorLabels" . | nindent 4 }}

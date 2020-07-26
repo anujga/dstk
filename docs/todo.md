@@ -25,6 +25,7 @@ are already sorted. 2 use cases would be
 
 ### Production
 1. opentracing @sudip
+1. pg_dump schedule backup. tune chart
 1. docker and metrics
     1. health check
         - https://github.com/grpc/grpc-go/blob/master/health/server.go
@@ -68,3 +69,9 @@ the use cases for these api except ttl so lower priority:
     1. expose grpc streaming api for these
     1. json store with partial get/put
 
+### Tech Debt
+1. use [compflags](https://github.com/posener/complete/tree/master)
+as opposed to vanilla flags everywhere
+1. create a master helm chart with respects namespaces and uses helm operator
+ to configure dependent charts and values 
+ 

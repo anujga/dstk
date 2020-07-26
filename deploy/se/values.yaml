@@ -9,6 +9,7 @@ dc:
   port: 6011
   name: dc
 
+metricPort: 6002
 image:
   repository: localhost:5000/dstk
   pullPolicy: IfNotPresent
