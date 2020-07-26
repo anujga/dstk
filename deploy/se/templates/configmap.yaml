@@ -9,7 +9,8 @@ data:
     Port: 6001
     Driver: postgres
     Mode: sql
-    ConnUrl: "host=pq-postgresql.default.svc.cluster.local user=postgres dbname=postgres password=8DjsIK2koR sslmode=disable"
+    ConnUrl: "host=dstk-psql-postgresql.dstk.svc.cluster.local user=postgres dbname=postgres sslmode=disable "
+    PasswdFile: /secrets/se/postgresql-password
     Init:
       CleanExisting: true
       NumParts: 16

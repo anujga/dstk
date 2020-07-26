@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/io"
 	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/sharding_engine/simple"
 	"go.uber.org/zap"
@@ -14,6 +15,7 @@ import (
 type Conf struct {
 	Port          int
 	ConnUrl, Mode string
+	PasswdFile    string
 	Driver        string
 	Init          *Bootstrap
 }
@@ -61,6 +63,17 @@ func run(c *Conf) (*core.FutureErr, *grpc.Server, error) {
 		if len(c.ConnUrl) == 0 {
 			return nil, nil, errors.New("connection url missing")
 		}
+		if c.PasswdFile != "" {
+			passwd, err := io.Cat(c.PasswdFile)
+			if err != nil {
+				return nil, nil, err
+			}
+			zap.S().Infow("updating password from local file",
+				"file", c.PasswdFile)
+
+			c.ConnUrl = c.ConnUrl + " password=" + passwd
+		}
+
 		server, err = simple.UsingSql(c.Driver, c.ConnUrl)
 		if err != nil {
 			return nil, nil, err

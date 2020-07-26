@@ -9,12 +9,14 @@ dc:
   port: 6011
   name: dc
 
+pgSecret: "dstk-psql-postgresql"
+
 metricPort: 6002
 image:
   repository: localhost:5000/dstk
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: 90f7117
+  tag: latest
 
 imagePullSecrets: []
 nameOverride: ""
