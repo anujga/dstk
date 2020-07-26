@@ -78,7 +78,6 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	return f, nil
 }

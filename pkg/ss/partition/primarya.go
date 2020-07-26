@@ -25,8 +25,9 @@ func (pa *primaryActor) become() error {
 			default:
 				// todo
 			}
-		case *common.ClientMsg:
+		case common.ClientMsg:
 			cm := m.(common.ClientMsg)
+			pa.logger.Info("client msg handling", zap.Int64("part", pa.id), zap.ByteString("key", cm.Key()))
 			res, err := pa.consumer.Process(cm)
 			resC := cm.ResponseChannel()
 			if err != nil {

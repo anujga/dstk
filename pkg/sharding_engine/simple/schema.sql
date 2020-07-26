@@ -31,8 +31,10 @@ insert into partition (id, modified_on, worker_id, start, "end", url, desired_st
 values (102, now(), 1, E'\\x0000', E'\\x1000', 'localhost:6011', 'follower', 'follower', 1);
 
 delete from partition where 1=1;
+
 insert into partition (id, modified_on, worker_id, start, "end", url, desired_state)
 values (1, now(), 1, E'\\x0000', E'\\x6000', 'localhost:6011', 'primary');
+
 insert into partition (id, modified_on, worker_id, start, "end", url, desired_state, leader_id)
 values (11, now(), 1, E'\\x0000', E'\\x2000', 'localhost:6011', 'catchingup', 1);
 insert into partition (id, modified_on, worker_id, start, "end", url, desired_state, leader_id)

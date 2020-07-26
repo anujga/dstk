@@ -7,7 +7,22 @@ import (
 	"google.golang.org/grpc"
 )
 
-func ExampleUsage() {
+var k = []byte{0xa}
+
+func put(client dstk.DcRpcClient) {
+	res, err := client.Put(context.TODO(), &dstk.DcPutReq{
+		Key:        k,
+		Value:      []byte("harsha"),
+		TtlSeconds: 1000,
+	})
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(res)
+	}
+}
+
+func getClient() dstk.DcRpcClient {
 	client, err := NewClient(
 		context.TODO(),
 		"c1",
@@ -16,11 +31,22 @@ func ExampleUsage() {
 	if err != nil {
 		panic(err)
 	}
-	req := &dstk.DcGetReq{Key: []byte("harsha")}
+	return client
+}
+
+func get(client dstk.DcRpcClient) {
+	req := &dstk.DcGetReq{Key: k}
 	val, err := client.Get(context.TODO(), req)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		fmt.Println(val)
 	}
+}
+
+func main() {
+	c := getClient()
+	put(c)
+	get(c)
+	//fmt.Println(hex.DecodeString("aa"))
 }

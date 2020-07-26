@@ -70,7 +70,7 @@ func startNewActors(newParts []*PartCombo, pm *managerImpl) {
 				newp.Run(msg)
 			} else {
 				newp.Run(nil)
-				pm.slog.Warnw("no trans function", "from", currActorState.String(), "to", currDbState.String())
+				pm.slog.Info("no trans function", "from", currActorState.String(), "to", currDbState.String())
 			}
 		} else {
 			pm.slog.Warnw("no trans function", "from", currActorState.String())
