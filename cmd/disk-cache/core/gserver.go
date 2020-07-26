@@ -15,10 +15,6 @@ type DiskCacheServer struct {
 	log        *zap.Logger
 }
 
-func (d *DiskCacheServer) Scan(ctx context.Context, req *pb.ScanReq) (*pb.ScanRes, error) {
-	panic("implement me")
-}
-
 func (d *DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcGetRes, error) {
 	if rpcReq.GetKey() == nil {
 		return nil, status.Error(

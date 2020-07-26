@@ -22,10 +22,6 @@ type impl struct {
 	ss.ClientBase
 }
 
-func (i *impl) Scan(ctx context.Context, in *pb.ScanReq, opts ...grpc.CallOption) (*pb.ScanRes, error) {
-	panic("implement me")
-}
-
 func (i *impl) Get(ctx context.Context, in *pb.DcGetReq, opts ...grpc.CallOption) (*pb.DcGetRes, error) {
 	out := new(pb.DcGetRes)
 
