@@ -16,3 +16,7 @@ func primaryToProxy(actor partition.Actor, partIdMap map[int64]partition.Actor, 
 	}
 	return &partition.BecomeProxy{ProxyTo: pt}
 }
+
+func primaryToRetired(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
+	return &partition.Retire{}
+}

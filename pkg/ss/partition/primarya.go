@@ -11,8 +11,7 @@ type primaryActor struct {
 }
 
 func (pa *primaryActor) become() error {
-	pa.smState.Store(Primary)
-	pa.logger.Info("became", zap.String("smstate", pa.getState().String()), zap.Int64("id", pa.id))
+	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id))
 	followers := make([]common.Mailbox, 0)
 	for m := range pa.mailBox {
 		switch m.(type) {
@@ -48,7 +47,11 @@ func (pa *primaryActor) become() error {
 			bp := m.(*BecomeProxy)
 			prx := &proxyActor{pa.actorBase, bp.ProxyTo}
 			pa.logger.Info("becoming proxy", zap.Int64("part", pa.id))
+			prx.setState(Proxy)
 			return prx.become()
+		case *Retire:
+			pa.logger.Info("retiring", zap.Int64("part", pa.id))
+			break
 		default:
 			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}

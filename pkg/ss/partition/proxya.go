@@ -14,8 +14,11 @@ type proxyActor struct {
 }
 
 func (pa *proxyActor) become() error {
-	pa.setState(Proxy)
-	pa.logger.Info("became", zap.String("smstate", pa.getState().String()), zap.Int64("id", pa.id))
+	pids := make([]int64, 0)
+	for _, p := range pa.proxyTo {
+		pids = append(pids, p.Id())
+	}
+	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id), zap.Int64s("proxy to", pids))
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case common.ClientMsg:
@@ -30,6 +33,9 @@ func (pa *proxyActor) become() error {
 					}
 				}
 			}
+		case *Retire:
+			pa.logger.Info("retiring", zap.Int64("part", pa.id))
+			break
 		default:
 			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}

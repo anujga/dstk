@@ -9,11 +9,11 @@ import (
 type catchingUpActor struct {
 	actorBase
 	leaderMailbox common.Mailbox
+	leaderId      int64
 }
 
 func (fa *catchingUpActor) become() error {
-	fa.setState(CatchingUp)
-	fa.logger.Info("became", zap.String("smstate", fa.getState().String()), zap.Int64("id", fa.id))
+	fa.logger.Info("became", zap.String("state", fa.getState().String()), zap.Int64("id", fa.id), zap.Int64("leader id", fa.leaderId))
 	select {
 	case fa.leaderMailbox <- &FollowRequest{FollowerMailbox: fa.mailBox, FollowerId: fa.id}:
 	default:
@@ -36,6 +36,7 @@ func (fa *catchingUpActor) become() error {
 					close(resC)
 				}
 				fa := followingActor{fa.actorBase}
+				fa.setState(Follower)
 				return fa.become()
 			} else {
 				return err

@@ -11,12 +11,12 @@ type followingActor struct {
 }
 
 func (fa *followingActor) become() error {
-	fa.setState(Follower)
-	fa.logger.Info("became", zap.String("smstate", fa.getState().String()), zap.Int64("id", fa.id))
+	fa.logger.Info("became", zap.String("state", fa.getState().String()), zap.Int64("id", fa.id))
 	for m := range fa.mailBox {
 		switch m.(type) {
 		case *BecomePrimary:
 			pa := &primaryActor{fa.actorBase}
+			pa.setState(Primary)
 			return pa.become()
 		case common.ClientMsg:
 			// we needn't handle this because primary would've updated the state.

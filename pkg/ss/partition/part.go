@@ -75,6 +75,7 @@ func (p *actorImpl) Run(m interface{}) *core.FutureErr {
 		switch m.(type) {
 		case *BecomePrimary:
 			pa := primaryActor{ab}
+			pa.setState(Primary)
 			fun = pa.become
 		case *BecomeProxy:
 			bp := m.(*BecomeProxy)
@@ -82,6 +83,7 @@ func (p *actorImpl) Run(m interface{}) *core.FutureErr {
 				actorBase: ab,
 				proxyTo:   bp.ProxyTo,
 			}
+			pa.setState(Proxy)
 			fun = pa.become
 		case *BecomeCatchingUpActor:
 			bf := m.(*BecomeCatchingUpActor)
@@ -89,9 +91,11 @@ func (p *actorImpl) Run(m interface{}) *core.FutureErr {
 				actorBase:     ab,
 				leaderMailbox: bf.LeaderMailbox,
 			}
+			ca.setState(CatchingUp)
 			fun = ca.become
 		case *BecomeFollower:
 			fa := followingActor{ab}
+			fa.setState(Follower)
 			fun = fa.become
 		}
 	}
