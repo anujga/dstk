@@ -6,16 +6,14 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/core/io"
 	diskcache "github.com/anujga/dstk/pkg/disk-cache"
-	"github.com/anujga/dstk/pkg/helpers"
 	"google.golang.org/grpc"
 	"net"
 )
 
 type Config struct {
-	Url       string
-	MetricUrl string
-	SeUrl     string
-	ClientId  string
+	Url      string
+	SeUrl    string
+	ClientId string
 }
 
 func startServer(url string, server pb.DcRpcServer) (*core.FutureErr, *grpc.Server, error) {
@@ -52,18 +50,7 @@ func (p *fwdProxy) Remove(c context.Context, in *pb.DcRemoveReq) (*pb.DcRes, err
 	return p.rpc.Remove(c, in, p.opts...)
 }
 
-func GatewayMode(conf string) error {
-
-	c := &Config{}
-
-	if err := core.UnmarshalYaml(conf, c); err != nil {
-		return err
-	}
-
-	if c.MetricUrl != "" {
-		s := helpers.ExposePrometheus(c.MetricUrl)
-		defer core.CloseLogErr(s)
-	}
+func GatewayMode(c *Config) (*core.FutureErr, error) {
 
 	opts := io.DefaultClientOpts()
 	rpc, err := diskcache.NewClient(
@@ -73,7 +60,7 @@ func GatewayMode(conf string) error {
 		opts...)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	proxy := &fwdProxy{
@@ -83,12 +70,8 @@ func GatewayMode(conf string) error {
 
 	f, _, err := startServer(c.Url, proxy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = f.Wait()
-	if err != nil {
-		panic(err)
-	}
-	return nil
+	return f, nil
 }

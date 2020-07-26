@@ -32,9 +32,10 @@ func main() {
 	core.ZapGlobalLevel(*logLevel)
 
 	var err error = nil
+	c0 := conf.Get()[0]
 	switch *mode {
 	case "verify":
-		err = verify.RunVerifier(conf.Get()[0])
+		err = verify.RunVerifier(c0)
 	case "worker":
 		var fs []*core.FutureErr
 
@@ -49,7 +50,18 @@ func main() {
 
 		err = core.Errs(core.WaitMany(fs)...)
 	case "gateway":
-		err = gateway.GatewayMode(conf.Get()[0])
+		c := &gateway.Config{}
+		err := core.UnmarshalYaml(c0, c)
+		if err != nil {
+			break
+		}
+
+		f, err := gateway.GatewayMode(c)
+		if err != nil {
+			break
+		}
+
+		err = f.Wait()
 
 	default:
 		err = errors.Newf("unknown mode %s", *mode)

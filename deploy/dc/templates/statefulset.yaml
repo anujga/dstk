@@ -74,9 +74,12 @@ template:
           - name: grpc
             containerPort: 6011
             protocol: TCP
-        #            - name: metrics
-        #              containerPort:
-        #              protocol: TCP
+          - name: metrics
+            containerPort: {{ .Values.metricPort }}
+            protocol: TCP
+          - name: gw
+            containerPort: 6013
+            protocol: TCP
         #          livenessProbe:
         #            httpGet:
         #              path: /
