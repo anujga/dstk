@@ -13,8 +13,11 @@ var transitionTable = map[partition.State]map[partition.State]func(a partition.A
 		partition.Follower:   initToFollower,
 		partition.Proxy:      initToProxy,
 	},
+	partition.CatchingUp: {
+		partition.Follower: catchingupToFollower,
+	},
 	partition.Primary: {
-		partition.Proxy: primaryToProxy,
+		partition.Proxy:   primaryToProxy,
 		partition.Retired: primaryToRetired,
 	},
 	partition.Follower: {
@@ -59,17 +62,18 @@ func ensureActors(plist *pb.PartList, pm *managerImpl) ([]*PartCombo, []*PartCom
 
 func startNewActors(newParts []*PartCombo, pm *managerImpl) {
 	for _, newp := range newParts {
-		currState := newp.Actor.State()
-		desiredState := partition.StateFromString(newp.GetCurrentState())
-		if currTo, ok := transitionTable[currState]; ok {
-			if trf, ok := currTo[desiredState]; ok {
+		currActorState := newp.Actor.State()
+		currDbState := partition.StateFromString(newp.GetCurrentState())
+		if currTo, ok := transitionTable[currActorState]; ok {
+			if trf, ok := currTo[currDbState]; ok {
 				msg := trf(newp.Actor, pm.store.partIdMap, newp.Partition)
 				newp.Run(msg)
 			} else {
-				pm.slog.Warnw("no trans function", "from", currState.String(), "to", desiredState.String())
+				newp.Run(nil)
+				pm.slog.Warnw("no trans function", "from", currActorState.String(), "to", currDbState.String())
 			}
 		} else {
-			pm.slog.Warnw("no trans function", "from", currState.String())
+			pm.slog.Warnw("no trans function", "from", currActorState.String())
 		}
 	}
 }
@@ -105,9 +109,11 @@ func handleTransition(currPa partition.Actor, part *pb.Partition, pmap map[int64
 				}
 			}
 		} else {
+			logger.Sugar().Warnw("no trans function", "from", currState.String(), "to", desiredState.String())
 			// todo
 		}
 	} else {
+		logger.Sugar().Warnw("no trans function", "from", currState.String())
 		// todo
 	}
 	return nil

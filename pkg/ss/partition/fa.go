@@ -25,6 +25,6 @@ func (fa *followingActor) become() error {
 			fa.logger.Warn("not handled", zap.Int64("part", fa.id), zap.Any("state", fa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	fa.setState(Completed)
+	fa.setState(Retired)
 	return nil
 }

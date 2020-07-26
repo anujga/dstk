@@ -13,6 +13,7 @@ type primaryActor struct {
 func (pa *primaryActor) become() error {
 	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id))
 	followers := make([]common.Mailbox, 0)
+	channelRead:
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case *FollowRequest:
@@ -51,11 +52,12 @@ func (pa *primaryActor) become() error {
 			return prx.become()
 		case *Retire:
 			pa.logger.Info("retiring", zap.Int64("part", pa.id))
-			break
+			break channelRead
 		default:
 			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	pa.setState(Completed)
+	pa.setState(Retired)
+	close(pa.mailBox)
 	return nil
 }

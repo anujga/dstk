@@ -21,35 +21,39 @@ func (fa *catchingUpActor) become() error {
 	}
 	// todo pass capacity as a parameter
 	msgList := make([]common.ClientMsg, 0)
+	snapshotReceived := false
 	for m := range fa.mailBox {
 		switch m.(type) {
 		case common.AppState:
 			if err := fa.consumer.ApplySnapshot(m.(common.AppState)); err == nil {
-				for _, msg := range msgList {
-					res, err := fa.consumer.Process(msg)
-					resC := msg.ResponseChannel()
-					if err != nil {
-						resC <- err
-					} else {
-						resC <- res
-					}
-					close(resC)
+				for _, _ = range msgList {
+					// todo no-op as leader is in same node
 				}
+			} else {
+				return err
+			}
+			snapshotReceived = true
+		case common.ClientMsg:
+			if snapshotReceived {
+				// todo no-op as leader is in same node
+			} else {
+				if len(msgList) == 1024 {
+					// todo handle
+				}
+				msgList = append(msgList, m.(common.ClientMsg))
+			}
+		case *BecomeFollower:
+			if snapshotReceived {
 				fa := followingActor{fa.actorBase}
 				fa.setState(Follower)
 				return fa.become()
 			} else {
-				return err
+				fa.logger.Info("cannot become follower before receiving snapshot", zap.Int64("part", fa.id))
 			}
-		case common.ClientMsg:
-			if len(msgList) == 1024 {
-				// todo handle
-			}
-			msgList = append(msgList, m.(common.ClientMsg))
 		default:
 			fa.logger.Warn("not handled", zap.Any("state", fa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	fa.setState(Completed)
+	fa.setState(Retired)
 	return nil
 }

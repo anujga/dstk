@@ -19,6 +19,7 @@ func (pa *proxyActor) become() error {
 		pids = append(pids, p.Id())
 	}
 	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id), zap.Int64s("proxy to", pids))
+	channelRead:
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case common.ClientMsg:
@@ -35,11 +36,12 @@ func (pa *proxyActor) become() error {
 			}
 		case *Retire:
 			pa.logger.Info("retiring", zap.Int64("part", pa.id))
-			break
+			break channelRead
 		default:
 			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
-	pa.setState(Completed)
+	pa.setState(Retired)
+	close(pa.mailBox)
 	return nil
 }

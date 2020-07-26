@@ -5,6 +5,8 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 	"sync/atomic"
 )
@@ -61,15 +63,21 @@ func (p *actorImpl) Id() int64 {
 
 func (p *actorImpl) Run(m interface{}) *core.FutureErr {
 	var fun func() error
+	db, err := sqlx.Connect("postgres", "user=postgres dbname=se password=se sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
 	ab := actorBase{
-		id:      p.Id(),
-		logger:  p.logger,
-		smState: p.smState,
-		mailBox: p.mailBox,
+		id:       p.Id(),
+		db:       db,
+		logger:   p.logger,
+		smState:  p.smState,
+		mailBox:  p.mailBox,
 		consumer: p.consumer,
 	}
 	if m == nil {
 		ia := initActor{ab}
+		ia.setState(Init)
 		fun = ia.become
 	} else {
 		switch m.(type) {
@@ -118,10 +126,6 @@ func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int) Actor {
 		Done:      core.NewPromise(),
 		logger:    zap.L(),
 	}
-	//s := Init
-	//if p.GetCurrentState() != "" {
-	//	s = StateFromString(p.GetCurrentState())
-	//}
 	ai.smState.Store(Init)
 	return ai
 }

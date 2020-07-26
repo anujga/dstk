@@ -8,7 +8,6 @@ const (
 	Follower
 	Primary
 	Proxy
-	Completed
 	Retired
 	Invalid
 )
@@ -23,8 +22,8 @@ func (s State) String() string {
 		return "primary"
 	case Proxy:
 		return "proxy"
-	case Completed:
-		return "completed"
+	//case Completed:
+	//	return "completed"
 	case Retired:
 		return "retired"
 	case Init:
