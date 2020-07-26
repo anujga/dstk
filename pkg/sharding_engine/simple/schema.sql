@@ -58,9 +58,3 @@ update partition set proxy_to='{101, 102}' where id=1;
 
 update partition set current_state='' where 1=1;
 
-
-<<<<<<< HEAD
-delete from partition where modified_on='2020-07-26 05:36:34.104066';
-=======
-delete from partition where modified_on='2020-07-26 13:53:32.127138';
->>>>>>> misc
