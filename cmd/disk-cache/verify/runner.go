@@ -7,45 +7,56 @@ import (
 	"encoding/hex"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/io"
 	diskcache "github.com/anujga/dstk/pkg/disk-cache"
 	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/verify"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"gopkg.in/errgo.v2/fmt/errors"
 	"math/rand"
 	"sync"
 )
 
 type Config struct {
-	Start     int64
-	Size      int64
-	Count     int64
-	Seed      int64
-	Views     uint64
-	Copies    int64
-	SeUrl     string
-	MetricUrl string
-	ClientId  string
+	Start      int64
+	Size       int64
+	Count      int64
+	Seed       int64
+	Views      uint64
+	Copies     int64
+	SeUrl      string
+	GatewayUrl string
+	Mode       string
+	MetricUrl  string
+	ClientId   string
 }
 
-var opts []grpc.DialOption
+func newClient(c *Config) (dstk.DcRpcClient, error) {
+	switch c.Mode {
+	default:
+		return nil, errors.Newf("Bad mode %s", c.Mode)
+	case "gateway":
+		opts := io.DefaultClientOpts()
+		conn, err := grpc.DialContext(
+			context.TODO(), c.GatewayUrl, opts...)
+		if err != nil {
+			return nil, err
+		}
 
-func init() {
-	opts = []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+		return dstk.NewDcRpcClient(conn), nil
+	case "client":
+		return diskcache.NewClient(
+			context.TODO(),
+			c.ClientId,
+			c.SeUrl,
+			io.DefaultClientOpts()...)
 	}
 }
 
 func runMany(c *Config) error {
 
-	rpc, err := diskcache.NewClient(
-		context.TODO(),
-		c.ClientId,
-		c.SeUrl,
-		opts...)
+	rpc, err := newClient(c)
 
 	if err != nil {
 		return err
@@ -87,11 +98,7 @@ func runMany(c *Config) error {
 }
 
 func verifyAll(c *Config) error {
-	rpc, err := diskcache.NewClient(
-		context.TODO(),
-		c.ClientId,
-		c.SeUrl,
-		opts...)
+	rpc, err := newClient(c)
 
 	if err != nil {
 		return err

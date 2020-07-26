@@ -1,15 +1,14 @@
-package main
+package diskcache
 
 import (
 	"context"
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
-	diskcache "github.com/anujga/dstk/pkg/disk-cache"
 	"google.golang.org/grpc"
 )
 
-func main() {
-	client, err := diskcache.NewClient(
+func ExampleUsage() {
+	client, err := NewClient(
 		context.TODO(),
 		"c1",
 		"localhost:6001",

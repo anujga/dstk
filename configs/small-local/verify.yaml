@@ -5,5 +5,7 @@ Seed: 1
 Views: 10
 Copies: 1
 SeUrl: "localhost:6001"
+GatewayUrl: "localhost:6991"
+Mode: gateway
 MetricUrl: "localhost:6900"
 ClientId: "c1"
