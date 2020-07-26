@@ -97,6 +97,7 @@ type sqlPart struct {
 	LeaderId     sql.NullInt64 `db:"leader_id"`
 	ProxyTo      pq.Int64Array `db:"proxy_to"`
 	DesiredState string        `db:"desired_state"`
+	CurrentState string        `db:"current_state"`
 }
 
 func FromProto(p *pb.Partition) *sqlPart {
@@ -109,6 +110,7 @@ func FromProto(p *pb.Partition) *sqlPart {
 		Url:          p.GetUrl(),
 		DesiredState: p.GetDesiredState(),
 		ProxyTo:      p.GetProxyTo(),
+		CurrentState: p.GetCurrentState(),
 	}
 	if p.GetLeaderId() != 0 {
 		sp.LeaderId = sql.NullInt64{
@@ -129,6 +131,7 @@ func (s *sqlPart) toProto() *pb.Partition {
 		Url:          s.Url,
 		DesiredState: s.DesiredState,
 		ProxyTo:      s.ProxyTo,
+		CurrentState: s.CurrentState,
 	}
 	if s.LeaderId.Valid {
 		p.LeaderId = s.LeaderId.Int64

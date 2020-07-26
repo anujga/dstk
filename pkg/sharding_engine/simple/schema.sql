@@ -9,6 +9,7 @@ CREATE TABLE partition
     "end"       bytea,
     url         text,
     desired_state text,
+    current_state text,
     leader_id    bigint,
     proxy_to bigint[] DEFAULT array[]::bigint[]
 );

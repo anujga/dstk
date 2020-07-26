@@ -6,10 +6,12 @@ import (
 	"go.uber.org/zap"
 )
 
-var transitionTable = map[partition.State]map[partition.State]func(a partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
+var transitionTable = map[partition.State]map[partition.State]func(a partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{}{
 	partition.Init: {
-		partition.Follower: initToFollower,
-		partition.Primary: initToPrimary,
+		partition.CatchingUp: initToCatchingup,
+		partition.Primary:    initToPrimary,
+		partition.Follower:   initToFollower,
+		partition.Proxy:      initToProxy,
 	},
 	partition.Primary: {
 		partition.Proxy: primaryToProxy,
@@ -22,25 +24,53 @@ var transitionTable = map[partition.State]map[partition.State]func(a partition.A
 	},
 }
 
-func ensureActors(plist *pb.PartList, pm *managerImpl)  {
+type NewPart struct {
+	partition.Actor
+	*pb.Partition
+}
+
+func ensureActors(plist *pb.PartList, pm *managerImpl) []*NewPart {
+	newActors := make([]*NewPart, 0)
 	for _, part := range plist.GetParts() {
 		if _, ok := pm.store.partIdMap[part.GetId()]; !ok {
 			if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
 				pa := partition.NewActor(part, c, maxOutstanding)
 				if e := pm.store.add(pa); e == nil {
-					pa.Run()
+					newActors = append(newActors, &NewPart{pa, part})
+					pm.slog.Infow("part created", "id", part.GetId())
 				} else {
 					pm.slog.Errorw("failed to add part", "part", pa)
 				}
 			} else {
 				pm.slog.Errorw("failed to make consumer", "part", part)
 			}
+		} else {
+			pm.slog.Infow("partition already exists", "id", part.GetId())
+		}
+	}
+	return newActors
+}
+
+func startNewActors(newParts []*NewPart, pm *managerImpl) {
+	for _, newp := range newParts {
+		currState := newp.Actor.State()
+		desiredState := partition.StateFromString(newp.GetCurrentState())
+		if currTo, ok := transitionTable[currState]; ok {
+			if trf, ok := currTo[desiredState]; ok {
+				msg := trf(newp.Actor, pm.store.partIdMap, newp.Partition)
+				newp.Run(msg)
+			} else {
+				pm.slog.Warnw("no trans function", "from", currState.String(), "to", desiredState.String())
+			}
+		} else {
+			pm.slog.Warnw("no trans function", "from", currState.String())
 		}
 	}
 }
 
 func resetParts(plist *pb.PartList, pm *managerImpl, logger *zap.Logger) error {
-	ensureActors(plist, pm)
+	newParts := ensureActors(plist, pm)
+	startNewActors(newParts, pm)
 	for _, part := range plist.GetParts() {
 		if currPa, ok := pm.store.partIdMap[part.GetId()]; ok {
 			handleTransition(currPa, part, pm.store.partIdMap, logger)

@@ -46,7 +46,7 @@ func (fa *catchingUpActor) become() error {
 			}
 			msgList = append(msgList, m.(common.ClientMsg))
 		default:
-			fa.logger.Warn("not handled", zap.Any("state", fa.smState), zap.Any("type", reflect.TypeOf(m)))
+			fa.logger.Warn("not handled", zap.Any("state", fa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	fa.setState(Completed)

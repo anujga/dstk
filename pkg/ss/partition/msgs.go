@@ -11,6 +11,9 @@ type BecomePrimary struct {
 }
 
 type BecomeFollower struct {
+}
+
+type BecomeCatchingUpActor struct {
 	LeaderId      int64
 	LeaderMailbox common.Mailbox
 }

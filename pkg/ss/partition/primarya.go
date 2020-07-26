@@ -50,7 +50,7 @@ func (pa *primaryActor) become() error {
 			pa.logger.Info("becoming proxy", zap.Int64("part", pa.id))
 			return prx.become()
 		default:
-			pa.logger.Warn("not handled", zap.Any("state", pa.smState), zap.Any("type", reflect.TypeOf(m)))
+			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	pa.setState(Completed)

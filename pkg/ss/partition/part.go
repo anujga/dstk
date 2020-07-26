@@ -15,7 +15,7 @@ type Actor interface {
 	Mailbox() common.Mailbox
 	Id() int64
 	Stop()
-	Run() *core.FutureErr
+	Run(interface{}) *core.FutureErr
 	CanServe() bool
 	State() State
 	Contains(k core.KeyT) bool
@@ -59,16 +59,44 @@ func (p *actorImpl) Id() int64 {
 	return p.partition.GetId()
 }
 
-func (p *actorImpl) Run() *core.FutureErr {
-	// ensure state is not mutated in other threads
-	ia := initActor{actorBase{
+func (p *actorImpl) Run(m interface{}) *core.FutureErr {
+	var fun func() error
+	ab := actorBase{
 		id:      p.Id(),
 		logger:  p.logger,
 		smState: p.smState,
 		mailBox: p.mailBox,
 		consumer: p.consumer,
-	}}
-	return p.Done.Complete(ia.become)
+	}
+	if m == nil {
+		ia := initActor{ab}
+		fun = ia.become
+	} else {
+		switch m.(type) {
+		case *BecomePrimary:
+			pa := primaryActor{ab}
+			fun = pa.become
+		case *BecomeProxy:
+			bp := m.(*BecomeProxy)
+			pa := proxyActor{
+				actorBase: ab,
+				proxyTo:   bp.ProxyTo,
+			}
+			fun = pa.become
+		case *BecomeCatchingUpActor:
+			bf := m.(*BecomeCatchingUpActor)
+			ca := catchingUpActor{
+				actorBase:     ab,
+				leaderMailbox: bf.LeaderMailbox,
+			}
+			fun = ca.become
+		case *BecomeFollower:
+			fa := followingActor{ab}
+			fun = fa.become
+		}
+	}
+	// ensure state is not mutated in other threads
+	return p.Done.Complete(fun)
 }
 
 //this will not be effective till the consumer
@@ -86,6 +114,10 @@ func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int) Actor {
 		Done:      core.NewPromise(),
 		logger:    zap.L(),
 	}
+	//s := Init
+	//if p.GetCurrentState() != "" {
+	//	s = StateFromString(p.GetCurrentState())
+	//}
 	ai.smState.Store(Init)
 	return ai
 }
