@@ -10,7 +10,7 @@ CREATE TABLE partition
     url         text,
     desired_state text,
     leader_id    bigint,
-    proxy_to bigint
+    proxy_to bigint[] DEFAULT array[]::bigint[]
 );
 
 -- Id: 1

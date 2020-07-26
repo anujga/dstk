@@ -11,13 +11,12 @@ type BecomePrimary struct {
 }
 
 type BecomeFollower struct {
-	LeaderId int64
+	LeaderId      int64
 	LeaderMailbox common.Mailbox
 }
 
 type BecomeProxy struct {
-	ProxyToId int64
-	ProxyTo   common.Mailbox
+	ProxyTo []Actor
 }
 
 type Retire struct {

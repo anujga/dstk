@@ -6,12 +6,13 @@ import (
 )
 
 func primaryToProxy(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
-	if a, ok := partIdMap[part.GetLeaderId()]; ok {
-		bp := &partition.BecomeProxy{
-			ProxyToId: a.Id(),
-			ProxyTo:   a.Mailbox(),
+	pt := make([]partition.Actor, 0)
+	for _, pId := range part.GetProxyTo() {
+		if a, ok := partIdMap[pId]; ok {
+			pt = append(pt, a)
+		} else {
+			//todo handle
 		}
-		return bp
 	}
-	return nil
+	return &partition.BecomeProxy{ProxyTo: pt}
 }

@@ -24,15 +24,17 @@ var transitionTable = map[partition.State]map[partition.State]func(a partition.A
 
 func ensureActors(plist *pb.PartList, pm *managerImpl)  {
 	for _, part := range plist.GetParts() {
-		if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
-			pa := partition.NewActor(part, c, maxOutstanding)
-			if e := pm.store.add(pa); e == nil {
-				pa.Run()
+		if _, ok := pm.store.partIdMap[part.GetId()]; !ok {
+			if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
+				pa := partition.NewActor(part, c, maxOutstanding)
+				if e := pm.store.add(pa); e == nil {
+					pa.Run()
+				} else {
+					pm.slog.Errorw("failed to add part", "part", pa)
+				}
 			} else {
-				pm.slog.Errorw("failed to add part", "part", pa)
+				pm.slog.Errorw("failed to make consumer", "part", part)
 			}
-		} else {
-			pm.slog.Errorw("failed to make consumer", "part", part)
 		}
 	}
 }
@@ -50,9 +52,9 @@ func resetParts(plist *pb.PartList, pm *managerImpl, logger *zap.Logger) error {
 func handleTransition(currPa partition.Actor, part *pb.Partition, pmap map[int64]partition.Actor, logger *zap.Logger) error {
 	currState := currPa.State()
 	desiredState := partition.StateFromString(part.GetDesiredState())
-	logger.Info("state transition", zap.Int64("id", part.GetId()), zap.String("from", currState.String()), zap.String("to", desiredState.String()))
 	if currTo, ok := transitionTable[currState]; ok {
 		if transFunc, ok := currTo[desiredState]; ok {
+			logger.Info("state transition", zap.Int64("id", part.GetId()), zap.String("from", currState.String()), zap.String("to", desiredState.String()))
 			if msg := transFunc(currPa, pmap, part); msg == nil {
 				// todo
 			} else {

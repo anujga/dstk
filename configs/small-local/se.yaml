@@ -3,8 +3,8 @@ Driver: postgres
 Mode: sql
 ConnUrl: "host=localhost user=postgres dbname=postgres password=se sslmode=disable"
 Init:
-  CleanExisting: true
-  NumParts: 16
+  CleanExisting: false
+  NumParts: 4
   Seed: 0
   Workers:
     - Id: 1

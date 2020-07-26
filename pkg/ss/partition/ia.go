@@ -17,10 +17,10 @@ func (ia *initActor) become() error {
 			return pa.become()
 		case *BecomeFollower:
 			fm := m.(*BecomeFollower)
-			ca := &catchingUpActor{ia.actorBase}
-			return ca.become(fm.LeaderMailbox)
+			ca := &catchingUpActor{ia.actorBase, fm.LeaderMailbox}
+			return ca.become()
 		default:
-			ia.logger.Warn("not handled", zap.Any("state", ia.smState), zap.Any("type", reflect.TypeOf(m)))
+			ia.logger.Warn("not handled", zap.Any("state", ia.smState), zap.Any("type", reflect.TypeOf(m)), zap.Int64("part", ia.id))
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package partition
 
 import (
+	"bytes"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
@@ -17,6 +18,7 @@ type Actor interface {
 	Run() *core.FutureErr
 	CanServe() bool
 	State() State
+	Contains(k core.KeyT) bool
 }
 
 type actorImpl struct {
@@ -26,6 +28,10 @@ type actorImpl struct {
 	mailBox   chan interface{}
 	Done      *core.FutureErr
 	logger    *zap.Logger
+}
+
+func (p *actorImpl) Contains(k core.KeyT) bool {
+	return bytes.Compare(p.Start(), k) <= 0 && bytes.Compare(k, p.End()) < 0
 }
 
 func (p *actorImpl) CanServe() bool {

@@ -46,9 +46,9 @@ func (pa *primaryActor) become() error {
 			}
 		case *BecomeProxy:
 			bp := m.(*BecomeProxy)
-			prx := &proxyActor{pa.actorBase}
+			prx := &proxyActor{pa.actorBase, bp.ProxyTo}
 			pa.logger.Info("becoming proxy", zap.Int64("part", pa.id))
-			return prx.become(bp.ProxyTo)
+			return prx.become()
 		default:
 			pa.logger.Warn("not handled", zap.Any("state", pa.smState), zap.Any("type", reflect.TypeOf(m)))
 		}

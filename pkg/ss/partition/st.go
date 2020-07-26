@@ -27,6 +27,8 @@ func (s State) String() string {
 		return "completed"
 	case Retired:
 		return "retired"
+	case Init:
+		return "init"
 	default:
 		return "invalid state"
 	}

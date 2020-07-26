@@ -8,13 +8,14 @@ import (
 
 type catchingUpActor struct {
 	actorBase
+	leaderMailbox common.Mailbox
 }
 
-func (fa *catchingUpActor) become(leaderMailbox common.Mailbox) error {
+func (fa *catchingUpActor) become() error {
 	fa.setState(CatchingUp)
 	fa.logger.Info("became", zap.String("smstate", fa.getState().String()), zap.Int64("id", fa.id))
 	select {
-	case leaderMailbox <- &FollowRequest{FollowerMailbox: fa.mailBox}:
+	case fa.leaderMailbox <- &FollowRequest{FollowerMailbox: fa.mailBox, FollowerId: fa.id}:
 	default:
 		// todo
 	}
