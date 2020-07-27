@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "se.fullname" . }}
+  labels:
+    {{- include "se.labels" . | nindent 4 }}
+data:
+  se.yaml: |-
+    Port: 6001
+    Driver: postgres
+    Mode: sql
+    ConnUrl: "host=dstk-psql-postgresql.dstk.svc.cluster.local user=postgres dbname=postgres sslmode=disable "
+    PasswdFile: /secrets/se/postgresql-password
+    Init:
+      CleanExisting: true
+      NumParts: 16
+      Seed: 0
+      Workers:
+        {{- $root := . -}}
+        {{- $n := atoi ( .Values.dc.replicaCount ) -}}
+        {{range $i, $e := until $n }}
+          - Id: {{$i}}
+            Url: "{{ $root.Values.dc.name }}-{{ $i }}.default.svc.cluster.local:{{ $root.Values.dc.port }}"
+        {{end}}

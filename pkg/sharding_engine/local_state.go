@@ -5,11 +5,12 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
 	"sync/atomic"
 )
 
 type state struct {
-	m            *rangemap.RangeMap
+	rangeMap     *rangemap.RangeMap
 	pbs          []*pb.Partition
 	lastModified int64
 }
@@ -20,23 +21,34 @@ type stateHolder struct {
 
 func (s *stateHolder) Clear() {
 	a := state{
-		m:   rangemap.New(1),
-		pbs: []*pb.Partition{},
+		rangeMap: rangemap.New(2),
+		pbs:      []*pb.Partition{},
 	}
-	s.r.Store(a)
+	s.r.Store(&a)
 }
 
 func (s *stateHolder) Parts() ([]*pb.Partition, error) {
-	return s.r.Load().(*state).pbs, nil
+	a := s.r.Load()
+	if a == nil {
+		return nil, core.ErrInfo(
+			codes.Internal,
+			"Reading partitions from uninitialized cache",
+			"s", s).Err()
+	}
+	return a.(*state).pbs, nil
 }
 
 func (s *stateHolder) LastModified() int64 {
-	return s.r.Load().(*state).lastModified
+	a := s.r.Load()
+	if a == nil {
+		return 0
+	}
+	return a.(*state).lastModified
 }
 
 func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, error) {
-	m := s.r.Load().(*state)
-	p, err := m.m.Get(key)
+	state := s.r.Load().(*state)
+	p, err := state.rangeMap.Get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +85,7 @@ func (s *stateHolder) UpdateTree(parts []*pb.Partition, lastModified int64) erro
 	zap.S().Infow("Partitions found", "count", len(parts))
 
 	s.r.Store(&state{
-		m:            t,
+		rangeMap:     t,
 		pbs:          parts,
 		lastModified: lastModified,
 	})

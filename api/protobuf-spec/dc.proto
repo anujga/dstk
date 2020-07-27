@@ -6,6 +6,7 @@ message DcGetReq {
 }
 
 message DcGetRes {
+  bytes key = 1;
   bytes value = 2;
 }
 
@@ -22,8 +23,33 @@ message DcPutReq {
   float ttl_seconds = 3;
 }
 
+// Read upto maxCount many records. In some cases we
+// will end up returning less due to end of partition
+// the client is suppose to make another request if
+// starting from the offset returned
+message ScanReq {
+  // start pointer inclusive. should not be null
+  bytes start = 1;
+  // end pointer exclusive. null indicates +infinity
+  bytes end = 2;
+
+  // semantic of nil or 0 meaning dont apply any limit is
+  // confusing. -1 meaning dont limit is error prone during
+  // onboarding. Hence forcing this to be non null. user
+  // may choose to pass +inf
+  int64 maxCount = 3;
+}
+
+
+message ScanRes {
+  bytes nextOffset = 1;
+  repeated DcGetRes items = 2;
+}
+
+
 service DcRpc {
   rpc Get (DcGetReq) returns (DcGetRes);
   rpc Put (DcPutReq) returns (DcRes);
   rpc Remove (DcRemoveReq) returns (DcRes);
+  //  rpc Scan (ScanReq) returns (ScanRes);
 }

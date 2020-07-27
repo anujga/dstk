@@ -18,92 +18,73 @@ vars:
 tasks:
   default:
     cmds:
-      - task: run
+      - task: docker
 
   os-deps:
     cmds:
       - echo "unknown os {{.GOOS}}"
 
-  run:
-    desc: Build and run the web app
+
+
+  docker:
+    desc: Build docker
     cmds:
-      - task: build
-      - ./{{.EXE}}
+      - ./scripts/docker.sh deploy/Dockerfile
 
   se:
     desc: Build and run SE
     cmds:
-      - go run cmd/se/se_app.go --conf=cmd/se/conf
+      - go run ./cmd/se --conf=cmd/se/conf
 
-  build:
-    desc: Build the web app
-    deps: [assets, templates]
+  dc-clean:
+    desc: Build and run Disk Cache
     cmds:
-      - go build -v -o {{.EXE}} ./app.go
+      - go run ./cmd/disk-cache --conf=cmd/disk-cache/config.yaml --clean-db=true
+
+  dc-verify:
+    desc: Verify Disk Cache
+    cmds:
+      - go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify-config.yaml
 
   apps:
     deps:
       - protos
     cmds:
+      - task: app-local
+
+  local:
+    cmds:
       - task: app
-        vars: {EXE: mkv}
+        vars: {EXE: se}
+
+      - task: app
+        vars: {EXE: "disk-cache"}
+
+      - scripts/docker.sh deploy/Dockerfile-local
+
   app:
     desc: Build the app
+    vars:
+      GIT_COMMIT:
+        sh: git log -n 1 --format=%h
     cmds:
-      - go build -o bin/{{.EXE}} ./cmd/{{.EXE}}/
+      - go build -o bin/{{.EXE}} -ldflags="-X main.Version={{.GIT_COMMIT}}" ./cmd/{{.EXE}}/
 
   test:
     cmds:
       - go test ./...
 
+  load-test:
+    cmds:
+      - goreman -f cmd/disk-cache/Procfile start
+
+
   protos:
     desc: compile protobuf files
+    deps:
+      - dl-deps
     cmds:
       - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
-
-
-  #  assets:
-  #    desc: Bundle assets and generate box for it
-  #    deps: [js, css]
-  #    cmds:
-  #      - fileb0x assets_box.yml
-  #    sources:
-  #      - public/**/*
-  #    generates:
-  #      - boxes/assets/ab0x.go
-  #      - assets_box.yml
-  #    method: checksum
-  #
-  #  js:
-  #    desc: Bundle JS
-  #    cmds:
-  #      - minify -o public/app.js {{.JS_FILES}}
-  #    sources:
-  #      - assets/js/**/*.js
-  #    generates:
-  #      - public/app.js
-  #    method: checksum
-  #
-  #  css:
-  #    desc: Bundle CSS
-  #    cmds:
-  #      - minify -o public/app.css {{.CSS_FILES}}
-  #    sources:
-  #      - assets/css/**/*.css
-  #    generates:
-  #      - public/app.css
-  #    method: checksum
-  #
-  #  templates:
-  #    desc: Generate box for HTML templates
-  #    cmds:
-  #      - fileb0x templates_box.yml
-  #    sources:
-  #      - templates/**/*
-  #      - templates_box.yml
-  #    generates:
-  #      - boxes/templates/ab0x.go
-  #    method: checksum
 
   dl-deps:
     desc: Install tools required to build this app
@@ -112,6 +93,8 @@ tasks:
     cmds:
       - task: go-get
         vars: {REPO: github.com/golang/protobuf/protoc-gen-go@v1.4.2}
+      - task: go-get
+        vars: {REPO: github.com/mattn/goreman@v0.3.5}
 
   go-get:
     cmds:

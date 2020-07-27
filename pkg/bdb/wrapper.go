@@ -1,6 +1,7 @@
 package bdb
 
 import (
+	"github.com/anujga/dstk/pkg/rangemap"
 	"github.com/dgraph-io/badger/v2"
 	"time"
 )
@@ -21,13 +22,16 @@ func (w *Wrapper) Get(key []byte) ([]byte, error) {
 		}
 	})
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, rangemap.ErrKeyAbsent(key).Err()
+		}
 		return nil, err
 	}
 	return res, nil
 }
 
 // thread safe
-func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float64) error {
+func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float32) error {
 	return w.Update(func(txn *badger.Txn) error {
 		entry := badger.NewEntry(key, value).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)

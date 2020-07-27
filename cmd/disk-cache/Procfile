@@ -1,0 +1,6 @@
+# Use goreman to run `go get github.com/mattn/goreman`
+se: go run ./cmd/se --conf=cmd/se/conf.yaml
+dc: go run ./cmd/disk-cache --conf=cmd/disk-cache/core/config.yaml --clean-db=true --log=info
+verify: sleep 5; go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify/verify-config.yaml
+
+

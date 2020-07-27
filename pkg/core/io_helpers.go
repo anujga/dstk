@@ -2,13 +2,35 @@ package core
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"io"
 )
+
+func UnmarshalYaml(filename string, obj interface{}) error {
+	v, err := ParseYaml(filename)
+	if err != nil {
+		return err
+	}
+	err = v.Unmarshal(obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MustUnmarshalYaml(filename string, obj interface{}) {
+	err := UnmarshalYaml(filename, obj)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func ParseYaml(filename string) (*viper.Viper, error) {
 	v := viper.New()
@@ -93,4 +115,36 @@ func ZapGlobalLevel(l zapcore.Level) {
 	}
 
 	zap.ReplaceGlobals(log)
+}
+
+func CloseLogErr(c io.Closer) {
+	err := c.Close()
+	if err != nil {
+		zap.S().Error("Close failed",
+			"item", c,
+			"err", err)
+	}
+}
+
+type ArrayFlags struct {
+	data []string
+}
+
+func (i *ArrayFlags) Get() []string {
+	return i.data
+}
+
+func (i *ArrayFlags) String() string {
+	return fmt.Sprintf("%v", i.data)
+}
+
+func (i *ArrayFlags) Set(value string) error {
+	i.data = append(i.data, value)
+	return nil
+}
+
+func MultiStringFlag(name string, usage string) *ArrayFlags {
+	var myFlags ArrayFlags
+	flag.Var(&myFlags, name, usage)
+	return &myFlags
 }

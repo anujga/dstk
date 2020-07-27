@@ -7,24 +7,18 @@ import (
 	"github.com/anujga/dstk/pkg/rangemap"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
 	"sync/atomic"
-	"time"
 )
 
 // todo: this is the 4th implementation of the range map.
 // need to define a proper data structure that can be reused
 type PartitionMgr struct {
-	consumer ConsumerFactory
-	state    atomic.Value //[state]
-	rpc      pb.SeWorkerApiClient
-	id       se.WorkerId
-	slog     *zap.SugaredLogger
-}
-
-type state struct {
-	m            *rangemap.RangeMap
-	lastModified int64
+	consumer       ConsumerFactory
+	state          atomic.Value //[state]
+	rpc            pb.SeWorkerApiClient
+	id             se.WorkerId
+	slog           *zap.SugaredLogger
+	initStateMaker func() interface{}
 }
 
 func (pm *PartitionMgr) Map() *rangemap.RangeMap {
@@ -39,65 +33,27 @@ func (pm *PartitionMgr) State() *state {
 	return s.(*state)
 }
 
-func (pm *PartitionMgr) ResetMap(s *state) {
+func (pm *PartitionMgr) ResetMap(s *state) *state {
 	old := pm.State()
 	pm.state.Store(s)
-	//todo: we need to close old gracefully. correct algorithm
-	//would be to ref count state and then close. here we just
-	// sleep for 1 minute
-	go func() {
-		<-time.NewTimer(1 * time.Minute).C
-		if old != nil {
-			CloseConsumers(old.m)
-		}
-	}()
-
+	return old
 }
 
 func CloseConsumers(rs *rangemap.RangeMap) {
 	for i := range rs.Iter(core.MinKey) {
 		p := i.(*PartRange)
 		//the consumer will continue to work till mailbox is empty
-		close(p.mailBox)
+		p.Stop()
 	}
 }
 
 // Path = data
-func (pm *PartitionMgr) Find(key core.KeyT) (*PartRange, error) {
+func (pm *PartitionMgr) Find(key core.KeyT) (PartitionActor, error) {
 	if rng, err := pm.Map().Get(key); err == nil {
-		return rng.(*PartRange), nil
+		return rng.(PartitionActor), nil
 	} else {
 		return nil, err
 	}
-}
-
-//todo: ensure there is at least 1 partition during construction
-func NewPartitionMgr2(workerId se.WorkerId, consumer ConsumerFactory, rpc pb.SeWorkerApiClient) *PartitionMgr {
-	pm := &PartitionMgr{
-		consumer: consumer,
-		rpc:      rpc,
-		id:       workerId,
-		slog:     zap.S().With("workerId", workerId),
-	}
-
-	core.Repeat(5*time.Second, func(timestamp time.Time) bool {
-		err := pm.syncSe()
-		if err != nil {
-			pm.slog.Errorw("fetch updates from SE",
-				"err", err)
-		} else {
-			delay := timestamp.UnixNano() - pm.State().lastModified
-			pm.slog.Infow("fetch updates from SE",
-				"time", timestamp,
-				"delay", delay)
-		}
-		return true
-	})
-	pm.ResetMap(&state{
-		m:            rangemap.New(15),
-		lastModified: 0,
-	})
-	return pm
 }
 
 //todo: should indicate whether changes were applied or not
@@ -113,7 +69,7 @@ func (pm *PartitionMgr) syncSe() error {
 
 	newTime := rs.GetLastModified()
 	s := pm.State()
-	if newTime <= s.lastModified {
+	if s != nil && newTime <= s.lastModified {
 		return nil
 	}
 	newState, err := newMap(pm, rs)
@@ -129,49 +85,15 @@ func newMap(pm *PartitionMgr, rs *pb.PartList) (*state, error) {
 	s := &state{
 		m:            rangemap.New(15),
 		lastModified: rs.GetLastModified(),
+		logger:       pm.slog,
 	}
 
 	for _, p := range rs.GetParts() {
-		err := s.add(p, pm.slog, pm.consumer)
+		part, err := s.add(p, pm.consumer, nil)
 		if err != nil {
 			return nil, err
 		}
+		part.Mailbox() <- &appState{s: pm.initStateMaker()}
 	}
 	return s, nil
-}
-
-// path=control
-func (s *state) add(p *pb.Partition, slog *zap.SugaredLogger, consumer ConsumerFactory) error {
-	var err error
-	slog.Info("AddPartition Start", "part", p)
-	defer slog.Info("AddPartition Status", "part", p, "err", err)
-	c, maxOutstanding, err := consumer.Make(p)
-	if err != nil {
-		return err
-	}
-	part := NewPartRange(p, c, maxOutstanding)
-	if err = s.m.Put(part); err != nil {
-		return err
-	}
-
-	part.Run()
-	return nil
-}
-
-// Single threaded router. 1 channel per partition
-// path=data
-func (pm *PartitionMgr) OnMsg(msg Msg) error {
-	p, err := pm.Find(msg.Key())
-	if err != nil {
-		return err
-	}
-	select {
-	case p.mailBox <- msg:
-		return nil
-	default:
-		return core.ErrInfo(codes.ResourceExhausted, "Partition Busy",
-			"capacity", cap(p.mailBox),
-			"partition", p.Id()).Err()
-
-	}
 }

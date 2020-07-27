@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dc.fullname" . }}
+  labels:
+    {{- include "dc.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+    - port: {{ .Values.metricPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "dc.selectorLabels" . | nindent 4 }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dc.fullname" . }}-gateway
+  labels:
+    {{- include "dc.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.gatewayService.type }}
+  ports:
+    - port: {{ .Values.gatewayService.port }}
+      targetPort: gw
+      protocol: TCP
+      name: gw
+  selector:
+    {{- include "dc.selectorLabels" . | nindent 4 }}

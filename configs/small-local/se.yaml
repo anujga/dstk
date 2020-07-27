@@ -1,0 +1,13 @@
+Port: 6001
+Driver: postgres
+Mode: sql
+ConnUrl: "host=localhost user=postgres dbname=postgres password=se sslmode=disable"
+Init:
+  CleanExisting: true
+  NumParts: 16
+  Seed: 0
+  Workers:
+    - Id: 1
+      Url: "localhost: 6011"
+    - Id: 2
+      Url: "localhost: 6021"

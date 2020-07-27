@@ -1,114 +1,74 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
-	dstk "github.com/anujga/dstk/pkg/api/proto"
+	dc "github.com/anujga/dstk/cmd/disk-cache/core"
+	"github.com/anujga/dstk/cmd/disk-cache/gateway"
+	"github.com/anujga/dstk/cmd/disk-cache/verify"
 	"github.com/anujga/dstk/pkg/core"
-	se "github.com/anujga/dstk/pkg/sharding_engine"
-	"github.com/anujga/dstk/pkg/ss"
-	"github.com/spf13/viper"
+	"github.com/posener/complete/v2/compflag"
+	"github.com/posener/complete/v2/predict"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-	"net"
+	"gopkg.in/errgo.v2/fmt/errors"
 )
 
-//type Parts struct {
-//	Parts []struct {
-//		Start string
-//		End   string
-//	}
-//}
-
-//func addPartitions(partitions *Parts, slog *zap.SugaredLogger, pm *ss.PartitionMgr) error {
-//	i := 0
-//	for i, p := range (*partitions).Parts {
-//		slog.Infow("Adding Partition", "id", i, "end", p)
-//		pv := dstk.Partition{Id: int64(i), End: []byte(p.End), Start: []byte(p.Start)}
-//		if err := pm.Add(&pv); err != nil {
-//			return err
-//		}
-//	}
-//	slog.Infof("partitions count = %d\n", i+1)
-//	return nil
-//}
-
-// 4. glue it up together
-func glue(workerId se.WorkerId, rpc dstk.SeWorkerApiClient) (ss.Router, error) {
-	factory, err := newConsumerMaker(
-		viper.GetString("db_path"),
-		viper.GetInt("max_outstanding"))
-	if err != nil {
-		return nil, err
-	}
-	// 4.1 Make the Partition Manager
-	pm := ss.NewPartitionMgr2(workerId, factory, rpc)
-	// 4.2 Register predefined partitions.
-	//parts := new(Parts)
-	//err = viper.Unmarshal(&parts)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//slog := zap.S()
-	//slog.Infow("Adding partitions", "keys", parts)
-	//err = addPartitions(parts, slog, pm)
-	return pm, err
-}
-
-// 6. Thick client
-
-func startGrpcServer(router ss.Router, log *zap.Logger, resBufSize int64, rh *ss.MsgHandler) error {
-	lis, err := net.Listen("tcp", ":9099")
-	if err != nil {
-		return err
-	}
-	s := grpc.NewServer()
-	cacheServer := MakeServer(rh, log, resBufSize)
-	dstk.RegisterDcRpcServer(s, cacheServer)
-	reflection.Register(s)
-	if err := s.Serve(lis); err != nil {
-		return err
-	}
-	return nil
-}
-
 func main() {
-	core.ZapGlobalLevel(zap.InfoLevel)
-	chanSize := viper.GetInt64("response_buffer_size")
-	wid := viper.GetInt64("worker_id")
-	if wid <= 0 {
-		panic(fmt.Sprintf("Bad worker id %s", viper.Get("worker_id")))
+
+	var conf = core.MultiStringFlag(
+		"conf", "config files. can pass more than 1 --conf c1.yaml --conf c2.yaml")
+
+	var logLevel = zap.LevelFlag(
+		"log", zap.InfoLevel, "debug, info, warn, error, dpanic, panic, fatal")
+
+	var mode = compflag.String(
+		"mode", "worker", "",
+		predict.OptValues("worker", "verify", "gateway"))
+
+	var cleanData = flag.Bool(
+		"clean-db", false, "delete existing db")
+
+	compflag.Parse()
+
+	core.ZapGlobalLevel(*logLevel)
+
+	var err error = nil
+	c0 := conf.Get()[0]
+	switch *mode {
+	case "verify":
+		err = verify.RunVerifier(c0)
+	case "worker":
+		var fs []*core.FutureErr
+
+		for _, c := range conf.Get() {
+			zap.S().Infow("starting runner", "conf", c)
+			f, err := dc.MainRunner(c, *cleanData)
+			if err != nil {
+				panic(err)
+			}
+			fs = append(fs, f)
+		}
+
+		err = core.Errs(core.WaitMany(fs)...)
+	case "gateway":
+		c := &gateway.Config{}
+		err := core.UnmarshalYaml(c0, c)
+		if err != nil {
+			break
+		}
+
+		f, err := gateway.GatewayMode(c)
+		if err != nil {
+			break
+		}
+
+		err = f.Wait()
+
+	default:
+		err = errors.Newf("unknown mode %s", *mode)
 	}
-	workerId := se.WorkerId(wid)
-	targetUrl := viper.GetString("se_url")
-	rpc, err := se.NewSeWorker(context.TODO(), targetUrl, grpc.WithInsecure())
+
 	if err != nil {
 		panic(err)
 	}
 
-	router, err := glue(workerId, rpc)
-	if err != nil {
-		panic(err)
-	}
-
-	f := core.RunAsync(func() error {
-		msgHandler := &ss.MsgHandler{Router: router}
-		return startGrpcServer(router, zap.L(), chanSize, msgHandler)
-	})
-	err = f.Wait()
-	if err != nil {
-		panic(err)
-	}
-}
-
-func init() {
-	var conf = flag.String(
-		"conf", "./cmd/disk-cache", "config file")
-	flag.Parse()
-	viper.AddConfigPath(*conf)
-	if err := viper.ReadInConfig(); err != nil {
-		panic(err)
-	}
 }

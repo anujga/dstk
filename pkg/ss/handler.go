@@ -2,49 +2,57 @@ package ss
 
 import (
 	"errors"
+	"github.com/anujga/dstk/pkg/core"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"time"
 )
 
-func handleResponseElement(elem interface{}, response *interface{}, e *error) {
-	switch elem.(type) {
-	case int64:
-		*response = elem.(int64)
-		*e = nil
-	case string:
-		*response = elem.(string)
-		*e = nil
-	case error:
-		*e = elem.(error)
-		*response = (*e).Error()
-	default:
-		*response = "internal error"
-		*e = errors.New("invalid response")
-	}
-	return
-}
-
 type MsgHandler struct {
-	Router
+	w WorkerActor
 }
 
-func (mh *MsgHandler) Handle(req Msg) (interface{}, error) {
-	if err := mh.OnMsg(req); err != nil {
-		// TODO find a better place to close this
-		close(req.ResponseChannel())
-		return "", err
-	} else {
-		var response interface{}
-		var errToRet error
-		for {
-			select {
-			case e, ok := <-req.ResponseChannel():
-				if !ok {
-					return response, errToRet
-				}
-				handleResponseElement(e, &response, &errToRet)
-			case _ = <-time.After(time.Second * 5):
-				return "internal error", errors.New("timeout")
+func (mh *MsgHandler) Handle(req Msg) ([]interface{}, error) {
+	select {
+	case mh.w.Mailbox() <- req:
+	default:
+		return nil, core.ErrInfo(codes.ResourceExhausted, "Worker busy",
+			"capacity", cap(mh.w.Mailbox())).Err()
+	}
+	responses := make([]interface{}, 0)
+	for {
+		select {
+		case e, ok := <-req.ResponseChannel():
+			if ok {
+				responses = append(responses, e)
+			} else {
+				return responses, nil
 			}
+		case _ = <-time.After(time.Second * 5):
+			return nil, errors.New("timeout")
 		}
+	}
+}
+
+func (mh *MsgHandler) HandleBlocking(req Msg) (interface{}, *status.Status) {
+	select {
+	case mh.w.Mailbox() <- req:
+	default:
+		return nil, core.ErrInfo(codes.ResourceExhausted, "Worker busy",
+			"capacity", cap(mh.w.Mailbox()))
+	}
+
+	select {
+	case e := <-req.ResponseChannel():
+		switch v := e.(type) {
+		case error:
+			return nil, status.Convert(v)
+		default:
+			return v, nil
+		}
+
+	case _ = <-time.After(time.Second * 5):
+		return nil, core.ErrInfo(codes.DeadlineExceeded, "timeout",
+			"msg", req)
 	}
 }

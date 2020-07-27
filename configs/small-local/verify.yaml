@@ -1,0 +1,11 @@
+Start: 0
+Size: 20
+Count: 20
+Seed: 1
+Views: 10
+Copies: 1
+#SeUrl: "localhost:6001"
+GatewayUrl: "localhost:6013"
+Mode: gateway
+MetricUrl: "localhost:6900"
+ClientId: "c1"
