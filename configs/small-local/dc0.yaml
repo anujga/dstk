@@ -2,7 +2,6 @@ max_outstanding: 1000
 response_buffer_size: 5
 se_url: localhost:6001
 
-worker_id: 2
-db_path: /tmp/dc2
+db_path: /tmp/dc0
 url: localhost:6021
 metric_url: localhost:6022

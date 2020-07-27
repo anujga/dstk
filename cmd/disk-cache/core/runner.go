@@ -5,6 +5,7 @@ import (
 	"github.com/anujga/dstk/cmd/disk-cache/gateway"
 	"github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/io"
 	"github.com/anujga/dstk/pkg/helpers"
 	"github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/ss"
@@ -14,22 +15,38 @@ import (
 	"os"
 )
 
-func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
+func MainRunner(conf string, workerName string, cleanDb bool) (*core.FutureErr, error) {
+	log := zap.S()
+
 	viper.SetConfigFile(conf)
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
 	chanSize := viper.GetInt64("response_buffer_size")
-	wid := viper.GetInt64("worker_id")
-	if wid <= 0 {
+
+	log.Infow("parsing workerName",
+		"input", workerName)
+
+	wid, err := io.ScaleSetOrdinal(workerName)
+	if err != nil {
+		return nil, errors.Becausef(nil, err,
+			"Invalid workerName. example dstk-2, found %s",
+			workerName)
+	}
+
+	if wid < 0 {
 		return nil, errors.Newf("Bad worker id %s", viper.Get("worker_id"))
 	}
+
+	log.Infow("worker id",
+		"name", workerName,
+		"id", wid)
 	workerId := se.WorkerId(wid)
 	seUrl := viper.GetString("se_url")
 	if cleanDb {
 		dbPath := viper.GetString("db_path")
-		zap.S().Infow("Cleaning existing db", "path", dbPath)
+		log.Infow("Cleaning existing db", "path", dbPath)
 		if err := os.RemoveAll(dbPath); err != nil {
 			return nil, err
 		}
@@ -43,13 +60,13 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 
 	url := viper.GetString("url")
 
-	metricUrl := viper.GetString("metric_url")
-	if metricUrl != "" {
-		s := helpers.ExposePrometheus(metricUrl)
-		defer core.CloseLogErr(s)
-	}
-
 	f := core.RunAsync(func() error {
+		metricUrl := viper.GetString("metric_url")
+		if metricUrl != "" {
+			s := helpers.ExposePrometheus(metricUrl)
+			defer core.CloseLogErr(s)
+		}
+
 		ws, err := ss.NewWorkerServer(seUrl, workerId, factory, func() interface{} {
 			return nil
 		})
@@ -59,16 +76,15 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 		dcServer := MakeServer(ws.MsgHandler, chanSize)
 		dstk.RegisterDcRpcServer(ws.Server, dcServer)
 		err = ws.Start("tcp", url)
-		var err2 error = nil
-		//err2 := metrics.Close()
-		return core.Errs(err, err2)
+
+		return err
 
 	})
 
 	gw := viper.GetString("GatewayEndpoint")
 	if gw != "" {
 		clientId := fmt.Sprintf("gw-%d", workerId)
-		defer zap.S().Infow("Starting gateway",
+		defer log.Infow("Starting gateway",
 			"addr", gw,
 			"err", err)
 

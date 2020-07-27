@@ -3,7 +3,6 @@ response_buffer_size: 5
 se_url: localhost:6001
 
 db_path: /tmp/dc1
-worker_id: 1
 url: localhost:6011
 metric_url: ":6012"
 
