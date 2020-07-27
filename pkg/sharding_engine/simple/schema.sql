@@ -31,15 +31,12 @@ insert into partition (id, modified_on, worker_id, start, "end", url, desired_st
 values (102, now(), 1, E'\\x0000', E'\\x1000', 'localhost:6011', 'follower', 'follower', 1);
 
 delete from partition where 1=1;
-
 insert into partition (id, modified_on, worker_id, start, "end", url, desired_state)
 values (1, now(), 1, E'\\x0000', E'\\x6000', 'localhost:6011', 'primary');
-
 insert into partition (id, modified_on, worker_id, start, "end", url, desired_state, leader_id)
 values (11, now(), 1, E'\\x0000', E'\\x2000', 'localhost:6011', 'catchingup', 1);
 insert into partition (id, modified_on, worker_id, start, "end", url, desired_state, leader_id)
 values (12, now(), 1, E'\\x2000', E'\\x6000', 'localhost:6011', 'catchingup', 1);
--- what if follower is received first
 update partition set desired_state='follower' where id=11 or id=12;
 update partition set proxy_to='{11,12}', desired_state='proxy' where id=1;
 update partition set desired_state='primary' where id=11 or id=12;
