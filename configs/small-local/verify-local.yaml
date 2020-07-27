@@ -1,0 +1,10 @@
+Start: 0
+Size: 50
+Count: 1
+Seed: 1
+Views: 100
+Copies: 1
+SeUrl: "localhost:6001"
+Mode: client
+MetricUrl: "localhost:6900"
+ClientId: "c1"

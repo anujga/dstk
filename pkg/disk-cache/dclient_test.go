@@ -5,6 +5,7 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"google.golang.org/grpc"
+	"testing"
 )
 
 var k = []byte{0xa}
@@ -44,7 +45,7 @@ func get(client dstk.DcRpcClient) {
 	}
 }
 
-func ExampleUsage() {
+func TestExampleUsage(t *testing.T) {
 	c := getClient()
 	put(c)
 	get(c)

@@ -10,6 +10,7 @@ import (
 type Process interface {
 	Invoke(ctx context.Context) error
 	Done(ctx context.Context) bool
+	Init(ctx context.Context) error
 }
 
 //todo: replace with tracing/prometheus
@@ -20,6 +21,10 @@ type ProcessStats struct {
 func RunProcess(p Process) *ProcessStats {
 	ctx := context.TODO()
 	s := ProcessStats{}
+	if e := p.Init(ctx); e != nil {
+		s.Failure += 1
+		zap.S().Errorw("Failed to init", "err", e)
+	}
 	for !p.Done(ctx) {
 		err := p.Invoke(ctx)
 		if err != nil {
@@ -37,6 +42,15 @@ func RunProcess(p Process) *ProcessStats {
 type SampledProcess struct {
 	Ps  []Process
 	Rnd rand.Source
+}
+
+func (p *SampledProcess) Init(ctx context.Context) error {
+	for _, p := range p.Ps {
+		if e := p.Init(ctx); e != nil {
+			return e
+		}
+	}
+	return nil
 }
 
 func (p *SampledProcess) Invoke(ctx context.Context) error {

@@ -101,6 +101,25 @@ func (u *user) Done(context.Context) bool {
 	return u.totalViews == 0
 }
 
+func (u *user) Init(ctx context.Context) error {
+	log := zap.S()
+	if u.Done(ctx) {
+		return errors.New("Called after done")
+	}
+	resetValue := uint64(0)
+	log.Debugw("Resetting",
+		"uid", hex.EncodeToString(u.idSer),
+		"reset value", resetValue)
+	resetBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(resetBytes, resetValue)
+	_, err := u.rpc.Put(ctx, &dstk.DcPutReq{
+		Key:        u.idSer,
+		Value:      resetBytes,
+		TtlSeconds: u.ttlSeconds,
+	})
+	return err
+}
+
 func CreateUsers(beg int64, n int64, fn ProcessFactory) ([]verify.Process, error) {
 	if n < 1 {
 		return nil, errors.New("Invalid Arg, beg - end > 0")
