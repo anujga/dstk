@@ -41,7 +41,7 @@ func NewUserFactory(totalViews uint64, rpc dstk.DcRpcClient) ProcessFactory {
 			idSer:              idSer,
 			totalViews:         totalViews,
 			maxViewsPerSession: 5,
-			ttlSeconds:         float32(1 * time.Minute),
+			ttlSeconds:         float32(5 * time.Minute),
 			rnd:                rand.NewSource(id),
 			rpc:                rpc,
 			bytes8:             bytes8,
