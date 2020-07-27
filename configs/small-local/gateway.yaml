@@ -1,0 +1,4 @@
+Url: "localhost:6991"
+MetricUrl: "localhost:6992"
+SeUrl: "localhost:6001"
+ClientId: gateway1

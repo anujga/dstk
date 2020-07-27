@@ -1,6 +1,8 @@
 package dc
 
 import (
+	"fmt"
+	"github.com/anujga/dstk/cmd/disk-cache/gateway"
 	"github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/helpers"
@@ -24,7 +26,7 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 		return nil, errors.Newf("Bad worker id %s", viper.Get("worker_id"))
 	}
 	workerId := se.WorkerId(wid)
-	targetUrl := viper.GetString("se_url")
+	seUrl := viper.GetString("se_url")
 	if cleanDb {
 		dbPath := viper.GetString("db_path")
 		zap.S().Infow("Cleaning existing db", "path", dbPath)
@@ -48,7 +50,7 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 	}
 
 	f := core.RunAsync(func() error {
-		ws, err := ss.NewWorkerServer(targetUrl, workerId, factory, func() interface{} {
+		ws, err := ss.NewWorkerServer(seUrl, workerId, factory, func() interface{} {
 			return nil
 		})
 		if err != nil {
@@ -62,5 +64,23 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 		return core.Errs(err, err2)
 
 	})
+
+	gw := viper.GetString("GatewayEndpoint")
+	if gw != "" {
+		clientId := fmt.Sprintf("gw-%d", workerId)
+		defer zap.S().Infow("Starting gateway",
+			"addr", gw,
+			"err", err)
+
+		_, err = gateway.GatewayMode(&gateway.Config{
+			Url:      gw,
+			SeUrl:    seUrl,
+			ClientId: clientId,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+	}
 	return f, nil
 }

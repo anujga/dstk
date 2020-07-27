@@ -4,8 +4,8 @@ import (
 	"fmt"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/io"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 	"net"
 )
 
@@ -20,8 +20,7 @@ func StartServer(port int, server WorkerAndClient) (*core.FutureErr, *grpc.Serve
 		return nil, nil, err
 	}
 
-	sock := grpc.NewServer()
-	reflection.Register(sock)
+	sock := io.GrpcServer()
 	pb.RegisterSeWorkerApiServer(sock, server)
 	pb.RegisterSeClientApiServer(sock, server)
 
