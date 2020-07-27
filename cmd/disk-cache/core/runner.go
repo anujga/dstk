@@ -50,9 +50,7 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 	}
 
 	f := core.RunAsync(func() error {
-		ws, err := ss.NewWorkerServer(seUrl, workerId, factory, func() interface{} {
-			return nil
-		})
+		ws, err := ss.NewWorkerServer(seUrl, workerId, factory)
 		if err != nil {
 			panic(err)
 		}
@@ -80,7 +78,6 @@ func MainRunner(conf string, cleanDb bool) (*core.FutureErr, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	return f, nil
 }

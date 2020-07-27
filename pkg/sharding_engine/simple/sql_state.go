@@ -2,9 +2,11 @@ package simple
 
 import (
 	"context"
+	"database/sql"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -60,9 +62,9 @@ func add(tx *sqlx.Tx, parts []*pb.Partition) error {
 	}
 
 	q := `INSERT INTO partition 
-    		(id, modified_on, worker_id, start, "end", url)
+    		(id, modified_on, worker_id, start, "end", url, desired_state)
     	 VALUES
-			(:id, :modified_on, :worker_id, :start, :end, :url)
+			(:id, :modified_on, :worker_id, :start, :end, :url, :desired_state)
 	`
 
 	for _, p := range parts {
@@ -87,33 +89,54 @@ func add(tx *sqlx.Tx, parts []*pb.Partition) error {
 }
 
 type sqlPart struct {
-	Id         int64
-	ModifiedOn time.Time `db:"modified_on"`
-	WorkerId   int64     `db:"worker_id"`
-	Start, End core.KeyT
-	Url        string
+	Id           int64
+	ModifiedOn   time.Time `db:"modified_on"`
+	WorkerId     int64     `db:"worker_id"`
+	Start, End   core.KeyT
+	Url          string
+	LeaderId     sql.NullInt64 `db:"leader_id"`
+	ProxyTo      pq.Int64Array `db:"proxy_to"`
+	DesiredState string        `db:"desired_state"`
+	CurrentState string        `db:"current_state"`
 }
 
 func FromProto(p *pb.Partition) *sqlPart {
-	return &sqlPart{
-		Id:         p.GetId(),
-		ModifiedOn: time.Unix(0, p.GetModifiedOn()),
-		WorkerId:   p.GetWorkerId(),
-		Start:      p.GetStart(),
-		End:        p.GetEnd(),
-		Url:        p.GetUrl(),
+	sp := &sqlPart{
+		Id:           p.GetId(),
+		ModifiedOn:   time.Unix(0, p.GetModifiedOn()),
+		WorkerId:     p.GetWorkerId(),
+		Start:        p.GetStart(),
+		End:          p.GetEnd(),
+		Url:          p.GetUrl(),
+		DesiredState: p.GetDesiredState(),
+		ProxyTo:      p.GetProxyTo(),
+		CurrentState: p.GetCurrentState(),
 	}
+	if p.GetLeaderId() != 0 {
+		sp.LeaderId = sql.NullInt64{
+			Int64: p.GetLeaderId(),
+			Valid: true,
+		}
+	}
+	return sp
 }
 
 func (s *sqlPart) toProto() *pb.Partition {
-	return &pb.Partition{
-		Id:         s.Id,
-		ModifiedOn: s.ModifiedOn.UnixNano(),
-		Active:     true,
-		Start:      s.Start,
-		End:        s.End,
-		Url:        s.Url,
+	p := &pb.Partition{
+		Id:           s.Id,
+		ModifiedOn:   s.ModifiedOn.UnixNano(),
+		Active:       true,
+		Start:        s.Start,
+		End:          s.End,
+		Url:          s.Url,
+		DesiredState: s.DesiredState,
+		ProxyTo:      s.ProxyTo,
+		CurrentState: s.CurrentState,
 	}
+	if s.LeaderId.Valid {
+		p.LeaderId = s.LeaderId.Int64
+	}
+	return p
 }
 
 func toProto(ps []sqlPart) *pb.PartList {

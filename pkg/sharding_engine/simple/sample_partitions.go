@@ -33,7 +33,7 @@ func GenerateParts(m int, ws []*Worker, src rand.Source) ([]*pb.Partition, *stat
 		j := rnd.Intn(len(ws))
 		w := ws[j]
 		beg := i * n
-		p := newPart(int16(beg), int16(beg+n), w)
+		p := newPart(int16(beg), int16(beg+n), w, i+1)
 		ps = append(ps, p)
 	}
 
@@ -41,20 +41,21 @@ func GenerateParts(m int, ws []*Worker, src rand.Source) ([]*pb.Partition, *stat
 	return ps, nil
 }
 
-func newPart(beg, end int16, w *Worker) *pb.Partition {
+func newPart(beg, end int16, w *Worker, i int) *pb.Partition {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(beg))
 	e := make([]byte, 2)
 	binary.BigEndian.PutUint16(e, uint16(end))
 
 	p := &pb.Partition{
-		Id:         int64(beg),
+		Id:         int64(i),
 		ModifiedOn: time.Now().UnixNano(),
 		Active:     true,
 		Start:      b,
 		End:        e,
 		Url:        w.Url,
 		WorkerId:   w.Id,
+		DesiredState: "primary",
 	}
 
 	return p

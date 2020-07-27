@@ -3,16 +3,18 @@ package ss
 import (
 	"errors"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/ss/common"
+	"github.com/anujga/dstk/pkg/ss/node"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"time"
 )
 
 type MsgHandler struct {
-	w WorkerActor
+	w node.Actor
 }
 
-func (mh *MsgHandler) Handle(req Msg) ([]interface{}, error) {
+func (mh *MsgHandler) Handle(req common.Msg) ([]interface{}, error) {
 	select {
 	case mh.w.Mailbox() <- req:
 	default:
@@ -34,7 +36,7 @@ func (mh *MsgHandler) Handle(req Msg) ([]interface{}, error) {
 	}
 }
 
-func (mh *MsgHandler) HandleBlocking(req Msg) (interface{}, *status.Status) {
+func (mh *MsgHandler) HandleBlocking(req common.Msg) (interface{}, *status.Status) {
 	select {
 	case mh.w.Mailbox() <- req:
 	default:

@@ -122,6 +122,7 @@ func verifyAll(c *Config) error {
 
 				res, err := rpc.Get(context.TODO(), &dstk.DcGetReq{Key: uidSer})
 				if err != nil {
+					log.Errorw("error in get", "err", err)
 					//todo: error
 				} else {
 					views := binary.LittleEndian.Uint64(res.GetValue())
