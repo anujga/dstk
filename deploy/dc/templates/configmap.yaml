@@ -14,3 +14,4 @@ data:
     db_path: /data
     url: localhost:6011
     metric_url: localhost:6012
+    GatewayEndpoint: ":6013"
