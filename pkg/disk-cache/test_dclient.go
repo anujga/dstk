@@ -44,7 +44,7 @@ func get(client dstk.DcRpcClient) {
 	}
 }
 
-func main() {
+func ExampleUsage() {
 	c := getClient()
 	put(c)
 	get(c)
