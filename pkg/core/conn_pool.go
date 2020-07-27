@@ -40,6 +40,7 @@ func (m *nonExpiryPool) Get(ctx context.Context, url string) (interface{}, error
 	if exists {
 		return conn, nil
 	}
+	var existingConnection interface{}
 
 	//to avoid multiple people from creating a connection
 	//to the same url, take a lock on factory
@@ -53,7 +54,7 @@ func (m *nonExpiryPool) Get(ctx context.Context, url string) (interface{}, error
 
 		m.mu.Lock()
 		{
-			_, exists = m.table[url]
+			existingConnection, exists = m.table[url]
 			if !exists {
 				m.table[url] = conn
 			}
@@ -69,8 +70,7 @@ func (m *nonExpiryPool) Get(ctx context.Context, url string) (interface{}, error
 			return nil, errors.New(
 				"BadState: created an already existing connection and also failed to close it")
 		}
-		return nil, errors.New(
-			"BadState: created an already existing connection")
+		return existingConnection, nil
 	}
 
 	return conn, nil

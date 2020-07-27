@@ -54,7 +54,7 @@ func ensureActors(plist *pb.PartList, pm *managerImpl) ([]*PartCombo, []*PartCom
 				Actor:     existingActor,
 				Partition: part,
 			})
-			pm.slog.Infow("partition already exists", "id", part.GetId())
+			pm.slog.Debugw("partition already exists", "id", part.GetId())
 		}
 	}
 	return newActors, existingActors
@@ -93,7 +93,7 @@ func handleTransition(currPa partition.Actor, part *pb.Partition, pmap map[int64
 	currState := currPa.State()
 	desiredState := partition.StateFromString(part.GetDesiredState())
 	if currState == desiredState {
-		logger.Info("state not changed", zap.Int64("part", part.GetId()), zap.String("state", currState.String()))
+		logger.Debug("state not changed", zap.Int64("part", part.GetId()), zap.String("state", currState.String()))
 		return nil
 	}
 	if currTo, ok := transitionTable[currState]; ok {

@@ -1,6 +1,7 @@
 package partition
 
 import (
+	"encoding/hex"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"go.uber.org/zap"
 	"reflect"
@@ -27,7 +28,7 @@ func (pa *primaryActor) become() error {
 			}
 		case common.ClientMsg:
 			cm := m.(common.ClientMsg)
-			pa.logger.Info("client msg handling", zap.Int64("part", pa.id), zap.ByteString("key", cm.Key()))
+			pa.logger.Debug("client msg handling", zap.Int64("part", pa.id), zap.String("key", hex.EncodeToString(cm.Key())))
 			res, err := pa.consumer.Process(cm)
 			resC := cm.ResponseChannel()
 			if err != nil {

@@ -24,6 +24,8 @@ func RunProcess(p Process) *ProcessStats {
 	if e := p.Init(ctx); e != nil {
 		s.Failure += 1
 		zap.S().Errorw("Failed to init", "err", e)
+	} else {
+		zap.S().Infow("init completed successfully")
 	}
 	for !p.Done(ctx) {
 		err := p.Invoke(ctx)

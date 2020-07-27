@@ -1,8 +1,8 @@
 Start: 0
-Size: 50
-Count: 1
+Size: 20
+Count: 20
 Seed: 1
-Views: 100
+Views: 2
 Copies: 1
 SeUrl: "localhost:6001"
 Mode: client

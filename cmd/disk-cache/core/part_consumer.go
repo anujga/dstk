@@ -1,6 +1,7 @@
 package dc
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
@@ -31,10 +32,12 @@ func (m *partitionConsumer) Meta() *dstk.Partition {
 
 // thread safe
 func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
+	fmt.Println(fmt.Sprintf("get for %s", hex.EncodeToString(req.GetKey())))
 	return m.pc.Get(req.GetKey())
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
+	fmt.Println(fmt.Sprintf("put for %s %s", hex.EncodeToString(req.GetKey()), hex.EncodeToString(req.GetValue())))
 	return nil, m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds())
 }
 
