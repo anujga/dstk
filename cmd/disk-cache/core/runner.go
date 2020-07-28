@@ -67,9 +67,7 @@ func MainRunner(conf string, workerName string, cleanDb bool) (*core.FutureErr, 
 			defer core.CloseLogErr(s)
 		}
 
-		ws, err := ss.NewWorkerServer(seUrl, workerId, factory, func() interface{} {
-			return nil
-		})
+		ws, err := ss.NewWorkerServer(seUrl, workerId, factory)
 		if err != nil {
 			panic(err)
 		}

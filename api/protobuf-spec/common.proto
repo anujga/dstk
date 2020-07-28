@@ -10,6 +10,11 @@ message Partition {
     bytes end = 5;
     string url = 6;
     int64 workerId = 7;
+    int64 leaderId = 8;
+    // todo should we deprecate active in favor of this?
+    string desiredState = 9;
+    string currentState = 10;
+    repeated int64 proxyTo = 11;
 }
 
 message Partitions {
