@@ -24,6 +24,8 @@ func main() {
 		"mode", "worker", "",
 		predict.OptValues("worker", "verify", "gateway"))
 
+	var name = compflag.String("name", "", "eg: dc-1")
+
 	var cleanData = flag.Bool(
 		"clean-db", false, "delete existing db")
 
@@ -41,7 +43,7 @@ func main() {
 
 		for _, c := range conf.Get() {
 			zap.S().Infow("starting runner", "conf", c)
-			f, err := dc.MainRunner(c, *cleanData)
+			f, err := dc.MainRunner(c, *name, *cleanData)
 			if err != nil {
 				panic(err)
 			}

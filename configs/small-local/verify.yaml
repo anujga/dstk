@@ -1,8 +1,8 @@
 Start: 0
-Size: 20
-Count: 20
+Size: 30
+Count: 30
 Seed: 1
-Views: 10
+Views: 100
 Copies: 1
 #SeUrl: "localhost:6001"
 GatewayUrl: "localhost:6013"

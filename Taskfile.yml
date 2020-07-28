@@ -18,7 +18,7 @@ vars:
 tasks:
   default:
     cmds:
-      - task: docker
+      - task: local
 
   os-deps:
     cmds:
