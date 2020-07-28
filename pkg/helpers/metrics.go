@@ -7,6 +7,9 @@ import (
 )
 
 func ExposePrometheus(address string) *http.Server {
+	zap.S().Infow("starting prometheus",
+		"endpoint", address)
+
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	server := &http.Server{

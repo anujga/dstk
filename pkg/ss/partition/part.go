@@ -63,7 +63,7 @@ func (p *actorImpl) Id() int64 {
 
 func (p *actorImpl) Run(m interface{}) *core.FutureErr {
 	var fun func() error
-	db, err := sqlx.Connect("postgres", "user=postgres dbname=se password=se sslmode=disable")
+	db, err := sqlx.Connect("postgres", "user=postgres dbname=postgres password=se sslmode=disable")
 	if err != nil {
 		panic(err)
 	}

@@ -1,6 +1,7 @@
 # Use goreman to run `go get github.com/mattn/goreman`
-se: go run ./cmd/se --conf=cmd/se/conf.yaml
-dc: go run ./cmd/disk-cache --conf=cmd/disk-cache/core/config.yaml --clean-db=true --log=info
-verify: sleep 5; go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify/verify-config.yaml
+se: go run ./cmd/se --conf=configs/small-local/se.yaml
+dc-0: go run ./cmd/disk-cache --conf=configs/small-local/dc0.yaml --clean-db=true --log=info --name=dc-0
+dc-1: go run ./cmd/disk-cache --conf=configs/small-local/dc1.yaml --clean-db=true --log=info --name=dc-1
+verify: sleep 5; go run ./cmd/disk-cache ---mode=verify --conf=configs/small-local/verify.yaml
 
 
