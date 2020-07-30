@@ -1,6 +1,7 @@
 Port: 6001
 Driver: postgres
 Mode: sql
+MetricUrl: "dstk-local:6002"
 ConnUrl: "host=localhost user=postgres dbname=postgres password=se sslmode=disable"
 Init:
   CleanExisting: true

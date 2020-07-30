@@ -4,6 +4,6 @@ se_url: localhost:6001
 
 db_path: /tmp/dc1
 url: localhost:6011
-metric_url: ":6012"
+metric_url: "dstk-local:6012"
 
 GatewayEndpoint: ":6013"

@@ -1,0 +1,20 @@
+global:
+  scrape_interval:     10s # By default, scrape targets every 15 seconds.
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    monitor: 'codelab-monitor'
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+  - job_name: 'dstk'
+    static_configs:
+      - targets:
+          - '192.168.0.139:6002'
+          - '192.168.0.139:6012'
+          - '192.168.0.139:6022'
+          - '192.168.0.139:6900'

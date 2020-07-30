@@ -1,0 +1,58 @@
+version: '3'
+networks:
+  monitor-net:
+    driver: bridge
+
+volumes:
+  se-data2:
+  grafana-pvc:
+  prometheus-pvc:
+
+services:
+  database:
+    image: "postgres" # use latest official postgres version
+    network_mode: bridge
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: se
+      POSTGRES_PASSWORD: se
+    volumes:
+      - se-data2:/var/lib/postgresql/data/
+
+  grafana:
+    image: grafana/grafana
+    networks:
+      - monitor-net
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-pvc:/var/lib/grafana
+
+  prometheus:
+    image: prom/prometheus:latest
+    networks:
+      - monitor-net
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-pvc:/prometheus
+
+  nodeexporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+    networks:
+      - monitor-net
+

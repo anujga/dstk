@@ -18,11 +18,11 @@ type Client interface {
 }
 
 // https://github.com/anujga/dstk/issues/40
-type impl struct {
+type fwdClient struct {
 	ss.ClientBase
 }
 
-func (i *impl) Get(ctx context.Context, in *pb.DcGetReq, opts ...grpc.CallOption) (*pb.DcGetRes, error) {
+func (i *fwdClient) Get(ctx context.Context, in *pb.DcGetReq, opts ...grpc.CallOption) (*pb.DcGetRes, error) {
 	out := new(pb.DcGetRes)
 
 	err := i.Fwd(ctx,
@@ -36,7 +36,7 @@ func (i *impl) Get(ctx context.Context, in *pb.DcGetReq, opts ...grpc.CallOption
 
 }
 
-func (i *impl) Put(ctx context.Context, in *pb.DcPutReq, opts ...grpc.CallOption) (*pb.DcRes, error) {
+func (i *fwdClient) Put(ctx context.Context, in *pb.DcPutReq, opts ...grpc.CallOption) (*pb.DcRes, error) {
 	out := new(pb.DcRes)
 
 	err := i.Fwd(ctx,
@@ -49,7 +49,7 @@ func (i *impl) Put(ctx context.Context, in *pb.DcPutReq, opts ...grpc.CallOption
 	return out, err
 }
 
-func (i *impl) Remove(ctx context.Context, in *pb.DcRemoveReq, opts ...grpc.CallOption) (*pb.DcRes, error) {
+func (i *fwdClient) Remove(ctx context.Context, in *pb.DcRemoveReq, opts ...grpc.CallOption) (*pb.DcRes, error) {
 	out := new(pb.DcRes)
 
 	err := i.Fwd(ctx,
@@ -74,7 +74,7 @@ func NewClient(ctx context.Context, clientId string, seUrl string, opts ...grpc.
 		seClient,
 		opts...)
 
-	return &impl{
+	return &fwdClient{
 		ClientBase: ss.ClientBase{Pool: clientPool},
 	}, nil
 }

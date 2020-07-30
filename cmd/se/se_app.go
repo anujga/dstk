@@ -17,10 +17,9 @@ type Conf struct {
 	ConnUrl, Mode string
 	PasswdFile    string
 	Driver        string
+	MetricUrl     string
 	Init          *Bootstrap
 }
-
-var metricUrl = "localhost:6002"
 
 type Bootstrap struct {
 	CleanExisting bool
@@ -42,7 +41,7 @@ func main() {
 		panic(err)
 	}
 
-	s := helpers.ExposePrometheus(metricUrl)
+	s := helpers.ExposePrometheus(c.MetricUrl)
 	defer core.CloseLogErr(s)
 
 	err = f.Wait()

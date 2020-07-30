@@ -4,4 +4,4 @@ se_url: localhost:6001
 
 db_path: /tmp/dc0
 url: localhost:6021
-metric_url: localhost:6022
+metric_url: dstk-local:6022
