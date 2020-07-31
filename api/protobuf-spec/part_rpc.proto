@@ -4,7 +4,7 @@ package dstk;
 import "common.proto";
 
 message PartitionsGetRequest {
-  int64 id = 1;
+  repeated int64 ids = 1;
   int64 modifiedOnGte = 2;
   bool active = 3;
   int64 workerId = 4;
