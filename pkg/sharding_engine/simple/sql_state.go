@@ -20,6 +20,7 @@ func UsingSql(driver string, conn string) (*sqlSe, error) {
 
 	r := &sqlSe{
 		db: db,
+		clock: &core.RealClock{},
 	}
 
 	return r, nil

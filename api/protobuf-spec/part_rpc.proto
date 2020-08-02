@@ -3,8 +3,9 @@ package dstk;
 
 import "common.proto";
 
-message PartitionsGetRequest {
+message PartitionGetRequest {
   int64 workerId = 1;
+  bool fetchAll = 2;
 }
 
 message PartitionGetResponse {
@@ -26,8 +27,11 @@ message PartitionCreateRequest {
 }
 
 service PartitionRpc {
-  rpc CreatePartition (PartitionCreateRequest) returns (PartitionRpcBaseResponse);
-  rpc GetPartitions (PartitionsGetRequest) returns (PartitionGetResponse);
+  // Returns all partitions that pass all the given filters. If no filter parameter is specified,
+  // this returns all partitions. For example, worker id being 0 means worker id filter is not specified.
+  rpc GetPartitions (PartitionGetRequest) returns (PartitionGetResponse);
+  // todo merge update and create with appropriate semantics
   rpc UpdatePartition (PartitionUpdateRequest) returns (PartitionRpcBaseResponse);
+  rpc CreatePartition (PartitionCreateRequest) returns (PartitionRpcBaseResponse);
   // todo should we add an rpc for batch update?
 }

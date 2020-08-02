@@ -62,7 +62,7 @@ func NewThickClient(clientId string, rpc pb.PartitionRpcClient) (ThickClient, *s
 
 //todo: this should be a push instead of poll
 func (t *tc) syncSe() error {
-	rs, err := t.rpc.GetPartitions(context.TODO(), &pb.PartitionsGetRequest{})
+	rs, err := t.rpc.GetPartitions(context.TODO(), &pb.PartitionGetRequest{FetchAll: true})
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (t *tc) syncSe() error {
 	if newTime <= t.cache.LastModified() {
 		return nil
 	}
-	err = t.cache.UpdateTree(rs.GetPartitions())
+	err = t.cache.UpdateTree(rs.GetPartitions(), newTime)
 	if err != nil {
 		return err
 	}

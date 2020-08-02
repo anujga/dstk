@@ -37,7 +37,7 @@ func (ps *PartsSyncer) Start() *status.Status {
 
 func (ps *PartsSyncer) syncFromSe() error {
 	newParts, err := ps.seRpc.GetPartitions(context.TODO(),
-		&pb.PartitionsGetRequest{WorkerId: int64(ps.wa.Id())})
+		&pb.PartitionGetRequest{WorkerId: int64(ps.wa.Id())})
 	if err != nil {
 		return err
 	}
