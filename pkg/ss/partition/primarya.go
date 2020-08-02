@@ -1,7 +1,6 @@
 package partition
 
 import (
-	"encoding/hex"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"go.uber.org/zap"
 	"reflect"
@@ -14,7 +13,7 @@ type primaryActor struct {
 func (pa *primaryActor) become() error {
 	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id))
 	followers := make([]common.Mailbox, 0)
-	channelRead:
+channelRead:
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case *FollowRequest:
@@ -28,24 +27,18 @@ func (pa *primaryActor) become() error {
 			}
 		case common.ClientMsg:
 			cm := m.(common.ClientMsg)
-			pa.logger.Debug("client msg handling", zap.Int64("part", pa.id), zap.String("key", hex.EncodeToString(cm.Key())))
-			res, err := pa.consumer.Process(cm)
-			resC := cm.ResponseChannel()
-			if err != nil {
-				resC <- err
-			} else {
-				resC <- res
-			}
-			close(resC)
+			handleClientMsg(&pa.actorBase, cm)
 			if !cm.ReadOnly() && len(followers) > 0 {
 				for _, f := range followers {
 					select {
-					case f <- cm:
+					case f <- &common.ReplicatedMsg{ClientMsg: cm}:
 					default:
 						// todo
 					}
 				}
 			}
+		case *common.ReplicatedMsg:
+			handleReplicatedMsg(&pa.actorBase, m.(*common.ReplicatedMsg))
 		case *BecomeProxy:
 			bp := m.(*BecomeProxy)
 			prx := &proxyActor{pa.actorBase, bp.ProxyTo}

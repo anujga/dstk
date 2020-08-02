@@ -27,7 +27,7 @@ func (pa *proxyActor) become() error {
 			for _, a := range pa.proxyTo {
 				if a.Contains(cm.Key()) {
 					select {
-					case a.Mailbox() <- cm:
+					case a.Mailbox() <- &common.ProxiedMsg{ClientMsg: cm}:
 					default:
 						cm.ResponseChannel() <- core.ErrInfo(codes.ResourceExhausted, "Worker busy",
 							"capacity", cap(a.Mailbox()))

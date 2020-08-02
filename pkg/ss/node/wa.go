@@ -62,9 +62,9 @@ func (w *actorImpl) Start() *core.FutureErr {
 			switch msg.(type) {
 			case common.ClientMsg:
 				w.clientReq(msg.(common.ClientMsg))
-			case *pb.PartList:
+			case *pb.Partitions:
 				// todo handle error
-				_ = w.partMgr.Reset(msg.(*pb.PartList))
+				_ = w.partMgr.Reset(msg.(*pb.Partitions))
 			default:
 				w.logger.Warn("no handler", zap.Any("msg", msg))
 			}

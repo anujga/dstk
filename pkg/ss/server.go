@@ -35,12 +35,10 @@ func NewWorkerServer(seUrl string, wid se.WorkerId, consumerFactory common.Consu
 	if err2 != nil {
 		return nil, err2
 	}
-
-	seClient, err := se.NewSeWorker(context.TODO(), seUrl, grpc.WithInsecure())
+	seClient, err := se.NewSeClient(context.TODO(), seUrl, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
-
 	s := io.GrpcServer()
 	return &WorkerGrpcServer{
 		Server:     s,

@@ -33,7 +33,7 @@ type PartCombo struct {
 	*pb.Partition
 }
 
-func ensureActors(plist *pb.PartList, pm *managerImpl) ([]*PartCombo, []*PartCombo) {
+func ensureActors(plist *pb.Partitions, pm *managerImpl) ([]*PartCombo, []*PartCombo) {
 	newActors := make([]*PartCombo, 0)
 	existingActors := make([]*PartCombo, 0)
 	for _, part := range plist.GetParts() {
@@ -70,7 +70,7 @@ func startNewActors(newParts []*PartCombo, pm *managerImpl) {
 				newp.Run(msg)
 			} else {
 				newp.Run(nil)
-				pm.slog.Info("no trans function", "from", currActorState.String(), "to", currDbState.String())
+				pm.slog.Infow("no trans function", "from", currActorState.String(), "to", currDbState.String())
 			}
 		} else {
 			pm.slog.Warnw("no trans function", "from", currActorState.String())
@@ -78,7 +78,7 @@ func startNewActors(newParts []*PartCombo, pm *managerImpl) {
 	}
 }
 
-func resetParts(plist *pb.PartList, pm *managerImpl, logger *zap.Logger) error {
+func resetParts(plist *pb.Partitions, pm *managerImpl, logger *zap.Logger) error {
 	newParts, _ := ensureActors(plist, pm)
 	startNewActors(newParts, pm)
 	for _, part := range plist.GetParts() {
@@ -86,6 +86,7 @@ func resetParts(plist *pb.PartList, pm *managerImpl, logger *zap.Logger) error {
 			handleTransition(currPa, part, pm.store.partIdMap, logger)
 		}
 	}
+	// todo handle partitions that are no longer present in new list
 	return nil
 }
 

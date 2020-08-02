@@ -1,0 +1,33 @@
+syntax = "proto3";
+package dstk;
+
+import "common.proto";
+
+message PartitionsGetRequest {
+  int64 workerId = 4;
+}
+
+message PartitionGetResponse {
+  Partitions partitions = 1;
+}
+
+message PartitionUpdateRequest {
+  int64 id = 1;
+  string desiredState = 2;
+  string currentState = 3;
+  bytes etag = 4;
+}
+
+message PartitionRpcBaseResponse {
+}
+
+message PartitionCreateRequest {
+  Partition partition = 1;
+}
+
+service PartitionRpc {
+  rpc CreatePartition (PartitionCreateRequest) returns (PartitionRpcBaseResponse);
+  rpc GetPartitions (PartitionsGetRequest) returns (PartitionGetResponse);
+  rpc UpdatePartition (PartitionUpdateRequest) returns (PartitionRpcBaseResponse);
+  // todo should we add an rpc for batch update?
+}

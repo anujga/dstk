@@ -12,7 +12,7 @@ import (
 
 type PartsSyncer struct {
 	wa    Actor
-	seRpc pb.SeWorkerApiClient
+	seRpc pb.PartitionRpcClient
 	slog  *zap.SugaredLogger
 }
 
@@ -36,16 +36,16 @@ func (ps *PartsSyncer) Start() *status.Status {
 }
 
 func (ps *PartsSyncer) syncFromSe() error {
-	newParts, err := ps.seRpc.MyParts(context.TODO(),
-		&pb.MyPartsReq{WorkerId: int64(ps.wa.Id())})
+	newParts, err := ps.seRpc.GetPartitions(context.TODO(),
+		&pb.PartitionsGetRequest{WorkerId: int64(ps.wa.Id())})
 	if err != nil {
 		return err
 	}
-	ps.wa.Mailbox() <- newParts
+	ps.wa.Mailbox() <- newParts.GetPartitions()
 	return nil
 }
 
-func NewSyncer(wa Actor, seRpc pb.SeWorkerApiClient) *PartsSyncer {
+func NewSyncer(wa Actor, seRpc pb.PartitionRpcClient) *PartsSyncer {
 	return &PartsSyncer{
 		wa:    wa,
 		seRpc: seRpc,
