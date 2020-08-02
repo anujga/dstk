@@ -11,7 +11,7 @@ func handleReplicatedMsg(ab *actorBase, rm *common.ReplicatedMsg)  {
 }
 
 func handleClientMsg(ab *actorBase, cm common.ClientMsg)  {
-	ab.logger.Info("client msg handling", zap.Int64("part", ab.id), zap.String("key", hex.EncodeToString(cm.Key())))
+	ab.logger.Debug("client msg handling", zap.Int64("part", ab.id), zap.String("key", hex.EncodeToString(cm.Key())))
 	res, err := ab.consumer.Process(cm)
 	resC := cm.ResponseChannel()
 	if err != nil {
