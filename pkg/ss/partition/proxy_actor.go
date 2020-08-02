@@ -3,9 +3,7 @@ package partition
 import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
-	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
-	"reflect"
 )
 
 type proxyActor struct {
@@ -18,7 +16,7 @@ func (pa *proxyActor) become() error {
 	for _, p := range pa.proxyTo {
 		pids = append(pids, p.Id())
 	}
-	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id), zap.Int64s("proxy to", pids))
+	//pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id), zap.Int64s("proxy to", pids))
 	channelRead:
 	for m := range pa.mailBox {
 		switch m.(type) {
@@ -35,10 +33,11 @@ func (pa *proxyActor) become() error {
 				}
 			}
 		case *Retire:
-			pa.logger.Info("retiring", zap.Int64("part", pa.id))
+			//pa.logger.Info("retiring", zap.Int64("part", pa.id))
 			break channelRead
 		default:
-			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
+			// todo emit metrics
+			//pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	pa.setState(Retired)

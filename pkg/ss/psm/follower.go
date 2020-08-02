@@ -1,4 +1,4 @@
-package partition
+package psm
 
 import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
