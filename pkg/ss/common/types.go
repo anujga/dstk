@@ -28,6 +28,8 @@ type ReplicatedMsg struct {
 	ClientMsg
 }
 
+
+// todo add an enum to differentiate between client msg, replicated, proxied message
 type ProxiedMsg struct {
 	ClientMsg
 }
