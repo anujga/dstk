@@ -1,21 +1,15 @@
 package simple
 
 import (
-	"context"
 	"database/sql"
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
-	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"time"
 )
-
-type sqlSe struct {
-	db *sqlx.DB
-}
 
 func UsingSql(driver string, conn string) (*sqlSe, error) {
 	db, err := sqlx.Connect(driver, conn)
@@ -26,6 +20,7 @@ func UsingSql(driver string, conn string) (*sqlSe, error) {
 
 	r := &sqlSe{
 		db: db,
+		clock: &core.RealClock{},
 	}
 
 	return r, nil
@@ -90,10 +85,11 @@ func add(tx *sqlx.Tx, parts []*pb.Partition) error {
 
 type sqlPart struct {
 	Id           int64
-	ModifiedOn   time.Time `db:"modified_on"`
-	WorkerId     int64     `db:"worker_id"`
-	Start, End   core.KeyT
-	Url          string
+	ModifiedOn   time.Time     `db:"modified_on"`
+	WorkerId     int64         `db:"worker_id"`
+	Start        core.KeyT     `db:"start"`
+	End          core.KeyT     `db:"end"`
+	Url          string        `db:"url"`
 	LeaderId     sql.NullInt64 `db:"leader_id"`
 	ProxyTo      pq.Int64Array `db:"proxy_to"`
 	DesiredState string        `db:"desired_state"`
@@ -139,7 +135,7 @@ func (s *sqlPart) toProto() *pb.Partition {
 	return p
 }
 
-func toProto(ps []sqlPart) *pb.PartList {
+func toProto(ps []sqlPart) *pb.Partitions {
 	var rs = make([]*pb.Partition, 0, len(ps))
 	var lastMod = int64(0)
 
@@ -150,39 +146,5 @@ func toProto(ps []sqlPart) *pb.PartList {
 			lastMod = r.ModifiedOn
 		}
 	}
-	return &pb.PartList{
-		Parts: rs, LastModified: lastMod,
-	}
-}
-
-func (s *sqlSe) AllParts(_ context.Context, _ *pb.AllPartsReq) (*pb.PartList, error) {
-	var parts []sqlPart
-	if err := s.db.Select(&parts, "SELECT * FROM partition"); err != nil {
-		return nil, err
-	}
-
-	ps := toProto(parts)
-	zap.S().Infow("returning parts",
-		"count", len(ps.Parts),
-		"modifiedOn", ps.LastModified)
-	return ps, nil
-}
-
-func (s *sqlSe) MyParts(_ context.Context, req *pb.MyPartsReq) (*pb.PartList, error) {
-	var parts []sqlPart
-	workerId := req.WorkerId
-	err := s.db.Select(&parts,
-		"SELECT * FROM partition where worker_id = $1",
-		workerId)
-
-	if err != nil {
-		return nil, err
-	}
-
-	ps := toProto(parts)
-	zap.S().Infow("returning parts",
-		"workerId", workerId,
-		"count", len(ps.Parts),
-		"modifiedOn", ps.LastModified)
-	return ps, nil
+	return &pb.Partitions{Parts: rs}
 }

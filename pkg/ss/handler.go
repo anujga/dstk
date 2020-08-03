@@ -43,16 +43,15 @@ func (mh *MsgHandler) HandleBlocking(req common.Msg) (interface{}, *status.Statu
 		return nil, core.ErrInfo(codes.ResourceExhausted, "Worker busy",
 			"capacity", cap(mh.w.Mailbox()))
 	}
-
 	select {
 	case e := <-req.ResponseChannel():
 		switch v := e.(type) {
-		case error:
-			return nil, status.Convert(v)
+		case *common.Response:
+			r := e.(*common.Response)
+			return r.Res, status.Convert(r.Err)
 		default:
 			return v, nil
 		}
-
 	case _ = <-time.After(time.Second * 5):
 		return nil, core.ErrInfo(codes.DeadlineExceeded, "timeout",
 			"msg", req)

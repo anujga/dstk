@@ -33,7 +33,7 @@ func (c *clientPool) GetClient(ctx context.Context, key []byte) (PartitionClient
 	return pc.(PartitionClient), nil
 }
 
-func NewPartitionClientPool(clientId string, rpcClientFactory RpcClientFactory, seClient dstk.SeClientApiClient, connectionOpts ...grpc.DialOption) (PartitionClientPool, *status.Status) {
+func NewPartitionClientPool(clientId string, rpcClientFactory RpcClientFactory, seClient dstk.PartitionRpcClient, connectionOpts ...grpc.DialOption) (PartitionClientPool, *status.Status) {
 	tc, err := se.NewThickClient(clientId, seClient)
 	if err != nil {
 		return nil, err

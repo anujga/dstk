@@ -12,7 +12,7 @@ import (
 
 type Manager interface {
 	Find(key core.KeyT) (partition.Actor, error)
-	Reset(plist *pb.PartList) error
+	Reset(plist *pb.Partitions) error
 }
 
 // todo: this is the 4th implementation of the range map.
@@ -27,7 +27,7 @@ func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, error) {
 	return pm.store.find(key)
 }
 
-func (pm *managerImpl) Reset(plist *pb.PartList) error {
+func (pm *managerImpl) Reset(plist *pb.Partitions) error {
 	return resetParts(plist, pm, pm.slog.Desugar())
 }
 
