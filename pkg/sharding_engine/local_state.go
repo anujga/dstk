@@ -72,7 +72,7 @@ func (x *PartRange) End() core.KeyT {
 //todo: use CAS on instead of blind replace to avoid lost update
 // thread: unsafe. its actually safe but the above statement forces
 // callers to call sequentially
-func (s *stateHolder) UpdateTree(parts *pb.Partitions, updatedTime int64) error {
+func (s *stateHolder) UpdateTree(parts *pb.Partitions, lastModified int64) error {
 	t := rangemap.New(16) // log(100K) expected count of partition
 
 	for _, p := range parts.GetParts() {
@@ -87,7 +87,7 @@ func (s *stateHolder) UpdateTree(parts *pb.Partitions, updatedTime int64) error 
 	s.r.Store(&state{
 		rangeMap:     t,
 		pbs:          parts.GetParts(),
-		lastModified: updatedTime,
+		lastModified: lastModified,
 	})
 
 	return nil
