@@ -1,11 +1,11 @@
 Start: 0
-Size: 30
-Count: 30
+Size: 10
+Count: 10
 Seed: 1
 Views: 100
 Copies: 1
-#SeUrl: "localhost:6001"
-GatewayUrl: "localhost:6013"
-Mode: gateway
-MetricUrl: "localhost:6900"
+SeUrl: "localhost:6001"
+#GatewayUrl: "localhost:6013"
+Mode: client
+MetricUrl: "dstk-local:6900"
 ClientId: "c1"

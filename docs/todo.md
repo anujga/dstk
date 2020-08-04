@@ -26,6 +26,9 @@ are already sorted. 2 use cases would be
 ### Production
 1. opentracing @sudip
 1. pg_dump schedule backup. tune chart
+1. review all usage of context. need to add timeout and cancellation semantic
+wherever relevant.
+1. clean shutdown of all systems. Proper handling of Stateful sets shutdown. 
 1. docker and metrics
     1. health check
         - https://github.com/grpc/grpc-go/blob/master/health/server.go
@@ -55,12 +58,7 @@ and upload data to blob. Similarly, restore.
 For instance, io heavy workloads will work pretty nice with local nvme and
 managed disk for durability.
 
-### Client
-1. Gateway mode in addition to thick client. gateway vs thick client
-    1. Gateway will give us more control than thick clients.
-    1. Language agnostic. Mandatory since we dont have a thick client 
-    in java
-
+### Gateway
 1. Add utility methods to keep the main server remain thin. Not sure about
 the use cases for these api except ttl so lower priority:
     1. Implement TTL cleanup logic
@@ -74,4 +72,7 @@ the use cases for these api except ttl so lower priority:
 as opposed to vanilla flags everywhere
 1. create a master helm chart with respects namespaces and uses helm operator
  to configure dependent charts and values 
- 
+
+1. Cleanup the schema for SE. 
+1. New table for workerId -> WorkerUrl mapping. Stateful set is enough unless
+ we are building some sort of custom lease mechanism.

@@ -26,6 +26,11 @@ tasks:
 
 
 
+  protos:
+    desc: compile protobuf files
+    cmds:
+      - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
+
   docker:
     desc: Build docker
     cmds:
@@ -53,14 +58,22 @@ tasks:
       - task: app-local
 
   local:
+    deps:
+      - local-monitor
     cmds:
       - task: app
-        vars: {EXE: se}
+        vars:
+          EXE: se
 
       - task: app
-        vars: {EXE: "disk-cache"}
+        vars:
+          EXE: disk-cache
 
       - scripts/docker.sh deploy/Dockerfile-local
+
+  local-monitor:
+    cmds:
+      - docker-compose -f scripts/docker-compose.yaml up
 
   app:
     desc: Build the app
@@ -77,14 +90,6 @@ tasks:
   load-test:
     cmds:
       - goreman -f cmd/disk-cache/Procfile start
-
-
-  protos:
-    desc: compile protobuf files
-    deps:
-      - dl-deps
-    cmds:
-      - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
 
   dl-deps:
     desc: Install tools required to build this app

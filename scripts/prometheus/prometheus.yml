@@ -8,9 +8,13 @@ global:
 
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-  - job_name: 'prometheus'
+  - job_name: 'standard'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets:
+        - 'localhost:9090'
+        - 'cadvisor:8080'
+        - 'nodeexporter:9100'
+        -
   - job_name: 'dstk'
     static_configs:
       - targets:
