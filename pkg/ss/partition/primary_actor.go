@@ -1,10 +1,8 @@
 package partition
 
 import (
-	"encoding/hex"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"go.uber.org/zap"
-	"reflect"
 )
 
 type primaryActor struct {
@@ -12,15 +10,15 @@ type primaryActor struct {
 }
 
 func (pa *primaryActor) become() error {
-	pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id))
+	//pa.logger.Info("became", zap.String("state", pa.getState().String()), zap.Int64("id", pa.id))
 	followers := make([]common.Mailbox, 0)
-	channelRead:
+channelRead:
 	for m := range pa.mailBox {
 		switch m.(type) {
 		case *FollowRequest:
 			fr := m.(*FollowRequest)
 			followers = append(followers, fr.FollowerMailbox)
-			pa.logger.Info("adding follower", zap.Int64("to part", pa.id), zap.Int64("follower id", fr.FollowerId))
+			//pa.logger.Info("adding follower", zap.Int64("to part", pa.id), zap.Int64("follower id", fr.FollowerId))
 			select {
 			case fr.FollowerMailbox <- &common.AppStateImpl{S: pa.consumer.GetSnapshot()}:
 			default:
@@ -28,24 +26,18 @@ func (pa *primaryActor) become() error {
 			}
 		case common.ClientMsg:
 			cm := m.(common.ClientMsg)
-			pa.logger.Debug("client msg handling", zap.Int64("part", pa.id), zap.String("key", hex.EncodeToString(cm.Key())))
-			res, err := pa.consumer.Process(cm)
-			resC := cm.ResponseChannel()
-			if err != nil {
-				resC <- err
-			} else {
-				resC <- res
-			}
-			close(resC)
+			handleClientMsg(&pa.actorBase, cm)
 			if !cm.ReadOnly() && len(followers) > 0 {
 				for _, f := range followers {
 					select {
-					case f <- cm:
+					case f <- &common.ReplicatedMsg{ClientMsg: cm}:
 					default:
 						// todo
 					}
 				}
 			}
+		case *common.ReplicatedMsg:
+			handleReplicatedMsg(&pa.actorBase, m.(*common.ReplicatedMsg))
 		case *BecomeProxy:
 			bp := m.(*BecomeProxy)
 			prx := &proxyActor{pa.actorBase, bp.ProxyTo}
@@ -53,10 +45,11 @@ func (pa *primaryActor) become() error {
 			prx.setState(Proxy)
 			return prx.become()
 		case *Retire:
-			pa.logger.Info("retiring", zap.Int64("part", pa.id))
+			//pa.logger.Info("retiring", zap.Int64("part", pa.id))
 			break channelRead
 		default:
-			pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
+			// todo emit metrics
+			//pa.logger.Warn("not handled", zap.Int64("part", pa.id), zap.Any("state", pa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	pa.setState(Retired)

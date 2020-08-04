@@ -13,7 +13,7 @@ import (
 type tc struct {
 	notifications chan interface{}
 	cache         stateHolder
-	rpc           pb.SeClientApiClient
+	rpc           pb.PartitionRpcClient
 	clientId      string
 }
 
@@ -29,7 +29,7 @@ func (t *tc) Parts() ([]*pb.Partition, error) {
 	return t.cache.Parts()
 }
 
-func NewThickClient(clientId string, rpc pb.SeClientApiClient) (ThickClient, *status.Status) {
+func NewThickClient(clientId string, rpc pb.PartitionRpcClient) (ThickClient, *status.Status) {
 	t := tc{
 		notifications: make(chan interface{}, 2),
 		rpc:           rpc,
@@ -62,16 +62,21 @@ func NewThickClient(clientId string, rpc pb.SeClientApiClient) (ThickClient, *st
 
 //todo: this should be a push instead of poll
 func (t *tc) syncSe() error {
-	rs, err := t.rpc.AllParts(context.TODO(), &pb.AllPartsReq{ClientId: t.clientId})
+	rs, err := t.rpc.GetPartitions(context.TODO(), &pb.PartitionGetRequest{FetchAll: true})
 	if err != nil {
 		return err
 	}
 
-	newTime := rs.GetLastModified()
+	newTime := int64(0)
+	for _, p := range rs.Partitions.GetParts() {
+		if p.GetModifiedOn() > newTime {
+			newTime = p.GetModifiedOn()
+		}
+	}
 	if newTime <= t.cache.LastModified() {
 		return nil
 	}
-	err = t.cache.UpdateTree(rs.GetParts(), newTime)
+	err = t.cache.UpdateTree(rs.GetPartitions(), newTime)
 	if err != nil {
 		return err
 	}

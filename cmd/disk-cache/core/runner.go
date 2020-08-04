@@ -11,6 +11,7 @@ import (
 	"github.com/anujga/dstk/pkg/ss"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"gopkg.in/errgo.v2/fmt/errors"
 	"os"
 )
@@ -67,7 +68,7 @@ func MainRunner(conf string, workerName string, cleanDb bool) (*core.FutureErr, 
 			defer core.CloseLogErr(s)
 		}
 
-		ws, err := ss.NewWorkerServer(seUrl, workerId, factory)
+		ws, err := ss.NewWorkerServer(seUrl, workerId, factory, grpc.WithInsecure())
 		if err != nil {
 			panic(err)
 		}

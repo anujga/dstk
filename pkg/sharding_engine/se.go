@@ -33,18 +33,10 @@ type ThickClient interface {
 	Parts() ([]*pb.Partition, error)
 }
 
-func NewSeClient(ctx context.Context, target string, opts ...grpc.DialOption) (pb.SeClientApiClient, error) {
+func NewSeClient(ctx context.Context, target string, opts ...grpc.DialOption) (pb.PartitionRpcClient, error) {
 	conn, err := grpc.DialContext(ctx, target, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return pb.NewSeClientApiClient(conn), err
-}
-
-func NewSeWorker(ctx context.Context, target string, opts ...grpc.DialOption) (pb.SeWorkerApiClient, error) {
-	conn, err := grpc.DialContext(ctx, target, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return pb.NewSeWorkerApiClient(conn), err
+	return pb.NewPartitionRpcClient(conn), err
 }

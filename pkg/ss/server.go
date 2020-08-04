@@ -29,18 +29,16 @@ func (wgs *WorkerGrpcServer) Start(network, address string) error {
 	}
 }
 
-func NewWorkerServer(seUrl string, wid se.WorkerId, consumerFactory common.ConsumerFactory) (*WorkerGrpcServer, error) {
+func NewWorkerServer(seUrl string, wid se.WorkerId, consumerFactory common.ConsumerFactory, opts ...grpc.DialOption) (*WorkerGrpcServer, error) {
 	logger := zap.L()
 	wa, err2 := node.NewActor(consumerFactory, wid)
 	if err2 != nil {
 		return nil, err2
 	}
-
-	seClient, err := se.NewSeWorker(context.TODO(), seUrl, grpc.WithInsecure())
+	seClient, err := se.NewSeClient(context.TODO(), seUrl, opts...)
 	if err != nil {
 		panic(err)
 	}
-
 	s := io.GrpcServer()
 	return &WorkerGrpcServer{
 		Server:     s,

@@ -2,8 +2,6 @@ package partition
 
 import (
 	"github.com/anujga/dstk/pkg/ss/common"
-	"go.uber.org/zap"
-	"reflect"
 )
 
 type catchingUpActor struct {
@@ -13,7 +11,7 @@ type catchingUpActor struct {
 }
 
 func (fa *catchingUpActor) become() error {
-	fa.logger.Info("became", zap.String("state", fa.getState().String()), zap.Int64("id", fa.id), zap.Int64("leader id", fa.leaderId))
+	//fa.logger.Info("became", zap.String("state", fa.getState().String()), zap.Int64("id", fa.id), zap.Int64("leader id", fa.leaderId))
 	select {
 	case fa.leaderMailbox <- &FollowRequest{FollowerMailbox: fa.mailBox, FollowerId: fa.id}:
 	default:
@@ -48,10 +46,11 @@ func (fa *catchingUpActor) become() error {
 				fa.setState(Follower)
 				return fa.become()
 			} else {
-				fa.logger.Info("cannot become follower before receiving snapshot", zap.Int64("part", fa.id))
+				//fa.logger.Info("cannot become follower before receiving snapshot", zap.Int64("part", fa.id))
 			}
 		default:
-			fa.logger.Warn("not handled", zap.Any("state", fa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
+			// todo emit metrics
+			//fa.logger.Warn("not handled", zap.Any("state", fa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	fa.setState(Retired)

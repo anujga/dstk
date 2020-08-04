@@ -1,5 +1,7 @@
 package core
 
+import "time"
+
 type KeyT []byte
 
 var (
@@ -16,4 +18,16 @@ func init() {
 		MaxKey[i] = 0xff
 	}
 	MaxKey[MaxKeyLen] = 1
+}
+
+
+type DstkClock interface {
+	Time() int64
+}
+
+type RealClock struct {
+}
+
+func (r *RealClock) Time() int64 {
+	return time.Now().Unix()
 }

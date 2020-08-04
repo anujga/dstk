@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/core/io"
 	"github.com/anujga/dstk/pkg/helpers"
@@ -53,7 +54,7 @@ func main() {
 func run(c *Conf) (*core.FutureErr, *grpc.Server, error) {
 
 	var (
-		server simple.WorkerAndClient
+		server dstk.PartitionRpcServer
 		err    error
 	)
 
@@ -94,6 +95,7 @@ func run(c *Conf) (*core.FutureErr, *grpc.Server, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	zap.S().Infow("started se server", "port", c.Port)
 
 	return f, s, nil
 }
