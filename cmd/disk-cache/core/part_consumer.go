@@ -35,7 +35,11 @@ func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
-	return nil, m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds())
+	document := &dstk.DcDocument{
+		Value: req.GetValue(),
+		Etag: req.GetEtag(),
+	}
+	return nil, m.pc.Put(req.GetKey(), document, req.GetTtlSeconds())
 }
 
 func (m *partitionConsumer) remove(req *dstk.DcRemoveReq) (interface{}, error) {

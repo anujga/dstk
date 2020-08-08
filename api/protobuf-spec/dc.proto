@@ -7,7 +7,7 @@ message DcGetReq {
 
 message DcGetRes {
   bytes key = 1;
-  bytes value = 2;
+  DcDocument document = 2;
 }
 
 message DcRemoveReq {
@@ -21,6 +21,13 @@ message DcPutReq {
   bytes key = 1;
   bytes value = 2;
   float ttl_seconds = 3;
+  string etag = 4;
+}
+
+message DcDocument {
+  bytes value = 1;
+  string etag = 2;
+  int64 last_updated_millis = 3;
 }
 
 // Read upto maxCount many records. In some cases we

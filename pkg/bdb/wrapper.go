@@ -1,8 +1,11 @@
 package bdb
 
 import (
+	"fmt"
+	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/rangemap"
 	"github.com/dgraph-io/badger/v2"
+	"github.com/golang/protobuf/proto"
 	"time"
 )
 
@@ -11,11 +14,15 @@ type Wrapper struct {
 }
 
 // thread safe
-func (w *Wrapper) Get(key []byte) ([]byte, error) {
+func (w *Wrapper) Get(key []byte) (*dstk.DcDocument, error) {
 	var res []byte
+	var document *dstk.DcDocument
 	err := w.View(func(txn *badger.Txn) error {
 		if item, err := txn.Get(key); err == nil {
+			document = &dstk.DcDocument{}
+			// TODO(gowri.sundaram): Remove value copy.
 			res, err = item.ValueCopy(nil)
+			err = proto.Unmarshal(res, document)
 			return err
 		} else {
 			return err
@@ -27,13 +34,19 @@ func (w *Wrapper) Get(key []byte) ([]byte, error) {
 		}
 		return nil, err
 	}
-	return res, nil
+	return document, nil
 }
 
 // thread safe
-func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float32) error {
+func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32) error {
+	fmt.Printf("GOT REQUEST WITH ETAG!!!: %s\n", document.GetEtag())
+	payload, err := proto.Marshal(document)
+	if err != nil {
+		return err
+	}
+
 	return w.Update(func(txn *badger.Txn) error {
-		entry := badger.NewEntry(key, value).WithTTL(time.Duration(ttlSeconds) * time.Second)
+		entry := badger.NewEntry(key, payload).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)
 	})
 }
