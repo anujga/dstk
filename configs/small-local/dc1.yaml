@@ -6,4 +6,4 @@ db_path: /tmp/dc1
 url: localhost:6011
 metric_url: ":6012"
 
-GatewayEndpoint: ":6013"
+#GatewayEndpoint: ":6013"
