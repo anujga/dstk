@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"crypto/tls"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -17,9 +16,6 @@ func ExposePrometheus(address string) *http.Server {
 	server := &http.Server{
 		Addr:    address,
 		Handler: mux,
-		TLSConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
 	}
 	go func() {
 		err := server.ListenAndServe()
