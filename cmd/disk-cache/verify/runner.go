@@ -145,14 +145,14 @@ func verifyAll(c *Config) error {
 	return nil
 }
 
-func startSplit(c *Config) (*core.FutureErr, error) {
+func startSplit(c *Config) error {
 	seRpc, err := se.NewSeClient(context.TODO(), c.SeUrl)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	partsRes, err := seRpc.GetPartitions(context.TODO(), &dstk.PartitionGetRequest{FetchAll: true})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	ps := partsRes.GetPartitions().GetParts()
 	rnd := rand.NewSource(c.Seed)
@@ -165,7 +165,7 @@ func startSplit(c *Config) (*core.FutureErr, error) {
 		},
 		SeRpc: seRpc,
 	}
-	return splitDag.Start(context.TODO(), nil), nil
+	return splitDag.Start(context.TODO(), nil)
 
 }
 
@@ -177,14 +177,13 @@ func RunVerifier(conf string) error {
 	}
 
 	if c.MetricUrl != "" {
-		s := helpers.ExposePrometheus(c.MetricUrl)
-		defer core.CloseLogErr(s)
+		_ = helpers.ExposePrometheus(c.MetricUrl)
 	}
 
-	_, err := startSplit(c)
-	if err != nil {
-		return err
-	}
+	//err := startSplit(c)
+	//if err != nil {
+	//	return err
+	//}
 
 	if err := runMany(c); err != nil {
 		return err

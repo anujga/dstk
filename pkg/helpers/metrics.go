@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"crypto/tls"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"net/http"
@@ -15,6 +17,9 @@ func ExposePrometheus(address string) *http.Server {
 	server := &http.Server{
 		Addr:    address,
 		Handler: mux,
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 	}
 	go func() {
 		err := server.ListenAndServe()
@@ -22,6 +27,7 @@ func ExposePrometheus(address string) *http.Server {
 			zap.S().Errorw("error in prometheus endpoint",
 				"err", err)
 		}
+		defer core.CloseLogErr(server)
 	}()
 
 	return server

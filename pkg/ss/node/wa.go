@@ -74,8 +74,8 @@ func (w *actorImpl) Start() *core.FutureErr {
 	return fut
 }
 
-func NewActor(factory common.ConsumerFactory, id se.WorkerId) (Actor, error) {
-	p, err := partition.NewManager(factory)
+func NewActor(factory common.ConsumerFactory, id se.WorkerId, partRpc pb.PartitionRpcClient) (Actor, error) {
+	p, err := partition.NewManager(factory, partRpc)
 	if err != nil {
 		return nil, err.Err()
 	}

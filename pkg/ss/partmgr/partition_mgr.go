@@ -21,6 +21,7 @@ type managerImpl struct {
 	store           *actorStore
 	consumerFactory common.ConsumerFactory
 	slog            *zap.SugaredLogger
+	partRpc         pb.PartitionRpcClient
 }
 
 func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, error) {
@@ -28,11 +29,11 @@ func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, error) {
 }
 
 func (pm *managerImpl) Reset(plist *pb.Partitions) error {
-	return resetParts(plist, pm, pm.slog.Desugar())
+	return resetParts(plist, pm, pm.slog.Desugar(), pm.partRpc)
 }
 
 //todo: ensure there is at least 1 partition during construction
-func NewManager(factory common.ConsumerFactory) (Manager, *status.Status) {
+func NewManager(factory common.ConsumerFactory, partRpc pb.PartitionRpcClient) (Manager, *status.Status) {
 	return &managerImpl{
 		consumerFactory: factory,
 		slog:            zap.S(),
@@ -41,5 +42,6 @@ func NewManager(factory common.ConsumerFactory) (Manager, *status.Status) {
 			partIdMap:    make(map[int64]partition.Actor),
 			lastModified: 0,
 		},
+		partRpc: partRpc,
 	}, nil
 }
