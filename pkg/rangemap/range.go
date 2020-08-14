@@ -31,6 +31,14 @@ func RangeContains(r Range, t core.KeyT) bool {
 	return bytes.Compare(r.Start(), t) <= 0 && bytes.Compare(t, r.End()) < 0
 }
 
+func RangeContainsExcludeStart(r Range, end core.KeyT) bool {
+	return bytes.Compare(r.Start(), end) < 0 && bytes.Compare(end, r.End()) < 0
+}
+
+func KeyEquals(k1 core.KeyT, k2 core.KeyT) bool {
+	return bytes.Compare(k1, k2) == 0
+}
+
 func RangeEquals(r1 Range, r2 Range) bool {
 	startEq := bytes.Compare(r1.Start(), r2.Start()) == 0
 	if !startEq {

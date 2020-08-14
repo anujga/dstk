@@ -21,6 +21,13 @@ func (b *badgerMap) Close() error {
 }
 
 func (b *badgerMap) Get(key core.KeyT) (Range, bool, *status.Status) {
+	if !core.ValidKey(key) {
+		return nil, false, core.ErrInfo(
+			codes.InvalidArgument,
+			"invalid key",
+			"key", key)
+
+	}
 	r, rangeFound, err := b.precedingRange(key)
 	if err != nil {
 		return nil, false, err
@@ -36,7 +43,11 @@ func (b *badgerMap) Get(key core.KeyT) (Range, bool, *status.Status) {
 }
 
 func (b *badgerMap) precedingRange(key core.KeyT) (Range, bool, *status.Status) {
-	item, found, err := bdb.LessOrEqual(b.db, b.name, key)
+	return b.iterRange(key, true)
+}
+
+func (b *badgerMap) iterRange(key core.KeyT, reverse bool) (Range, bool, *status.Status) {
+	item, found, err := bdb.FindFirst(b.db, reverse, key)
 	if err != nil {
 		return nil, false, err
 	}
@@ -77,13 +88,21 @@ func (b *badgerMap) Put(rng Range) *status.Status {
 		}
 	}
 
-	after, afterFound, st := b.precedingRange(rng.End())
+	after, afterFound, st := b.iterRange(rng.Start(), false)
+
 	if st != nil {
 		return st
 	}
 
 	if afterFound {
-		if RangeContains(after, rng.End()) {
+		//if RangeContainsExcludeStart(after, rng.End()) {
+		//	return core.ErrInfo(codes.InvalidArgument,
+		//		"New range overlaps",
+		//		"existing", after,
+		//		"new", rng)
+		//}
+
+		if RangeContains(rng, after.Start()) {
 			return core.ErrInfo(codes.InvalidArgument,
 				"New range overlaps",
 				"existing", after,
@@ -91,22 +110,22 @@ func (b *badgerMap) Put(rng Range) *status.Status {
 		}
 	}
 
-	if !afterFound {
-		if beforeFound {
-			panic("error in badger_map. range after found but not range before")
-		}
-	} else {
-		if !beforeFound {
-			panic("error in badger_map. range before found but not range before")
-		}
-
-		if !RangeEquals(before, after) {
-			return core.ErrInfo(codes.InvalidArgument,
-				"Range contains a subset present",
-				"subset", after,
-				"new", rng)
-		}
-	}
+	//if !afterFound {
+	//	if beforeFound {
+	//		panic("error in badger_map. range after found but not range before")
+	//	}
+	//} else {
+	//	if !beforeFound {
+	//		panic("error in badger_map. range before found but not range before")
+	//	}
+	//
+	//	if !RangeEquals(before, after) {
+	//		return core.ErrInfo(codes.InvalidArgument,
+	//			"Range contains a subset present",
+	//			"subset", after,
+	//			"new", rng)
+	//	}
+	//}
 
 	v, err := b.marshal.Marshal(rng)
 	if err != nil {

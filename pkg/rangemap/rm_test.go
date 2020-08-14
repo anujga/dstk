@@ -11,12 +11,27 @@ import (
 )
 
 type TestRange struct {
-	KeyStart string
-	KeyEnd   string
+	KeyStart core.KeyT
+	KeyEnd   core.KeyT
 	Value    string
 }
 
+func trange(start, end, value string) TestRange {
+	s := []byte(start)
+	if len(s) == 0 {
+		s = core.MinKey
+	}
+	return TestRange{
+		KeyStart: s,
+		KeyEnd:   []byte(end),
+		Value:    value,
+	}
+}
+
 func (t TestRange) Start() core.KeyT {
+	if len(t.KeyStart) == 0 {
+		return core.MinKey
+	}
 	return []byte(t.KeyStart)
 }
 
@@ -39,7 +54,7 @@ func (t *TestRangeMarshal) Unmarshal(bytes []byte) (Range, error) {
 }
 
 type KeyVal struct {
-	key   string
+	key   core.KeyT
 	value string
 }
 
@@ -63,47 +78,47 @@ func prepareTests() map[string]Test {
 	return map[string]Test{
 		"simple": {
 			ranges: []TestRange{
-				{"a", "o", "H1"},
+				trange("a", "o", "H1"),
 			},
 			invalidRanges: []TestRange{
-				{"d", "k", "H2"},
+				trange("d", "k", "H2"),
 			},
 			keyValues: []KeyVal{
-				{"a", "H1"},
+				{[]byte("a"), "H1"},
 			},
 			removeValidRanges: []TestRange{
-				{"a", "o", "H1"},
+				trange("a", "o", "H1"),
 			},
 			removeInvalidRanges: []TestRange{
-				{"a", "z", "H1"},
+				trange("a", "z", "H1"),
 			},
 		},
 		"overlapping": {
 			ranges: []TestRange{
-				{"a", "o", "H1"},
-				{"o", "s", "H2"},
-				{"zc", "zz", "H3"},
-				{"", "a", "first"},
-				{"zzz", maxKey, "last"},
+				trange("a", "o", "H1"),
+				trange("o", "s", "H2"),
+				trange("zc", "zz", "H3"),
+				trange("", "a", "first"),
+				trange("zzz", maxKey, "last"),
 			},
 			invalidRanges: []TestRange{
-				{"", maxKey, "H1"},
-				{"za", "zze", "H1"},
+				trange("", maxKey, "H1"),
+				trange("za", "zze", "H1"),
 			},
 			keyValues: []KeyVal{
-				{"a", "H1"},
-				{"o", "H2"},
-				{"t", ""},
-				{"", "first"},
-				{maxKey, ""},
+				{[]byte("a"), "H1"},
+				{[]byte("o"), "H2"},
+				{[]byte("t"), ""},
+				{core.MinKey, "first"},
+				{[]byte(maxKey), ""},
 			},
 			removeValidRanges: []TestRange{
-				{"a", "o", "H1"},
-				{"", "a", "first"},
+				trange("a", "o", "H1"),
+				trange("", "a", "first"),
 			},
 			removeInvalidRanges: []TestRange{
-				{"a", "z", "H1"},
-				{"zzzab", maxKey, "H1"},
+				trange("a", "z", "H1"),
+				trange("zzzab", maxKey, "H1"),
 			},
 		},
 	}
@@ -147,7 +162,11 @@ func putTests(rm RangeMap, t *testing.T) {
 				}
 			}
 			for _, kv := range test.keyValues {
-				rng, found, err := rm.Get([]byte(kv.key))
+				var k = []byte(kv.key)
+				if len(k) == 0 {
+					k = core.MinKey
+				}
+				rng, found, err := rm.Get(k)
 				if err != nil {
 					t.Fatal(err)
 				}
