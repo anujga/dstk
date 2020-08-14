@@ -15,3 +15,16 @@ not be required for stateful sets.
 1. start serving traffic
 1. start a background daemon to reconcile desired state on worker level
 as well as per partition. 
+
+# Integration Testing
+
+1. Randomly `kill -9` dc process. If testing in local is getting messy, skip it.
+
+1. Add support for https://github.com/chaos-mesh/chaos-mesh
+
+1. Since rpc will start failing, verification of legitimate state transition cannot happen. 
+The current algorithm for verify will break. Might need something like jespen. clients can
+blob upload the transition functions. a spark job can verify the validity something like 
+[knossos](https://github.com/jepsen-io/knossos#concepts)
+
+1. 

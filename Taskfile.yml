@@ -18,7 +18,7 @@ vars:
 tasks:
   default:
     cmds:
-      - task: local
+      - task: local-docker
 
   os-deps:
     cmds:
@@ -57,9 +57,15 @@ tasks:
     cmds:
       - task: app-local
 
-  local:
+  local-verify:
     deps:
       - local-monitor
+    cmds:
+      - goreman -f cmd/disk-cache/Procfile start
+
+  local-docker:
+    deps:
+      - protos
     cmds:
       - task: app
         vars:
@@ -86,10 +92,6 @@ tasks:
   test:
     cmds:
       - go test ./...
-
-  load-test:
-    cmds:
-      - goreman -f cmd/disk-cache/Procfile start
 
   dl-deps:
     desc: Install tools required to build this app
