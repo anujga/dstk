@@ -5,6 +5,7 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 type slicerCli struct {
@@ -19,7 +20,7 @@ type WorkerId int64
 type ThickClient interface {
 
 	// used at runtime for key lookup
-	Get(ctx context.Context, key []byte) (*pb.Partition, error)
+	Get(ctx context.Context, key []byte) (*pb.Partition, *status.Status)
 
 	// whenever cluster config changes, notifications are sent.
 	// primary usecase would be to create / close connections

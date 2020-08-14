@@ -2,6 +2,7 @@ package partition
 
 import (
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/control"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -30,8 +31,9 @@ channelRead:
 					select {
 					case a.Mailbox() <- &common.ProxiedMsg{ClientMsg: cm}:
 					default:
-						cm.ResponseChannel() <- core.ErrInfo(codes.ResourceExhausted, "Worker busy",
+						err := core.ErrInfo(codes.ResourceExhausted, "Worker busy",
 							"capacity", cap(a.Mailbox()))
+						cm.ResponseChannel() <- control.Failure(err)
 					}
 				}
 			}

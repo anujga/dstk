@@ -18,13 +18,18 @@ vars:
 tasks:
   default:
     cmds:
-      - task: local
+      - task: local-docker
 
   os-deps:
     cmds:
       - echo "unknown os {{.GOOS}}"
 
 
+
+  protos:
+    desc: compile protobuf files
+    cmds:
+      - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
 
   docker:
     desc: Build docker
@@ -44,7 +49,7 @@ tasks:
   dc-verify:
     desc: Verify Disk Cache
     cmds:
-      - go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify-config.yaml
+      - go run ./cmd/disk-cache --mode=verify --conf=configs/small-local/verify.yaml
 
   apps:
     deps:
@@ -52,15 +57,29 @@ tasks:
     cmds:
       - task: app-local
 
-  local:
+  local-verify:
+    deps:
+      - local-monitor
+    cmds:
+      - goreman -f cmd/disk-cache/Procfile start
+
+  local-docker:
+    deps:
+      - protos
     cmds:
       - task: app
-        vars: {EXE: se}
+        vars:
+          EXE: se
 
       - task: app
-        vars: {EXE: "disk-cache"}
+        vars:
+          EXE: disk-cache
 
       - scripts/docker.sh deploy/Dockerfile-local
+
+  local-monitor:
+    cmds:
+      - docker-compose -f scripts/docker-compose.yaml up
 
   app:
     desc: Build the app
@@ -73,18 +92,6 @@ tasks:
   test:
     cmds:
       - go test ./...
-
-  load-test:
-    cmds:
-      - goreman -f cmd/disk-cache/Procfile start
-
-
-  protos:
-    desc: compile protobuf files
-    deps:
-      - dl-deps
-    cmds:
-      - protoc {{.PROTO_FILES}} --proto_path={{.PROTO_PATH}} --go_out=plugins=grpc:{{.PROTO_OUT_DIR}}
 
   dl-deps:
     desc: Install tools required to build this app

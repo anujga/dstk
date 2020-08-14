@@ -6,11 +6,12 @@ import (
 	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"sync/atomic"
 )
 
 type state struct {
-	rangeMap     *rangemap.RangeMap
+	rangeMap     rangemap.RangeMap
 	pbs          []*pb.Partition
 	lastModified int64
 }
@@ -21,7 +22,7 @@ type stateHolder struct {
 
 func (s *stateHolder) Clear() {
 	a := state{
-		rangeMap: rangemap.New(2),
+		rangeMap: rangemap.NewBtreeRange(2),
 		pbs:      []*pb.Partition{},
 	}
 	s.r.Store(&a)
@@ -46,7 +47,7 @@ func (s *stateHolder) LastModified() int64 {
 	return a.(*state).lastModified
 }
 
-func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, error) {
+func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, *status.Status) {
 	state := s.r.Load().(*state)
 	p, err := state.rangeMap.Get(key)
 	if err != nil {
@@ -73,12 +74,12 @@ func (x *PartRange) End() core.KeyT {
 // thread: unsafe. its actually safe but the above statement forces
 // callers to call sequentially
 func (s *stateHolder) UpdateTree(parts *pb.Partitions, lastModified int64) error {
-	t := rangemap.New(16) // log(100K) expected count of partition
+	t := rangemap.NewBtreeRange(16) // log(100K) expected count of partition
 
 	for _, p := range parts.GetParts() {
 		err := t.Put(&PartRange{p: p})
 		if err != nil {
-			return err
+			return err.Err()
 		}
 	}
 

@@ -96,7 +96,7 @@ func TestRangeMap_Put(t *testing.T) {
 	tests := prepareTests()
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			rm := New(3)
+			rm := NewBtreeRange(3)
 			for _, rng := range test.ranges {
 				if e := rm.Put(rng); e != nil {
 					t.Fatalf("Putting range %v failed with error %v", rng, e)
@@ -109,7 +109,7 @@ func TestRangeMap_Put(t *testing.T) {
 			}
 			for _, kv := range test.keyValues {
 				rng, err := rm.Get([]byte(kv.key))
-				if err == ErrKeyAbsent {
+				if err.Code() == core.ErrKeyNotFound {
 					if kv.value != "" {
 						t.Fatalf("failed to get value for %v", rng)
 					}

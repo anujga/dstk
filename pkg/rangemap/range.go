@@ -49,3 +49,15 @@ func NewRange(rng Range) (*rangeItem, error) {
 func NewKeyRange(k core.KeyT) *rangeItem {
 	return &rangeItem{&dummyRange{start: k}}
 }
+
+type dummyRange struct {
+	start core.KeyT
+}
+
+func (ki *dummyRange) Start() core.KeyT {
+	return ki.start
+}
+
+func (ki *dummyRange) End() core.KeyT {
+	return nil
+}

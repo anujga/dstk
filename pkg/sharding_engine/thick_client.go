@@ -21,7 +21,7 @@ func (t *tc) Notifications() <-chan interface{} {
 	return t.notifications
 }
 
-func (t *tc) Get(ctx context.Context, key []byte) (*pb.Partition, error) {
+func (t *tc) Get(ctx context.Context, key []byte) (*pb.Partition, *status.Status) {
 	return t.cache.Get(key)
 }
 

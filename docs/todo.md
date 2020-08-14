@@ -25,7 +25,7 @@ are already sorted. 2 use cases would be
 
 ### Production
 1. opentracing @sudip
-1. pg_dump schedule backup. tune chart
+1. se metrics
 1. review all usage of context. need to add timeout and cancellation semantic
 wherever relevant.
 1. clean shutdown of all systems. Proper handling of Stateful sets shutdown. 
@@ -51,7 +51,7 @@ and upload data to blob. Similarly, restore.
 
 1. Metric server
     1. Maintain partition level metrics
-    1. approx count of entries, count partitions. These 2 will help spark job
+    1. Approx count of entries, count partitions. These 2 will help spark job
     in sizing for backup restore.
     
 1. Explore usage of page blobs with local caching as opposed to managed disk.
@@ -71,8 +71,8 @@ the use cases for these api except ttl so lower priority:
 1. use [compflags](https://github.com/posener/complete/tree/master)
 as opposed to vanilla flags everywhere
 1. create a master helm chart with respects namespaces and uses helm operator
- to configure dependent charts and values 
+to configure dependent charts and values 
 
 1. Cleanup the schema for SE. 
-1. New table for workerId -> WorkerUrl mapping. Stateful set is enough unless
+1. New table for workerId -> WorkerUrl mapping. Stateful maybe enough unless
  we are building some sort of custom lease mechanism.

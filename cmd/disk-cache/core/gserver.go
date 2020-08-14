@@ -3,6 +3,7 @@ package dc
 import (
 	"context"
 	pb "github.com/anujga/dstk/pkg/api/proto"
+	"github.com/anujga/dstk/pkg/core/control"
 	"github.com/anujga/dstk/pkg/ss"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -21,21 +22,21 @@ func (d *DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcG
 			codes.InvalidArgument,
 			"Key cannot be null")
 	}
-	ch := make(chan interface{}, d.resBufSize)
 	req := &DcRequest{
 		grpcRequest: rpcReq,
-		C:           ch,
+		C:           d.resposeBuffer(),
+		Ctx:         ctx,
 	}
 
-	responses, err := d.reqHandler.HandleBlocking(req)
-	if err != nil {
-		return nil, err.Err()
+	res := d.reqHandler.HandleBlocking(req)
+	if res.Err != nil {
+		return nil, res.Err.Err()
 	}
 
-	res := responses.([]byte)
+	rs := res.Res.([]byte)
 	return &pb.DcGetRes{
 		Key:   req.Key(),
-		Value: res,
+		Value: rs,
 	}, nil
 }
 
@@ -45,18 +46,22 @@ func (d *DiskCacheServer) Put(ctx context.Context, rpcReq *pb.DcPutReq) (*pb.DcR
 			codes.InvalidArgument,
 			"Key/value cannot be null")
 	}
-	ch := make(chan interface{}, d.resBufSize)
 	req := &DcRequest{
 		grpcRequest: rpcReq,
-		C:           ch,
+		C:           d.resposeBuffer(),
 		Ctx:         ctx,
 	}
-	_, err := d.reqHandler.HandleBlocking(req)
-	if err != nil {
-		return nil, err.Err()
+
+	r := d.reqHandler.HandleBlocking(req)
+	if r.Err != nil {
+		return nil, r.Err.Err()
 	}
 
 	return &pb.DcRes{}, nil
+}
+
+func (d *DiskCacheServer) resposeBuffer() chan *control.Response {
+	return make(chan *control.Response, d.resBufSize)
 }
 
 func (d *DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*pb.DcRes, error) {
@@ -65,14 +70,13 @@ func (d *DiskCacheServer) Remove(ctx context.Context, rpcReq *pb.DcRemoveReq) (*
 			codes.InvalidArgument,
 			"Key cannot be null")
 	}
-	ch := make(chan interface{}, d.resBufSize)
 	req := &DcRequest{
 		grpcRequest: rpcReq,
-		C:           ch,
+		C:           d.resposeBuffer(),
 	}
-	_, err := d.reqHandler.HandleBlocking(req)
-	if err != nil {
-		return nil, err.Err()
+	r := d.reqHandler.HandleBlocking(req)
+	if r.Err != nil {
+		return nil, r.Err.Err()
 	}
 
 	return &pb.DcRes{}, nil

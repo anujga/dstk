@@ -90,3 +90,10 @@ func ErrInfo(c codes.Code, msg string, keyValues ...interface{}) *status.Status 
 		return ex2
 	}
 }
+
+func ErrKeyAbsent(k KeyT) *status.Status {
+	return ErrInfo(
+		codes.NotFound,
+		"key absent",
+		"key", k)
+}

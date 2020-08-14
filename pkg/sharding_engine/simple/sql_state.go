@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"time"
 )
@@ -15,11 +16,11 @@ func UsingSql(driver string, conn string) (*sqlSe, error) {
 	db, err := sqlx.Connect(driver, conn)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	r := &sqlSe{
-		db: db,
+		db:    db,
 		clock: &core.RealClock{},
 	}
 
@@ -29,7 +30,7 @@ func UsingSql(driver string, conn string) (*sqlSe, error) {
 func InitDb(driver string, conn string, parts []*pb.Partition) error {
 	db, err := sqlx.Connect(driver, conn)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	tx, err := db.Beginx()
