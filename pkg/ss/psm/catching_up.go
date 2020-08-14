@@ -5,7 +5,7 @@ import (
 	"github.com/anujga/dstk/pkg/ss/partition"
 )
 
-func catchingupToFollower(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
-	return &partition.BecomeFollower{}
+func catchingupToFollower(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
+	return &partition.BecomeMsgImpl{TargetState: partition.Follower}
 }
 

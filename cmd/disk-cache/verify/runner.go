@@ -5,11 +5,13 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/anujga/dstk/pkg/actions/split"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/core/io"
 	diskcache "github.com/anujga/dstk/pkg/disk-cache"
 	"github.com/anujga/dstk/pkg/helpers"
+	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/verify"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -143,6 +145,30 @@ func verifyAll(c *Config) error {
 	return nil
 }
 
+func startSplit(c *Config) error {
+	seRpc, err := se.NewSeClient(context.TODO(), c.SeUrl)
+	if err != nil {
+		return err
+	}
+	partsRes, err := seRpc.GetPartitions(context.TODO(), &dstk.PartitionGetRequest{FetchAll: true})
+	if err != nil {
+		return err
+	}
+	ps := partsRes.GetPartitions().GetParts()
+	rnd := rand.NewSource(c.Seed)
+	i := int64(len(ps))
+	splitDag := split.Dag{
+		Part: ps[rnd.Int63()%int64(len(ps))],
+		IdGenerator: func() int64 {
+			i = i + 1
+			return i
+		},
+		SeRpc: seRpc,
+	}
+	return splitDag.Start(context.TODO(), nil)
+
+}
+
 func RunVerifier(conf string) error {
 	c := &Config{}
 
@@ -151,9 +177,13 @@ func RunVerifier(conf string) error {
 	}
 
 	if c.MetricUrl != "" {
-		s := helpers.ExposePrometheus(c.MetricUrl)
-		defer core.CloseLogErr(s)
+		_ = helpers.ExposePrometheus(c.MetricUrl)
 	}
+
+	//err := startSplit(c)
+	//if err != nil {
+	//	return err
+	//}
 
 	if err := runMany(c); err != nil {
 		return err

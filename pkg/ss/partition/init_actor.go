@@ -1,24 +1,32 @@
 package partition
 
+import (
+	"go.uber.org/zap"
+	"reflect"
+)
+
 type initActor struct {
 	actorBase
 }
 
 func (ia *initActor) become() error {
+	ia.setState(Init)
 	for m := range ia.mailBox {
 		switch m.(type) {
-		case *BecomePrimary:
-			pa := &primaryActor{ia.actorBase}
-			pa.setState(Primary)
-			return pa.become()
+		case BecomeMsg:
+			bm := m.(BecomeMsg)
+			switch bm.Target() {
+			case Primary:
+				pa := &primaryActor{ia.actorBase}
+				return pa.become()
+			default:
+			}
 		case *BecomeCatchingUpActor:
 			fm := m.(*BecomeCatchingUpActor)
 			ca := &catchingUpActor{ia.actorBase, fm.LeaderMailbox, fm.LeaderId}
-			ca.setState(CatchingUp)
 			return ca.become()
 		default:
-			// todo emit metrics
-			//ia.logger.Warn("not handled", zap.Any("state", ia.getState().String()), zap.Any("type", reflect.TypeOf(m)), zap.Int64("part", ia.id))
+			ia.logger.Warn("not handled", zap.Stringer("state", ia.getState()), zap.Any("type", reflect.TypeOf(m)), zap.Int64("part", ia.id))
 		}
 	}
 	return nil

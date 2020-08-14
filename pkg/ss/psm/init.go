@@ -5,7 +5,7 @@ import (
 	"github.com/anujga/dstk/pkg/ss/partition"
 )
 
-func initToProxy(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
+func initToProxy(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
 	pt := make([]partition.Actor, 0)
 	for _, pId := range part.GetProxyTo() {
 		if a, ok := partIdMap[pId]; ok {
@@ -17,7 +17,7 @@ func initToProxy(actor partition.Actor, partIdMap map[int64]partition.Actor, par
 	return &partition.BecomeProxy{ProxyTo: pt}
 }
 
-func initToCatchingup(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
+func initToCatchingup(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
 	if leader, ok := partIdMap[part.GetLeaderId()]; ok {
 		return &partition.BecomeCatchingUpActor{
 			LeaderId: part.GetLeaderId(),
@@ -27,10 +27,10 @@ func initToCatchingup(actor partition.Actor, partIdMap map[int64]partition.Actor
 	return nil
 }
 
-func initToPrimary(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
-	return &partition.BecomePrimary{}
+func initToPrimary(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
+	return &partition.BecomeMsgImpl{TargetState: partition.Primary}
 }
 
-func initToFollower(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{} {
-	return &partition.BecomeFollower{}
+func initToFollower(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
+	return &partition.BecomeMsgImpl{TargetState: partition.Follower}
 }
