@@ -5,7 +5,9 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/bdb"
+	"github.com/anujga/dstk/pkg/rangemap"
 	"github.com/anujga/dstk/pkg/ss/common"
+	"github.com/dgraph-io/badger/v2"
 	"go.uber.org/zap"
 	"time"
 )
@@ -32,7 +34,11 @@ func (m *partitionConsumer) Meta() *dstk.Partition {
 
 // thread safe
 func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
-	return m.pc.Get(req.GetKey())
+	document, err := m.pc.Get(req.GetKey())
+	if err == badger.ErrKeyNotFound {
+		return nil, rangemap.ErrKeyAbsent(req.GetKey()).Err()
+	}
+	return document, err
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {

@@ -87,7 +87,7 @@ func (u *user) Invoke(ctx context.Context) error {
 		Key:        u.idSer,
 		Value:      u.bytes8,
 		TtlSeconds: u.ttlSeconds,
-		Etag: "gogogo",
+		Etag: res.GetDocument().GetEtag(),
 	})
 	if err != nil {
 		return err
@@ -116,7 +116,6 @@ func (u *user) Init(ctx context.Context) error {
 		Key:        u.idSer,
 		Value:      resetBytes,
 		TtlSeconds: u.ttlSeconds,
-		Etag: "gogogo",
 	})
 	return err
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/core/io"
@@ -127,11 +126,11 @@ func verifyAll(c *Config) error {
 					//todo: error
 				} else {
 					document := res.GetDocument()
-					etag := document.GetEtag()
-					ts := document.GetLastUpdatedEpochSeconds()
-					fmt.Printf("Got etag: %s\n, timestamp: %d\n", etag, ts)
 					views := binary.LittleEndian.Uint64(document.GetValue())
 					expected := uint64(c.Copies) * c.Views
+					log.Debugw("Fetched document",
+						"views", views,
+						"etag", document.GetEtag())
 					if views != expected {
 						log.Errorw("Mismatch",
 							"userId", hex.EncodeToString(uidSer),

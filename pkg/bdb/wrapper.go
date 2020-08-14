@@ -3,9 +3,9 @@ package bdb
 import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
-	"github.com/anujga/dstk/pkg/rangemap"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -28,23 +28,36 @@ func (w *Wrapper) Get(key []byte) (*dstk.DcDocument, error) {
 			return err
 		}
 	})
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, rangemap.ErrKeyAbsent(key).Err()
-		}
-		return nil, err
-	}
-	return document, nil
+	return document, err
 }
 
 // thread safe
 func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32) error {
-	fmt.Printf("Got request etag: %s, ts: %d\n", document.GetEtag(), document.GetLastUpdatedEpochSeconds())
+	fmt.Printf("Got document: %s\n", document)
+
+	// We need to fetch current document to compare etag.
+	currentDocument, err := w.Get(key)
+	newDocument := (err == badger.ErrKeyNotFound)
+	if err != nil && !newDocument {
+		return err
+	}
+	if !newDocument && (document.GetEtag() != currentDocument.GetEtag()) {
+		fmt.Printf("Expected etag: %s, received: %s\n", currentDocument.GetEtag(), document.GetEtag())
+		return badger.ErrConflict
+	}
+
+	// Set a new etag.
+	randomEtag, err := uuid.NewRandom()
+	if err != nil {
+		return err
+	}
+	document.Etag = randomEtag.String()
+
+	// Write to badger.
 	payload, err := proto.Marshal(document)
 	if err != nil {
 		return err
 	}
-
 	return w.Update(func(txn *badger.Txn) error {
 		entry := badger.NewEntry(key, payload).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)

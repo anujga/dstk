@@ -18,7 +18,7 @@ func main() {
 		"conf", "config files. can pass more than 1 --conf c1.yaml --conf c2.yaml")
 
 	var logLevel = zap.LevelFlag(
-		"log", zap.InfoLevel, "debug, info, warn, error, dpanic, panic, fatal")
+		"log", zap.DebugLevel, "debug, info, warn, error, dpanic, panic, fatal")
 
 	var mode = compflag.String(
 		"mode", "worker", "",
