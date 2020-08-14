@@ -128,7 +128,8 @@ func verifyAll(c *Config) error {
 				} else {
 					document := res.GetDocument()
 					etag := document.GetEtag()
-					fmt.Printf("Got etag: %s\n", etag)
+					ts := document.GetLastUpdatedEpochSeconds()
+					fmt.Printf("Got etag: %s\n, timestamp: %d\n", etag, ts)
 					views := binary.LittleEndian.Uint64(document.GetValue())
 					expected := uint64(c.Copies) * c.Views
 					if views != expected {

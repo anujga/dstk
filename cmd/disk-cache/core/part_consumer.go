@@ -7,6 +7,7 @@ import (
 	"github.com/anujga/dstk/pkg/bdb"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"go.uber.org/zap"
+	"time"
 )
 
 // 2. Define the state for a given partition and implement ss.Consumer
@@ -35,9 +36,11 @@ func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
+	// Need to add notion of ignore etags.
 	document := &dstk.DcDocument{
 		Value: req.GetValue(),
 		Etag: req.GetEtag(),
+		LastUpdatedEpochSeconds: time.Now().Unix(),
 	}
 	return nil, m.pc.Put(req.GetKey(), document, req.GetTtlSeconds())
 }

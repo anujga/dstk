@@ -27,7 +27,7 @@ message DcPutReq {
 message DcDocument {
   bytes value = 1;
   string etag = 2;
-  int64 last_updated_millis = 3;
+  int64 last_updated_epoch_seconds = 3;
 }
 
 // Read upto maxCount many records. In some cases we

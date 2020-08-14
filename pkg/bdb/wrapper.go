@@ -39,7 +39,7 @@ func (w *Wrapper) Get(key []byte) (*dstk.DcDocument, error) {
 
 // thread safe
 func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32) error {
-	fmt.Printf("GOT REQUEST WITH ETAG!!!: %s\n", document.GetEtag())
+	fmt.Printf("Got request etag: %s, ts: %d\n", document.GetEtag(), document.GetLastUpdatedEpochSeconds())
 	payload, err := proto.Marshal(document)
 	if err != nil {
 		return err
