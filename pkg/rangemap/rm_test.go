@@ -2,8 +2,11 @@ package rangemap
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/google/go-cmp/cmp"
+	"io/ioutil"
 	"testing"
 )
 
@@ -19,6 +22,20 @@ func (t TestRange) Start() core.KeyT {
 
 func (t TestRange) End() core.KeyT {
 	return []byte(t.KeyEnd)
+}
+
+type TestRangeMarshal struct {
+}
+
+func (t *TestRangeMarshal) Marshal(r Range) ([]byte, error) {
+	r2 := r.(TestRange)
+	return json.Marshal(r2)
+}
+
+func (t *TestRangeMarshal) Unmarshal(bytes []byte) (Range, error) {
+	a := TestRange{}
+	err := json.Unmarshal(bytes, &a)
+	return a, err
 }
 
 type KeyVal struct {
@@ -92,11 +109,33 @@ func prepareTests() map[string]Test {
 	}
 }
 
-func TestRangeMap_Put(t *testing.T) {
+func TestBtreeRange_Put(t *testing.T) {
+	rm := NewBtreeRange(3)
+	defer core.CloseLogErr(rm)
+	putTests(rm, t)
+}
+func TestBadgerMap_Put(t *testing.T) {
+	dir, err := ioutil.TempDir("", "testBadger")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rm, err := NewBadgerRange(
+		"TestBadgerMap_Put",
+		&TestRangeMarshal{},
+		badger.DefaultOptions(dir))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer core.CloseLogErr(rm)
+	putTests(rm, t)
+}
+
+func putTests(rm RangeMap, t *testing.T) {
 	tests := prepareTests()
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			rm := NewBtreeRange(3)
+
 			for _, rng := range test.ranges {
 				if e := rm.Put(rng); e != nil {
 					t.Fatalf("Putting range %v failed with error %v", rng, e)
@@ -108,8 +147,11 @@ func TestRangeMap_Put(t *testing.T) {
 				}
 			}
 			for _, kv := range test.keyValues {
-				rng, err := rm.Get([]byte(kv.key))
-				if err.Code() == core.ErrKeyNotFound {
+				rng, found, err := rm.Get([]byte(kv.key))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !found {
 					if kv.value != "" {
 						t.Fatalf("failed to get value for %v", rng)
 					}

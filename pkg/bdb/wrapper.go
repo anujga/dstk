@@ -3,8 +3,36 @@ package bdb
 import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/dgraph-io/badger/v2"
+	"google.golang.org/grpc/status"
 	"time"
 )
+
+func lessOrEqHelper(txn *badger.Txn, k core.KeyT) ([]byte, error) {
+	opts := badger.IteratorOptions{
+		Reverse: true,
+	}
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	it.Seek(k)
+	if !it.Valid() {
+		return nil, nil
+	}
+
+	return it.Item().ValueCopy(nil)
+}
+
+func LessOrEqual(db *badger.DB, name string, k core.KeyT) ([]byte, bool, *status.Status) {
+	var res []byte
+
+	err := db.View(func(txn *badger.Txn) error {
+		r, err := lessOrEqHelper(txn, k)
+		res = r
+		return err
+	})
+
+	return res, res != nil, status.Convert(err)
+}
 
 type Wrapper struct {
 	*badger.DB
