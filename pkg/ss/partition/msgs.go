@@ -7,10 +7,16 @@ type FollowRequest struct {
 	FollowerMailbox common.Mailbox
 }
 
-type BecomePrimary struct {
+type BecomeMsg interface {
+	Target() State
 }
 
-type BecomeFollower struct {
+type BecomeMsgImpl struct {
+	TargetState State
+}
+
+func (b *BecomeMsgImpl) Target() State {
+	return b.TargetState
 }
 
 type BecomeCatchingUpActor struct {
@@ -18,9 +24,14 @@ type BecomeCatchingUpActor struct {
 	LeaderMailbox common.Mailbox
 }
 
+func (b *BecomeCatchingUpActor) Target() State {
+	return CatchingUp
+}
+
 type BecomeProxy struct {
 	ProxyTo []Actor
 }
 
-type Retire struct {
+func (b *BecomeProxy) Target() State {
+	return Proxy
 }

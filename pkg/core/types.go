@@ -3,6 +3,7 @@ package core
 import "time"
 
 type KeyT []byte
+type IdGenerator func()int64
 
 var (
 	MaxKey KeyT

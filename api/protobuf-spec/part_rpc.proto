@@ -4,8 +4,9 @@ package dstk;
 import "common.proto";
 
 message PartitionGetRequest {
-  int64 workerId = 1;
-  bool fetchAll = 2;
+  int64 id = 1;
+  int64 workerId = 2;
+  bool fetchAll = 3;
 }
 
 message PartitionGetResponse {

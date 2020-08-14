@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"net/http"
@@ -22,6 +23,7 @@ func ExposePrometheus(address string) *http.Server {
 			zap.S().Errorw("error in prometheus endpoint",
 				"err", err)
 		}
+		defer core.CloseLogErr(server)
 	}()
 
 	return server

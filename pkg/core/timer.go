@@ -9,6 +9,7 @@ type Repeater struct {
 	fn     func(time.Time) bool
 	ticker *time.Ticker
 	done   chan bool
+	Completed chan bool
 }
 
 func Repeat(freq time.Duration, fn func(time.Time) bool, firstRunSync bool) *Repeater {

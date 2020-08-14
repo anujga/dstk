@@ -5,7 +5,6 @@ import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 	"sync/atomic"
@@ -17,19 +16,20 @@ type Actor interface {
 	Mailbox() common.Mailbox
 	Id() int64
 	Stop()
-	Run(interface{}) *core.FutureErr
+	Run(BecomeMsg) *core.FutureErr
 	CanServe() bool
 	State() State
 	Contains(k core.KeyT) bool
 }
 
 type actorImpl struct {
-	partition *pb.Partition
-	smState   *atomic.Value
-	consumer  common.Consumer
-	mailBox   chan interface{}
-	Done      *core.FutureErr
-	logger    *zap.Logger
+	partition    *pb.Partition
+	smState      *atomic.Value
+	consumer     common.Consumer
+	mailBox      chan interface{}
+	Done         *core.FutureErr
+	logger       *zap.Logger
+	partitionRpc pb.PartitionRpcClient
 }
 
 func (p *actorImpl) Contains(k core.KeyT) bool {
@@ -61,51 +61,10 @@ func (p *actorImpl) Id() int64 {
 	return p.partition.GetId()
 }
 
-func (p *actorImpl) Run(m interface{}) *core.FutureErr {
-	var fun func() error
-	db, err := sqlx.Connect("postgres", "user=postgres dbname=postgres password=se sslmode=disable")
+func (p *actorImpl) Run(msg BecomeMsg) *core.FutureErr {
+	fun, err := getActorFunction(msg, p)
 	if err != nil {
-		panic(err)
-	}
-	ab := actorBase{
-		id:       p.Id(),
-		db:       db,
-		logger:   p.logger,
-		smState:  p.smState,
-		mailBox:  p.mailBox,
-		consumer: p.consumer,
-	}
-	if m == nil {
-		ia := initActor{ab}
-		ia.setState(Init)
-		fun = ia.become
-	} else {
-		switch m.(type) {
-		case *BecomePrimary:
-			pa := primaryActor{ab}
-			pa.setState(Primary)
-			fun = pa.become
-		case *BecomeProxy:
-			bp := m.(*BecomeProxy)
-			pa := proxyActor{
-				actorBase: ab,
-				proxyTo:   bp.ProxyTo,
-			}
-			pa.setState(Proxy)
-			fun = pa.become
-		case *BecomeCatchingUpActor:
-			bf := m.(*BecomeCatchingUpActor)
-			ca := catchingUpActor{
-				actorBase:     ab,
-				leaderMailbox: bf.LeaderMailbox,
-			}
-			ca.setState(CatchingUp)
-			fun = ca.become
-		case *BecomeFollower:
-			fa := followingActor{ab}
-			fa.setState(Follower)
-			fun = fa.become
-		}
+		// this can't happen now
 	}
 	// ensure state is not mutated in other threads
 	return p.Done.Complete(fun)
@@ -117,14 +76,15 @@ func (p *actorImpl) Stop() {
 	close(p.mailBox)
 }
 
-func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int) Actor {
+func NewActor(p *pb.Partition, c common.Consumer, maxOutstanding int, partitionRpc pb.PartitionRpcClient) Actor {
 	ai := &actorImpl{
-		partition: p,
-		consumer:  c,
-		smState:   &atomic.Value{},
-		mailBox:   make(chan interface{}, maxOutstanding),
-		Done:      core.NewPromise(),
-		logger:    zap.L(),
+		partition:    p,
+		consumer:     c,
+		smState:      &atomic.Value{},
+		mailBox:      make(chan interface{}, maxOutstanding),
+		Done:         core.NewPromise(),
+		logger:       zap.L(),
+		partitionRpc: partitionRpc,
 	}
 	ai.smState.Store(Init)
 	return ai

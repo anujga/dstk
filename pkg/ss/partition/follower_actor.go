@@ -2,6 +2,8 @@ package partition
 
 import (
 	"github.com/anujga/dstk/pkg/ss/common"
+	"go.uber.org/zap"
+	"reflect"
 )
 
 type followingActor struct {
@@ -9,13 +11,18 @@ type followingActor struct {
 }
 
 func (fa *followingActor) become() error {
-	//fa.logger.Info("became", zap.String("state", fa.getState().String()), zap.Int64("id", fa.id))
+	fa.setState(Follower)
+	fa.logger.Info("became", zap.Stringer("state", fa.getState()), zap.Int64("id", fa.id))
 	for m := range fa.mailBox {
 		switch m.(type) {
-		case *BecomePrimary:
-			pa := &primaryActor{fa.actorBase}
-			pa.setState(Primary)
-			return pa.become()
+		case BecomeMsg:
+			bm := m.(BecomeMsg)
+			switch bm.Target() {
+			case Primary:
+				pa := &primaryActor{fa.actorBase}
+				return pa.become()
+			default:
+			}
 		case *common.ProxiedMsg:
 			// todo it looks a bit odd for follower to process client messages, but this is ensuring
 			// the correctness of algorithm. we can revisit this.
@@ -24,8 +31,7 @@ func (fa *followingActor) become() error {
 		case *common.ReplicatedMsg:
 			handleReplicatedMsg(&fa.actorBase, m.(*common.ReplicatedMsg))
 		default:
-			// todo emit metrics
-			//fa.logger.Warn("not handled", zap.Int64("part", fa.id), zap.Any("state", fa.getState().String()), zap.Any("type", reflect.TypeOf(m)))
+			fa.logger.Warn("not handled", zap.Int64("part", fa.id), zap.Stringer("state", fa.getState()), zap.Any("type", reflect.TypeOf(m)))
 		}
 	}
 	fa.setState(Retired)

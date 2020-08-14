@@ -5,7 +5,7 @@ import (
 	"github.com/anujga/dstk/pkg/ss/partition"
 )
 
-var TransitionTable = map[partition.State]map[partition.State]func(a partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) interface{}{
+var TransitionTable = map[partition.State]map[partition.State]func(a partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg{
 	partition.Init: {
 		partition.CatchingUp: initToCatchingup,
 		partition.Primary:    initToPrimary,
@@ -26,4 +26,3 @@ var TransitionTable = map[partition.State]map[partition.State]func(a partition.A
 		partition.Retired: proxyToRetired,
 	},
 }
-
