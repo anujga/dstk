@@ -10,7 +10,7 @@ import (
 )
 
 type state struct {
-	rangeMap     *rangemap.RangeMap
+	rangeMap     rangemap.RangeMap
 	pbs          []*pb.Partition
 	lastModified int64
 }
@@ -21,7 +21,7 @@ type stateHolder struct {
 
 func (s *stateHolder) Clear() {
 	a := state{
-		rangeMap: rangemap.New(2),
+		rangeMap: rangemap.NewBtreeRange(2),
 		pbs:      []*pb.Partition{},
 	}
 	s.r.Store(&a)
@@ -73,7 +73,7 @@ func (x *PartRange) End() core.KeyT {
 // thread: unsafe. its actually safe but the above statement forces
 // callers to call sequentially
 func (s *stateHolder) UpdateTree(parts *pb.Partitions, lastModified int64) error {
-	t := rangemap.New(16) // log(100K) expected count of partition
+	t := rangemap.NewBtreeRange(16) // log(100K) expected count of partition
 
 	for _, p := range parts.GetParts() {
 		err := t.Put(&PartRange{p: p})

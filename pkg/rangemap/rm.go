@@ -27,15 +27,20 @@ func (ki *dummyRange) End() core.KeyT {
 	return nil
 }
 
-type RangeMap struct {
+type RangeMap interface {
+	Get(key core.KeyT) (Range, error)
+	Put(rng Range) error
+	Remove(rng Range) (Range, error)
+}
+type BtreeRange struct {
 	root *btree.BTree
 }
 
-func New(degree int) *RangeMap {
-	return &RangeMap{root: btree.New(degree)}
+func NewBtreeRange(degree int) RangeMap {
+	return &BtreeRange{root: btree.New(degree)}
 }
 
-func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
+func (rm *BtreeRange) getLessOrEqual(item *rangeItem) *rangeItem {
 	var itemInTree *rangeItem
 	rm.root.DescendLessOrEqual(item, func(i btree.Item) bool {
 		itemInTree = i.(*rangeItem)
@@ -44,7 +49,7 @@ func (rm *RangeMap) getLessOrEqual(item *rangeItem) *rangeItem {
 	return itemInTree
 }
 
-func (rm *RangeMap) Iter(start core.KeyT) <-chan Range {
+func (rm *BtreeRange) Iter(start core.KeyT) <-chan Range {
 	item := NewKeyRange(start)
 	ch := make(chan Range)
 	go func() {
@@ -59,7 +64,7 @@ func (rm *RangeMap) Iter(start core.KeyT) <-chan Range {
 	return ch
 }
 
-func (rm *RangeMap) Get(key core.KeyT) (Range, error) {
+func (rm *BtreeRange) Get(key core.KeyT) (Range, error) {
 	item, err := NewRange(&dummyRange{start: key})
 	if err != nil {
 		return nil, err
@@ -74,7 +79,7 @@ func (rm *RangeMap) Get(key core.KeyT) (Range, error) {
 	return nil, ErrKeyAbsent(key).Err()
 }
 
-func (rm *RangeMap) Put(rng Range) error {
+func (rm *BtreeRange) Put(rng Range) error {
 	item, err := NewRange(rng)
 	if err != nil {
 		return err
@@ -98,7 +103,7 @@ func (rm *RangeMap) Put(rng Range) error {
 	return nil
 }
 
-func (rm *RangeMap) Remove(rng Range) (Range, error) {
+func (rm *BtreeRange) Remove(rng Range) (Range, error) {
 	delItem, err := NewRange(rng)
 	if err != nil {
 		return nil, err
