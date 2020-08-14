@@ -49,7 +49,7 @@ tasks:
   dc-verify:
     desc: Verify Disk Cache
     cmds:
-      - go run ./cmd/disk-cache --verify=true --conf=cmd/disk-cache/verify-config.yaml
+      - go run ./cmd/disk-cache --mode=verify --conf=configs/small-local/verify.yaml
 
   apps:
     deps:

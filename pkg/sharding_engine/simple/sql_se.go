@@ -54,7 +54,9 @@ func (s *sqlSe) GetPartitions(ctx context.Context, request *pb.PartitionGetReque
 		return nil, status.Error(codes.Internal, "")
 	}
 	ps := toProto(parts)
-	zap.S().Infow("returning parts", "count", len(ps.Parts))
+	zap.S().Infow("returning parts",
+		"count", len(ps.Parts),
+		"client", request.WorkerId)
 	return &pb.PartitionGetResponse{Partitions: ps}, nil
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 type Manager interface {
-	Find(key core.KeyT) (partition.Actor, error)
+	Find(key core.KeyT) (partition.Actor, *status.Status)
 	Reset(plist *pb.Partitions) error
 }
 
@@ -24,7 +24,7 @@ type managerImpl struct {
 	partRpc         pb.PartitionRpcClient
 }
 
-func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, error) {
+func (pm *managerImpl) Find(key core.KeyT) (partition.Actor, *status.Status) {
 	return pm.store.find(key)
 }
 

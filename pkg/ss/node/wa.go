@@ -3,6 +3,7 @@ package node
 import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/control"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"github.com/anujga/dstk/pkg/ss/partmgr"
@@ -34,7 +35,11 @@ func (w *actorImpl) Mailbox() chan<- interface{} {
 func (w *actorImpl) clientReq(msg common.ClientMsg) {
 	p, err := w.partMgr.Find(msg.Key())
 	if err != nil {
-		msg.ResponseChannel() <- err
+		//zap.L().Warn("Failed to route request", zap.Reflect("msg", msg.Key()))
+		er := core.ErrInfo(codes.Internal, "Failed to route key",
+			"key", msg.Key(),
+			"cause", err)
+		msg.ResponseChannel() <- control.Failure(er)
 		close(msg.ResponseChannel())
 		return
 	}
@@ -44,10 +49,11 @@ func (w *actorImpl) clientReq(msg common.ClientMsg) {
 	select {
 	case p.Mailbox() <- msg:
 	default:
-		msg.ResponseChannel() <- core.ErrInfo(
+		err := core.ErrInfo(
 			codes.ResourceExhausted, "Partition Busy",
 			"capacity", cap(p.Mailbox()),
-			"partition", p.Id()).Err()
+			"partition", p.Id())
+		msg.ResponseChannel() <- control.Failure(err)
 		close(msg.ResponseChannel())
 	}
 }

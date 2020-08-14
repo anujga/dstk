@@ -2,15 +2,10 @@ package verify
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/binary"
-	"encoding/hex"
 	"github.com/anujga/dstk/pkg/actions/split"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
-	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/core/io"
 	diskcache "github.com/anujga/dstk/pkg/disk-cache"
-	"github.com/anujga/dstk/pkg/helpers"
 	se "github.com/anujga/dstk/pkg/sharding_engine"
 	"github.com/anujga/dstk/pkg/verify"
 	"go.uber.org/zap"
@@ -35,6 +30,8 @@ type Config struct {
 }
 
 func newClient(c *Config) (dstk.DcRpcClient, error) {
+	zap.S().Infow("New client",
+		"mode", c.Mode)
 	switch c.Mode {
 	default:
 		return nil, errors.Newf("Bad mode %s", c.Mode)
@@ -99,52 +96,6 @@ func runMany(c *Config) error {
 	return nil
 }
 
-func verifyAll(c *Config) error {
-	rpc, err := newClient(c)
-
-	if err != nil {
-		return err
-	}
-
-	wg := &sync.WaitGroup{}
-
-	log := zap.S()
-
-	for i := int64(0); i < c.Count; i++ {
-		beg := c.Start + (i * c.Size)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			bytes8 := make([]byte, 8)
-			for i := int64(0); i < c.Size; i++ {
-				uid := beg + i
-				binary.LittleEndian.PutUint64(bytes8, uint64(uid))
-				uidSer := md5.New().Sum(bytes8)
-
-				res, err := rpc.Get(context.TODO(), &dstk.DcGetReq{Key: uidSer})
-				if err != nil {
-					log.Errorw("error in get", "err", err)
-					//todo: error
-				} else {
-					views := binary.LittleEndian.Uint64(res.GetValue())
-					expected := uint64(c.Copies) * c.Views
-					if views != expected {
-						log.Errorw("Mismatch",
-							"userId", hex.EncodeToString(uidSer),
-							"views", views,
-							"expected", expected)
-					}
-				}
-			}
-		}()
-	}
-
-	wg.Wait()
-
-	return nil
-}
-
 func startSplit(c *Config) error {
 	seRpc, err := se.NewSeClient(context.TODO(), c.SeUrl)
 	if err != nil {
@@ -167,31 +118,4 @@ func startSplit(c *Config) error {
 	}
 	return splitDag.Start(context.TODO(), nil)
 
-}
-
-func RunVerifier(conf string) error {
-	c := &Config{}
-
-	if err := core.UnmarshalYaml(conf, c); err != nil {
-		return err
-	}
-
-	if c.MetricUrl != "" {
-		_ = helpers.ExposePrometheus(c.MetricUrl)
-	}
-
-	//err := startSplit(c)
-	//if err != nil {
-	//	return err
-	//}
-
-	if err := runMany(c); err != nil {
-		return err
-	}
-
-	if err := verifyAll(c); err != nil {
-		return err
-	}
-
-	return nil
 }

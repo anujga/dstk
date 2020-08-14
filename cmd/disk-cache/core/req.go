@@ -4,15 +4,16 @@ import (
 	"context"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
+	"github.com/anujga/dstk/pkg/core/control"
 )
 
 type DcRequest struct {
 	grpcRequest interface{}
-	C           chan interface{}
+	C           chan *control.Response
 	Ctx         context.Context
 }
 
-func (r *DcRequest) ResponseChannel() chan interface{} {
+func (r *DcRequest) ResponseChannel() chan *control.Response {
 	return r.C
 }
 

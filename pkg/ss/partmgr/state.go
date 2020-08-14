@@ -2,10 +2,10 @@ package partition
 
 import (
 	"bytes"
-	"errors"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/partition"
 	"github.com/google/btree"
+	"google.golang.org/grpc/status"
 )
 
 type partsItem struct {
@@ -49,7 +49,7 @@ func (pms *actorStore) add(pa partition.Actor) error {
 }
 
 // Path = control
-func (pms *actorStore) remove(pa partition.Actor) (partition.Actor, error) {
+func (pms *actorStore) remove(pa partition.Actor) (partition.Actor, *status.Status) {
 	var delItem *partsItem
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: pa.Start(),
@@ -61,7 +61,7 @@ func (pms *actorStore) remove(pa partition.Actor) (partition.Actor, error) {
 		return true
 	})
 	if delItem == nil {
-		return nil, errors.New("not found")
+		return nil, core.ErrKeyAbsent(pa.Start())
 	}
 	if len(delItem.Parts) == 1 {
 		if delItem.Parts[0] == pa {
@@ -75,7 +75,7 @@ func (pms *actorStore) remove(pa partition.Actor) (partition.Actor, error) {
 }
 
 // Path = data
-func (pms *actorStore) find(key core.KeyT) (partition.Actor, error) {
+func (pms *actorStore) find(key core.KeyT) (partition.Actor, *status.Status) {
 	var pa partition.Actor
 	pms.partRoot.DescendLessOrEqual(&partsItem{
 		StartBytes: key,
@@ -94,7 +94,7 @@ func (pms *actorStore) find(key core.KeyT) (partition.Actor, error) {
 		return false
 	})
 	if pa == nil {
-		return nil, errors.New("not found")
+		return nil, core.ErrKeyAbsent(key)
 	}
 	return pa, nil
 }

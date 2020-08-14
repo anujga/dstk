@@ -22,12 +22,12 @@ func (c *clientPool) GetClient(ctx context.Context, key []byte) (PartitionClient
 	part, err := c.tc.Get(ctx, key)
 
 	if err != nil {
-		return nil, err
+		return nil, err.Err()
 	}
 
-	pc, err := c.pool.Get(ctx, part.GetUrl())
-	if err != nil {
-		return nil, err
+	pc, er2 := c.pool.Get(ctx, part.GetUrl())
+	if er2 != nil {
+		return nil, er2
 	}
 
 	return pc.(PartitionClient), nil

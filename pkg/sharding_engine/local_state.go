@@ -6,6 +6,7 @@ import (
 	"github.com/anujga/dstk/pkg/rangemap"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"sync/atomic"
 )
 
@@ -46,7 +47,7 @@ func (s *stateHolder) LastModified() int64 {
 	return a.(*state).lastModified
 }
 
-func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, error) {
+func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, *status.Status) {
 	state := s.r.Load().(*state)
 	p, err := state.rangeMap.Get(key)
 	if err != nil {
@@ -78,7 +79,7 @@ func (s *stateHolder) UpdateTree(parts *pb.Partitions, lastModified int64) error
 	for _, p := range parts.GetParts() {
 		err := t.Put(&PartRange{p: p})
 		if err != nil {
-			return err
+			return err.Err()
 		}
 	}
 
