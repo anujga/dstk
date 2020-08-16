@@ -35,30 +35,31 @@ func (w *Wrapper) Get(key []byte) (*dstk.DcDocument, error) {
 func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32) error {
 	fmt.Printf("Got document: %s\n", document)
 
-	// We need to fetch current document to compare etag.
-	currentDocument, err := w.Get(key)
-	newDocument := (err == badger.ErrKeyNotFound)
-	if err != nil && !newDocument {
-		return err
-	}
-	if !newDocument && (document.GetEtag() != currentDocument.GetEtag()) {
-		fmt.Printf("Expected etag: %s, received: %s\n", currentDocument.GetEtag(), document.GetEtag())
-		return badger.ErrConflict
-	}
-
-	// Set a new etag.
-	randomEtag, err := uuid.NewRandom()
-	if err != nil {
-		return err
-	}
-	document.Etag = randomEtag.String()
-
-	// Write to badger.
-	payload, err := proto.Marshal(document)
-	if err != nil {
-		return err
-	}
 	return w.Update(func(txn *badger.Txn) error {
+		// We need to fetch current document to compare etag.
+		currentDocument, err := w.Get(key)
+		newDocument := (err == badger.ErrKeyNotFound)
+		if err != nil && !newDocument {
+			return err
+		}
+		if !newDocument && (document.GetEtag() != currentDocument.GetEtag()) {
+			fmt.Printf("Expected etag: %s, received: %s\n", currentDocument.GetEtag(), document.GetEtag())
+			return badger.ErrConflict
+		}
+
+		// Set a new etag.
+		randomEtag, err := uuid.NewRandom()
+		if err != nil {
+			return err
+		}
+		document.Etag = randomEtag.String()
+
+		// Write to badger.
+		payload, err := proto.Marshal(document)
+		if err != nil {
+			return err
+		}
+
 		entry := badger.NewEntry(key, payload).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)
 	})

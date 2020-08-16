@@ -1,9 +1,9 @@
 Start: 0
-Size: 20
-Count: 20
-Seed: 1
-Views: 2
-Copies: 1
+Size: 5
+Count: 5
+Seed: 19
+Views: 50
+Copies: 2
 SeUrl: "localhost:6001"
 Mode: client
 MetricUrl: "localhost:6900"
