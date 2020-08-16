@@ -72,8 +72,7 @@ func (u *user) Invoke(ctx context.Context) error {
 			return err
 		}
 	} else {
-
-		v0 = binary.LittleEndian.Uint64(res.Value)
+		v0 = binary.LittleEndian.Uint64(res.GetDocument().GetValue())
 	}
 	v2 := v0 + delta
 
@@ -88,6 +87,7 @@ func (u *user) Invoke(ctx context.Context) error {
 		Key:        u.idSer,
 		Value:      u.bytes8,
 		TtlSeconds: u.ttlSeconds,
+		Etag: res.GetDocument().GetEtag(),
 	})
 	if err != nil {
 		return err

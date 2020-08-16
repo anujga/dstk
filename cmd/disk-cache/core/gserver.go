@@ -33,10 +33,10 @@ func (d *DiskCacheServer) Get(ctx context.Context, rpcReq *pb.DcGetReq) (*pb.DcG
 		return nil, res.Err.Err()
 	}
 
-	rs := res.Res.([]byte)
+	rs := res.Res.(*pb.DcDocument)
 	return &pb.DcGetRes{
 		Key:   req.Key(),
-		Value: rs,
+		Document: rs,
 	}, nil
 }
 

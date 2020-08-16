@@ -40,7 +40,12 @@ func verifyAll(c *Config) error {
 					log.Errorw("error in get", "err", err)
 					//todo: error
 				} else {
-					views := binary.LittleEndian.Uint64(res.GetValue())
+					document := res.GetDocument()
+					views := binary.LittleEndian.Uint64(document.GetValue())
+					log.Debugw("Fetched document",
+						"Views", views,
+						"Etag", document.GetEtag())
+
 					expected := uint64(c.Copies) * c.Views
 					if views != expected {
 						log.Errorw("Mismatch",

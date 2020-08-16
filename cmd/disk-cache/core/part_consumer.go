@@ -5,8 +5,11 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/bdb"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
+	"github.com/dgraph-io/badger/v2"
 	"go.uber.org/zap"
+	"time"
 )
 
 // 2. Define the state for a given partition and implement ss.Consumer
@@ -31,11 +34,20 @@ func (m *partitionConsumer) Meta() *dstk.Partition {
 
 // thread safe
 func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
-	return m.pc.Get(req.GetKey())
+	document, err := m.pc.Get(req.GetKey())
+	if err == badger.ErrKeyNotFound {
+		return nil, core.ErrKeyAbsent(req.GetKey()).Err()
+	}
+	return document, err
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
-	return nil, m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds())
+	document := &dstk.DcDocument{
+		Value: req.GetValue(),
+		Etag: req.GetEtag(),
+		LastUpdatedEpochSeconds: time.Now().Unix(),
+	}
+	return nil, m.pc.Put(req.GetKey(), document, req.GetTtlSeconds())
 }
 
 func (m *partitionConsumer) remove(req *dstk.DcRemoveReq) (interface{}, error) {
