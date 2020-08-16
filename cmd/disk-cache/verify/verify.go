@@ -44,7 +44,8 @@ func verifyAll(c *Config) error {
 					views := binary.LittleEndian.Uint64(document.GetValue())
 					log.Debugw("Fetched document",
 						"Views", views,
-						"Etag", document.GetEtag())
+						"Etag", document.GetEtag(),
+						"Last updated", document.GetLastUpdatedEpochSeconds())
 
 					expected := uint64(c.Copies) * c.Views
 					if views != expected {
