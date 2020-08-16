@@ -57,7 +57,6 @@ func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32)
 		if err != nil {
 			return err
 		}
-
 		entry := badger.NewEntry(key, payload).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)
 	})
