@@ -27,13 +27,14 @@ func RunProcess(p Process) *ProcessStats {
 	} else {
 		zap.S().Infow("init completed successfully")
 	}
+
 	for !p.Done(ctx) {
 		err := p.Invoke(ctx)
 		if err != nil {
 			s.Failure += 1
 			zap.S().Errorw("invoke failed",
 				"err", err)
-			time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Millisecond)
 		} else {
 			s.Success += 1
 		}

@@ -33,8 +33,6 @@ func (w *Wrapper) Get(key []byte) (*dstk.DcDocument, error) {
 
 // thread safe
 func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32) error {
-	fmt.Printf("Got document: %s\n", document)
-
 	return w.Update(func(txn *badger.Txn) error {
 		// We need to fetch current document to compare etag.
 		currentDocument, err := w.Get(key)

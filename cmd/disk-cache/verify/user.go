@@ -16,8 +16,9 @@ import (
 )
 
 type user struct {
-	id    int64
-	idSer []byte
+	id    	int64
+	idSer 	[]byte
+	copyId 	int
 
 	totalViews         uint64
 	maxViewsPerSession int64
@@ -28,26 +29,26 @@ type user struct {
 	bytes8 []byte
 }
 
-type ProcessFactory = func(id int64) *user
+type ProcessFactory = func(userId int64, copyId int) *user
 
 func NewUserFactory(totalViews uint64, rpc dstk.DcRpcClient) ProcessFactory {
-	fn := func(id int64) *user {
+	fn := func(userId int64, copyId int) *user {
 		bytes8 := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes8, uint64(id))
+		binary.LittleEndian.PutUint64(bytes8, uint64(userId))
 		idSer := md5.New().Sum(bytes8)
-		zap.S().Debugw("Creating user", "id", id, "idSer", idSer)
+		zap.S().Debugw("Creating user", "id", userId, "idSer", idSer)
 		return &user{
-			id:                 id,
+			id:                 userId,
 			idSer:              idSer,
 			totalViews:         totalViews,
 			maxViewsPerSession: 5,
 			ttlSeconds:         float32(5 * time.Minute),
-			rnd:                rand.NewSource(id),
+			rnd:                rand.NewSource(userId),
 			rpc:                rpc,
 			bytes8:             bytes8,
+			copyId:		    copyId,
 		}
 	}
-
 	return fn
 }
 
@@ -67,7 +68,9 @@ func (u *user) Invoke(ctx context.Context) error {
 	if err != nil {
 		e0 := status.Convert(err)
 		if e0.Code() == codes.NotFound {
-			log.Debugw("adding new key", "uid", hex.EncodeToString(u.idSer))
+			log.Debugw("Adding new key",
+				"uid", hex.EncodeToString(u.idSer),
+				"copy", u.copyId)
 		} else {
 			return err
 		}
@@ -76,11 +79,12 @@ func (u *user) Invoke(ctx context.Context) error {
 	}
 	v2 := v0 + delta
 
-	log.Debugw("adding",
+	log.Debugw("Doing put request",
 		"uid", hex.EncodeToString(u.idSer),
+		"copy", u.copyId,
 		"existing", v0,
 		"new", v2,
-		"total", u.totalViews)
+		"views remaining", u.totalViews - delta)
 
 	binary.LittleEndian.PutUint64(u.bytes8, v2)
 	_, err = u.rpc.Put(ctx, &dstk.DcPutReq{
@@ -92,7 +96,6 @@ func (u *user) Invoke(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
 	u.totalViews -= delta
 	return nil
 }
@@ -106,9 +109,17 @@ func (u *user) Init(ctx context.Context) error {
 	if u.Done(ctx) {
 		return errors.New("Called after done")
 	}
+	// We will only run init for the first copy of each user.
+	if u.copyId != 0 {
+		log.Debugw("Not resetting values for",
+			"uid", hex.EncodeToString(u.idSer),
+			"copy", u.copyId)
+		return nil
+	}
 	resetValue := uint64(0)
 	log.Debugw("Resetting",
 		"uid", hex.EncodeToString(u.idSer),
+		"copy", u.copyId,
 		"reset value", resetValue)
 	resetBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(resetBytes, resetValue)
@@ -120,16 +131,14 @@ func (u *user) Init(ctx context.Context) error {
 	return err
 }
 
-func CreateUsers(beg int64, n int64, fn ProcessFactory) ([]verify.Process, error) {
+func CreateUsers(beg int64, n int64, copyId int, fn ProcessFactory) ([]verify.Process, error) {
 	if n < 1 {
 		return nil, errors.New("Invalid Arg, beg - end > 0")
 	}
 
 	ps := make([]verify.Process, n)
 	for i := int64(0); i < n; i++ {
-		ps[i] = fn(i + beg)
+		ps[i] = fn(i + beg, copyId)
 	}
-
 	return ps, nil
-
 }
