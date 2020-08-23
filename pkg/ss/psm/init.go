@@ -20,7 +20,7 @@ func initToProxy(actor partition.Actor, partIdMap map[int64]partition.Actor, par
 func initToCatchingup(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
 	if leader, ok := partIdMap[part.GetLeaderId()]; ok {
 		return &partition.BecomeCatchingUpActor{
-			LeaderId: part.GetLeaderId(),
+			LeaderId:      part.GetLeaderId(),
 			LeaderMailbox: leader.Mailbox(),
 		}
 	}
