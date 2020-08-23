@@ -6,13 +6,15 @@ import (
 )
 
 type Repeater struct {
-	fn     func(time.Time) bool
-	ticker *time.Ticker
-	done   chan bool
+	fn        func(time.Time) bool
+	ticker    *time.Ticker
+	done      chan bool
 	Completed chan bool
 }
 
 func Repeat(freq time.Duration, fn func(time.Time) bool, firstRunSync bool) *Repeater {
+	//TODO: sync run should happen before
+	// method should return error also
 	ticker := time.NewTicker(freq)
 	r := &Repeater{
 		fn:     fn,

@@ -2,12 +2,14 @@ package simple
 
 import (
 	"encoding/binary"
-	pb "github.com/anujga/dstk/pkg/api/proto"
-	"github.com/anujga/dstk/pkg/core"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"math/rand"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	pb "github.com/anujga/dstk/pkg/api/proto"
+	"github.com/anujga/dstk/pkg/core"
 )
 
 type Worker struct {
@@ -48,13 +50,13 @@ func newPart(beg, end int16, w *Worker, i int) *pb.Partition {
 	binary.BigEndian.PutUint16(e, uint16(end))
 
 	p := &pb.Partition{
-		Id:         int64(i),
-		ModifiedOn: time.Now().UnixNano(),
-		Active:     true,
-		Start:      b,
-		End:        e,
-		Url:        w.Url,
-		WorkerId:   w.Id,
+		Id:           int64(i),
+		ModifiedOn:   time.Now().UnixNano(),
+		Active:       true,
+		Start:        b,
+		End:          e,
+		Url:          w.Url,
+		WorkerId:     w.Id,
 		DesiredState: "primary",
 	}
 

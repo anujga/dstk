@@ -3,11 +3,13 @@ package sharder
 import (
 	"errors"
 	"fmt"
-	dstk "github.com/anujga/dstk/pkg/api/proto"
-	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"math/rand"
 	"sync"
 	"time"
+
+	rbt "github.com/emirpasic/gods/trees/redblacktree"
+
+	dstk "github.com/anujga/dstk/pkg/api/proto"
 )
 
 type ShardStore struct {
@@ -19,12 +21,12 @@ type ShardStore struct {
 	For the last partition end = nil
 */
 type JobPartitionHolder struct {
-	id          int64
-	t           *rbt.Tree
-	index       *TimeIndex
-	deleted     *TimeIndex // TODO. How to cleanup deleted ?
-	lastPart    *dstk.Partition
-	mux         sync.Mutex
+	id       int64
+	t        *rbt.Tree
+	index    *TimeIndex
+	deleted  *TimeIndex // TODO. How to cleanup deleted ?
+	lastPart *dstk.Partition
+	mux      sync.Mutex
 }
 
 func NewJobPartitionHolder(jobId int64) *JobPartitionHolder {

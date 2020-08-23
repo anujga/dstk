@@ -3,7 +3,7 @@ package core
 import "sync"
 
 type ConcurrentMap struct {
-	mp map[interface{}]interface{}
+	mp      map[interface{}]interface{}
 	mapLock sync.RWMutex
 }
 
