@@ -16,11 +16,11 @@ type state struct {
 	lastModified int64
 }
 
-type stateHolder struct {
+type partitionMgr struct {
 	r atomic.Value
 }
 
-func (s *stateHolder) Clear() {
+func (s *partitionMgr) Clear() {
 	a := state{
 		rangeMap: rangemap.NewBtreeRange(2),
 		pbs:      []*pb.Partition{},
@@ -28,18 +28,18 @@ func (s *stateHolder) Clear() {
 	s.r.Store(&a)
 }
 
-func (s *stateHolder) Parts() ([]*pb.Partition, error) {
+func (s *partitionMgr) Parts() ([]*pb.Partition, error) {
 	a := s.r.Load()
 	if a == nil {
 		return nil, core.ErrInfo(
 			codes.Internal,
-			"Reading partitions from uninitialized cache",
+			"Reading partitions from uninitialized partitionCache",
 			"s", s).Err()
 	}
 	return a.(*state).pbs, nil
 }
 
-func (s *stateHolder) LastModified() int64 {
+func (s *partitionMgr) LastModified() int64 {
 	a := s.r.Load()
 	if a == nil {
 		return 0
@@ -47,33 +47,28 @@ func (s *stateHolder) LastModified() int64 {
 	return a.(*state).lastModified
 }
 
-func (s *stateHolder) Get(key core.KeyT) (*pb.Partition, *status.Status) {
+func (s *partitionMgr) Get(key core.KeyT) (*pb.Partition, *status.Status) {
 	state := s.r.Load().(*state)
-	p, err := state.rangeMap.Get(key)
+	p, found, err := state.rangeMap.Get(key)
 	if err != nil {
 		return nil, err
+	}
+
+	if !found {
+		return nil, core.ErrInfo(codes.InvalidArgument,
+			"key does not belong to this paritionMap",
+			"key", key,
+		)
 	}
 
 	part := p.(*PartRange)
 	return part.p, nil
 }
 
-type PartRange struct {
-	p *pb.Partition
-}
-
-func (x *PartRange) Start() core.KeyT {
-	return x.p.GetStart()
-}
-
-func (x *PartRange) End() core.KeyT {
-	return x.p.GetEnd()
-}
-
 //todo: use CAS on instead of blind replace to avoid lost update
 // thread: unsafe. its actually safe but the above statement forces
 // callers to call sequentially
-func (s *stateHolder) UpdateTree(parts *pb.Partitions, lastModified int64) error {
+func (s *partitionMgr) UpdateTree(parts *pb.Partitions, lastModified int64) error {
 	t := rangemap.NewBtreeRange(16) // log(100K) expected count of partition
 
 	for _, p := range parts.GetParts() {

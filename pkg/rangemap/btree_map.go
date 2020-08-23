@@ -12,6 +12,11 @@ type BtreeRange struct {
 	root *btree.BTree
 }
 
+func (rm *BtreeRange) Close() error {
+	rm.root.Clear(false)
+	return nil
+}
+
 func NewBtreeRange(degree int) RangeMap {
 	return &BtreeRange{root: btree.New(degree)}
 }
@@ -40,19 +45,19 @@ func (rm *BtreeRange) Iter(start core.KeyT) <-chan Range {
 	return ch
 }
 
-func (rm *BtreeRange) Get(key core.KeyT) (Range, *status.Status) {
+func (rm *BtreeRange) Get(key core.KeyT) (Range, bool, *status.Status) {
 	item, err := NewRange(&dummyRange{start: key})
 	if err != nil {
-		return nil, status.Convert(err)
+		return nil, false, status.Convert(err)
 	}
 	pred := rm.getLessOrEqual(item)
 	if pred == nil {
-		return nil, core.ErrKeyAbsent(key)
+		return nil, false, nil
 	}
-	if pred.contains(key) {
-		return pred.Range, nil
+	if RangeContains(pred, key) {
+		return pred.Range, true, nil
 	}
-	return nil, core.ErrKeyAbsent(key)
+	return nil, false, nil
 }
 
 func (rm *BtreeRange) Put(rng Range) *status.Status {

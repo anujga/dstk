@@ -3,24 +3,29 @@ package core
 import "time"
 
 type KeyT []byte
-type IdGenerator func()int64
+type IdGenerator func() int64
 
 var (
 	MaxKey KeyT
 	MinKey KeyT
 )
 
-const MaxKeyLen = 1024
+const maxKeyLen = 1024
 
 func init() {
-	MinKey = []byte("")
-	MaxKey = make([]byte, MaxKeyLen+1)
-	for i := 0; i < MaxKeyLen; i++ {
+	MinKey = []byte{0}
+	MaxKey = make([]byte, maxKeyLen+1)
+	for i := 0; i < maxKeyLen; i++ {
 		MaxKey[i] = 0xff
 	}
-	MaxKey[MaxKeyLen] = 1
+	MaxKey[maxKeyLen] = 1
 }
 
+func ValidKey(k KeyT) bool {
+	n := len(k)
+	//todo: maxKeyLen check is weak. we are allowing keys of size larger than MaxKey
+	return n > 0 && n < maxKeyLen+1
+}
 
 type DstkClock interface {
 	Time() int64
