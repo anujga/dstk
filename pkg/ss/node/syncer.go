@@ -13,16 +13,15 @@ import (
 type PartsSyncer struct {
 	wa    Actor
 	seRpc pb.PartitionRpcClient
-	slog  *zap.SugaredLogger
 }
 
 func (ps *PartsSyncer) Start() *status.Status {
 	rep := core.Repeat(1*time.Minute, func(timestamp time.Time) bool {
 		if err := ps.syncFromSe(); err == nil {
-			ps.slog.Infow("fetch updates from SE",
+			zap.S().Infow("fetch updates from SE",
 				"time", timestamp)
 		} else {
-			ps.slog.Errorw("fetch updates from SE", "err", err)
+			zap.S().Errorw("fetch updates from SE", "err", err)
 		}
 		return true
 	}, true)
@@ -36,8 +35,10 @@ func (ps *PartsSyncer) Start() *status.Status {
 }
 
 func (ps *PartsSyncer) syncFromSe() error {
-	newParts, err := ps.seRpc.GetPartitions(context.TODO(),
-		&pb.PartitionGetRequest{WorkerId: int64(ps.wa.Id())})
+	req := &pb.PartitionGetRequest{
+		WorkerId: int64(ps.wa.Id()),
+	}
+	newParts, err := ps.seRpc.GetPartitions(context.TODO(), req)
 	if err != nil {
 		return err
 	}
@@ -49,6 +50,5 @@ func NewSyncer(wa Actor, seRpc pb.PartitionRpcClient) *PartsSyncer {
 	return &PartsSyncer{
 		wa:    wa,
 		seRpc: seRpc,
-		slog:  zap.S(),
 	}
 }

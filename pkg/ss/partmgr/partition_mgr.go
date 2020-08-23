@@ -1,4 +1,4 @@
-package partition
+package partitionmgr
 
 import (
 	pb "github.com/anujga/dstk/pkg/api/proto"

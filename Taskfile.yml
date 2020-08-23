@@ -58,8 +58,6 @@ tasks:
       - task: app-local
 
   local-verify:
-    deps:
-      - local-monitor
     cmds:
       - goreman -f cmd/disk-cache/Procfile start
 
