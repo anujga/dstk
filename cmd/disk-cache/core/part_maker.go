@@ -3,6 +3,7 @@ package dc
 import (
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/bdb"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
@@ -21,6 +22,7 @@ func (m *partitionConsumerMaker) Make(p *dstk.Partition) (common.Consumer, int, 
 		p:      p,
 		pc:     m.db,
 		logger: zap.L(),
+		clock: &core.RealClock{},
 	}, m.maxOutstanding, nil
 }
 

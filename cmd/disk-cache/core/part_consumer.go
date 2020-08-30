@@ -9,7 +9,6 @@ import (
 	"github.com/anujga/dstk/pkg/ss/common"
 	"github.com/dgraph-io/badger/v2"
 	"go.uber.org/zap"
-	"time"
 )
 
 // 2. Define the state for a given partition and implement ss.Consumer
@@ -17,6 +16,7 @@ type partitionConsumer struct {
 	p      *dstk.Partition
 	pc     *bdb.Wrapper
 	logger *zap.Logger
+	clock  core.DstkClock
 }
 
 func (m *partitionConsumer) GetSnapshot() common.AppState {
@@ -45,7 +45,7 @@ func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
 	document := &dstk.DcDocument{
 		Value: req.GetValue(),
 		Etag: req.GetEtag(),
-		LastUpdatedEpochSeconds: time.Now().Unix(),
+		LastUpdatedEpochSeconds: m.clock.Time(),
 	}
 	return nil, m.pc.Put(req.GetKey(), document, req.GetTtlSeconds())
 }
