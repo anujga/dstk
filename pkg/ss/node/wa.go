@@ -20,7 +20,7 @@ type Actor interface {
 type actorImpl struct {
 	id      se.WorkerId
 	mailbox chan interface{}
-	partMgr partition.Manager
+	partMgr partitionmgr.Manager
 	logger  *zap.Logger
 }
 
@@ -81,7 +81,7 @@ func (w *actorImpl) Start() *core.FutureErr {
 }
 
 func NewActor(factory common.ConsumerFactory, id se.WorkerId, partRpc pb.PartitionRpcClient) (Actor, error) {
-	p, err := partition.NewManager(factory, partRpc)
+	p, err := partitionmgr.NewManager(factory, partRpc)
 	if err != nil {
 		return nil, err.Err()
 	}

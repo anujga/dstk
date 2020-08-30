@@ -1,5 +1,9 @@
 package partition
 
+//todo: if you define state as string, instead of int,
+// none of this parsing is required. would also be
+// better for logging and tracing
+// https://stackoverflow.com/a/53569780
 type State int
 
 const (

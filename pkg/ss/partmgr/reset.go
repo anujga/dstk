@@ -1,10 +1,11 @@
-package partition
+package partitionmgr
 
 import (
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/ss/partition"
 	"github.com/anujga/dstk/pkg/ss/psm"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/status"
 )
 
 type PartCombo struct {
@@ -14,49 +15,54 @@ type PartCombo struct {
 
 func ensureActors(plist *pb.Partitions, pm *managerImpl, partRpc pb.PartitionRpcClient) ([]*PartCombo, []*PartCombo) {
 	newActors := make([]*PartCombo, 0)
+	slog := zap.S()
 	existingActors := make([]*PartCombo, 0)
 	for _, part := range plist.GetParts() {
-		if existingActor, ok := pm.store.partIdMap[part.GetId()]; !ok {
+		existingActor, found := pm.store.partIdMap[part.GetId()]
+		if !found {
 			if c, maxOutstanding, err := pm.consumerFactory.Make(part); err == nil {
 				pa := partition.NewActor(part, c, maxOutstanding, partRpc)
 				if e := pm.store.add(pa); e == nil {
 					newActors = append(newActors, &PartCombo{pa, part})
-					pm.slog.Infow("part created", "id", part.GetId())
+					slog.Infow("part created", "id", part.GetId())
 				} else {
-					pm.slog.Errorw("failed to add part", "part", pa)
+					slog.Errorw("failed to add part", "part", pa)
 				}
 			} else {
-				pm.slog.Errorw("failed to make consumer", "part", part)
+				slog.Errorw("failed to make consumer", "part", part)
 			}
 		} else {
 			existingActors = append(existingActors, &PartCombo{
 				Actor:     existingActor,
 				Partition: part,
 			})
-			pm.slog.Debugw("partition already exists", "id", part.GetId())
+			slog.Debugw("partition already exists", "id", part.GetId())
 		}
 	}
 	return newActors, existingActors
 }
 
 func startNewActors(newParts []*PartCombo, pm *managerImpl) {
+	slog := zap.S()
+
 	for _, newp := range newParts {
 		currActorState := newp.Actor.State()
 		currDbState := partition.StateFromString(newp.GetCurrentState())
+		// todo: Not sure invalid is same as init
 		if currDbState == partition.Invalid {
 			newp.Run(&partition.BecomeMsgImpl{TargetState: partition.Init})
-		} else {
-			if currTo, ok := psm.TransitionTable[currActorState]; ok {
-				if trf, ok := currTo[currDbState]; ok {
-					msg := trf(newp.Actor, pm.store.partIdMap, newp.Partition)
-					newp.Run(msg)
-				} else {
-					pm.slog.Warn("no trans function", "from", currActorState.String(), "to", currDbState.String())
-				}
-			} else {
-				pm.slog.Warnw("no trans function", "from", currActorState.String())
-			}
+			continue
+
 		}
+		trf, st := psm.GetTransition(currActorState, currDbState)
+		if st != nil {
+			//todo: this is a fatal error.
+			slog.Warnw("no trans function",
+				"err", st)
+			continue
+		}
+		msg := trf(newp.Actor, pm.store.partIdMap, newp.Partition)
+		newp.Run(msg)
 	}
 }
 
@@ -72,32 +78,41 @@ func resetParts(plist *pb.Partitions, pm *managerImpl, logger *zap.Logger, partR
 	return nil
 }
 
-func handleTransition(currPa partition.Actor, part *pb.Partition, pmap map[int64]partition.Actor, logger *zap.Logger) error {
+func handleTransition(currPa partition.Actor, part *pb.Partition, pmap map[int64]partition.Actor, logger *zap.Logger) *status.Status {
 	currState := currPa.State()
 	desiredState := partition.StateFromString(part.GetDesiredState())
 	if currState == desiredState {
-		logger.Debug("state not changed", zap.Int64("part", part.GetId()), zap.Stringer("state", currState))
+		logger.Debug("state not changed",
+			zap.Int64("part", part.GetId()),
+			zap.Stringer("state", currState))
 		return nil
 	}
-	if currTo, ok := psm.TransitionTable[currState]; ok {
-		if transFunc, ok := currTo[desiredState]; ok {
-			logger.Info("state transition", zap.Int64("id", part.GetId()), zap.Stringer("from", currState), zap.Stringer("to", desiredState))
-			if msg := transFunc(currPa, pmap, part); msg == nil {
-				// todo
-			} else {
-				select {
-				case currPa.Mailbox() <- msg:
-				default:
-					// todo
-				}
-			}
-		} else {
-			logger.Sugar().Warnw("no trans function", "from", currState.String(), "to", desiredState.String())
+	slog := zap.S()
+
+	transFunc, st := psm.GetTransition(currState, desiredState)
+	if st != nil {
+		//todo: this is a fatal error.
+		slog.Warnw("no trans function",
+			"err", st)
+		return st
+	}
+
+	logger.Info("state transition",
+		zap.Int64("id", part.GetId()),
+		zap.Stringer("from", currState),
+		zap.Stringer("to", desiredState))
+
+	msg := transFunc(currPa, pmap, part)
+
+	if msg == nil {
+		// todo
+	} else {
+		select {
+		case currPa.Mailbox() <- msg:
+		default:
 			// todo
 		}
-	} else {
-		logger.Sugar().Warnw("no trans function", "from", currState.String())
-		// todo
 	}
+
 	return nil
 }

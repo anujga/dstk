@@ -8,4 +8,3 @@ import (
 func catchingupToFollower(actor partition.Actor, partIdMap map[int64]partition.Actor, part *pb.Partition) partition.BecomeMsg {
 	return &partition.BecomeMsgImpl{TargetState: partition.Follower}
 }
-

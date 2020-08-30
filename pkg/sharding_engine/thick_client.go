@@ -10,27 +10,27 @@ import (
 	"time"
 )
 
-type tc struct {
-	notifications chan interface{}
-	cache         stateHolder
-	rpc           pb.PartitionRpcClient
-	clientId      string
+type thickClient struct {
+	notifications  chan interface{}
+	partitionCache partitionMgr
+	rpc            pb.PartitionRpcClient
+	clientId       string
 }
 
-func (t *tc) Notifications() <-chan interface{} {
+func (t *thickClient) Notifications() <-chan interface{} {
 	return t.notifications
 }
 
-func (t *tc) Get(ctx context.Context, key []byte) (*pb.Partition, *status.Status) {
-	return t.cache.Get(key)
+func (t *thickClient) Get(ctx context.Context, key []byte) (*pb.Partition, *status.Status) {
+	return t.partitionCache.Get(key)
 }
 
-func (t *tc) Parts() ([]*pb.Partition, error) {
-	return t.cache.Parts()
+func (t *thickClient) Parts() ([]*pb.Partition, error) {
+	return t.partitionCache.Parts()
 }
 
 func NewThickClient(clientId string, rpc pb.PartitionRpcClient) (ThickClient, *status.Status) {
-	t := tc{
+	t := thickClient{
 		notifications: make(chan interface{}, 2),
 		rpc:           rpc,
 		clientId:      clientId,
@@ -42,7 +42,7 @@ func NewThickClient(clientId string, rpc pb.PartitionRpcClient) (ThickClient, *s
 			zap.S().Errorw("fetch updates from SE",
 				"err", err)
 		} else {
-			delay := timestamp.UnixNano() - t.cache.LastModified()
+			delay := timestamp.UnixNano() - t.partitionCache.LastModified()
 			zap.S().Infow("fetch updates from SE",
 				"time", timestamp,
 				"delay", delay)
@@ -61,7 +61,7 @@ func NewThickClient(clientId string, rpc pb.PartitionRpcClient) (ThickClient, *s
 }
 
 //todo: this should be a push instead of poll
-func (t *tc) syncSe() error {
+func (t *thickClient) syncSe() error {
 	rs, err := t.rpc.GetPartitions(context.TODO(), &pb.PartitionGetRequest{FetchAll: true})
 	if err != nil {
 		return err
@@ -73,10 +73,10 @@ func (t *tc) syncSe() error {
 			newTime = p.GetModifiedOn()
 		}
 	}
-	if newTime <= t.cache.LastModified() {
+	if newTime <= t.partitionCache.LastModified() {
 		return nil
 	}
-	err = t.cache.UpdateTree(rs.GetPartitions(), newTime)
+	err = t.partitionCache.UpdateTree(rs.GetPartitions(), newTime)
 	if err != nil {
 		return err
 	}
