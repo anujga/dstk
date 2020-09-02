@@ -26,9 +26,13 @@ message DcPutReq {
 
 message DcDocument {
   bytes value = 1;
-  string etag = 2;
-  int64 last_updated_epoch_seconds = 3;
+  DcDocumentMeta meta = 2;
 }
+message DcDocumentMeta {
+  string etag = 1;
+  int64 last_updated_epoch_seconds = 2;
+}
+
 
 // Read upto maxCount many records. In some cases we
 // will end up returning less due to end of partition

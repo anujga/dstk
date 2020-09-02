@@ -122,7 +122,7 @@ func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32)
 		if err != nil && !newDocument {
 			return err
 		}
-		if !newDocument && (document.GetEtag() != currentDocument.GetEtag()) {
+		if !newDocument && (document.GetMeta().GetEtag() != currentDocument.GetMeta().GetEtag()) {
 			return badger.ErrConflict
 		}
 
@@ -131,7 +131,7 @@ func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32)
 		if err != nil {
 			return err
 		}
-		document.Etag = randomEtag.String()
+		document.GetMeta().Etag = randomEtag.String()
 
 		// Write to badger.
 		payload, err := proto.Marshal(document)
