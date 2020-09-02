@@ -42,10 +42,13 @@ func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
-	document := &dstk.DcDocument{
-		Value: req.GetValue(),
+	meta := &dstk.DcDocumentMeta{
 		Etag: req.GetEtag(),
 		LastUpdatedEpochSeconds: m.clock.Time(),
+	}
+	document := &dstk.DcDocument{
+		Value: req.GetValue(),
+		Meta: meta,
 	}
 	return nil, m.pc.Put(req.GetKey(), document, req.GetTtlSeconds())
 }

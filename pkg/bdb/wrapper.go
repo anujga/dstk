@@ -5,7 +5,6 @@ import (
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/golang/protobuf/proto"
-	"github.com/google/uuid"
 	"google.golang.org/grpc/status"
 	"time"
 )
@@ -91,6 +90,7 @@ func FindFirst(db *badger.DB, reverse bool, k core.KeyT) ([]byte, bool, *status.
 
 type Wrapper struct {
 	*badger.DB
+	core.EtagGenerator
 }
 
 // thread safe
@@ -122,16 +122,18 @@ func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32)
 		if err != nil && !newDocument {
 			return err
 		}
-		if !newDocument && (document.GetEtag() != currentDocument.GetEtag()) {
+		if !newDocument && (document.GetMeta().GetEtag() != currentDocument.GetMeta().GetEtag()) {
 			return badger.ErrConflict
 		}
 
 		// Set a new etag.
-		randomEtag, err := uuid.NewRandom()
-		if err != nil {
-			return err
+		var newEtag int64
+		if newDocument {
+			newEtag = w.EtagGenerator.Initial()
+		} else {
+			newEtag = w.EtagGenerator.Next(currentDocument.GetMeta().GetEtag())
 		}
-		document.Etag = randomEtag.String()
+		document.GetMeta().Etag = newEtag
 
 		// Write to badger.
 		payload, err := proto.Marshal(document)

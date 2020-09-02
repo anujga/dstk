@@ -47,7 +47,7 @@ func newConsumerMaker(dbPath string, maxOutstanding int) (*partitionConsumerMake
 		return nil, err
 	}
 	return &partitionConsumerMaker{
-		db:             &bdb.Wrapper{DB: db},
+		db:             &bdb.Wrapper{DB: db, EtagGenerator: &core.SequentialEtagGenerator{}},
 		maxOutstanding: maxOutstanding,
 	}, nil
 }
