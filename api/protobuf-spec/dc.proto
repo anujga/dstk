@@ -7,7 +7,7 @@ message DcGetReq {
 
 message DcGetRes {
   bytes key = 1;
-  bytes value = 2;
+  DcDocument document = 2;
 }
 
 message DcRemoveReq {
@@ -21,7 +21,18 @@ message DcPutReq {
   bytes key = 1;
   bytes value = 2;
   float ttl_seconds = 3;
+  int64 etag = 4;
 }
+
+message DcDocument {
+  bytes value = 1;
+  DcDocumentMeta meta = 2;
+}
+message DcDocumentMeta {
+  int64 etag = 1;
+  int64 last_updated_epoch_seconds = 2;
+}
+
 
 // Read upto maxCount many records. In some cases we
 // will end up returning less due to end of partition

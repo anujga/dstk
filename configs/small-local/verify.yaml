@@ -2,8 +2,8 @@ Start: 0
 Size: 10
 Count: 10
 Seed: 1
-Views: 100
-Copies: 1
+Views: 50
+Copies: 4
 SeUrl: "localhost:6001"
 #GatewayUrl: "localhost:6013"
 Mode: client

@@ -37,3 +37,19 @@ type RealClock struct {
 func (r *RealClock) Time() int64 {
 	return time.Now().Unix()
 }
+
+type EtagGenerator interface {
+	Next(curr int64) int64
+	Initial() int64
+}
+
+type SequentialEtagGenerator struct {
+}
+
+func (s *SequentialEtagGenerator) Next(curr int64) int64 {
+	return curr + 1
+}
+
+func (s *SequentialEtagGenerator) Initial() int64 {
+	return 1
+}

@@ -1,8 +1,10 @@
 package bdb
 
 import (
+	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/core"
 	"github.com/dgraph-io/badger/v2"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc/status"
 	"time"
 )
@@ -88,10 +90,11 @@ func FindFirst(db *badger.DB, reverse bool, k core.KeyT) ([]byte, bool, *status.
 
 type Wrapper struct {
 	*badger.DB
+	core.EtagGenerator
 }
 
 // thread safe
-func (w *Wrapper) Get(key []byte) ([]byte, error) {
+func (w *Wrapper) Get(key []byte) (*dstk.DcDocument, error) {
 	var res []byte
 	err := w.View(func(txn *badger.Txn) error {
 		if item, err := txn.Get(key); err == nil {
@@ -102,18 +105,42 @@ func (w *Wrapper) Get(key []byte) ([]byte, error) {
 		}
 	})
 	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, core.ErrKeyAbsent(key).Err()
-		}
 		return nil, err
 	}
-	return res, nil
+
+	document := &dstk.DcDocument{}
+	err = proto.Unmarshal(res, document)
+	return document, err
 }
 
 // thread safe
-func (w *Wrapper) Put(key []byte, value []byte, ttlSeconds float32) error {
+func (w *Wrapper) Put(key []byte, document *dstk.DcDocument, ttlSeconds float32) error {
 	return w.Update(func(txn *badger.Txn) error {
-		entry := badger.NewEntry(key, value).WithTTL(time.Duration(ttlSeconds) * time.Second)
+		// We need to fetch current document to compare etag.
+		currentDocument, err := w.Get(key)
+		newDocument := err == badger.ErrKeyNotFound
+		if err != nil && !newDocument {
+			return err
+		}
+		if !newDocument && (document.GetMeta().GetEtag() != currentDocument.GetMeta().GetEtag()) {
+			return badger.ErrConflict
+		}
+
+		// Set a new etag.
+		var newEtag int64
+		if newDocument {
+			newEtag = w.EtagGenerator.Initial()
+		} else {
+			newEtag = w.EtagGenerator.Next(currentDocument.GetMeta().GetEtag())
+		}
+		document.GetMeta().Etag = newEtag
+
+		// Write to badger.
+		payload, err := proto.Marshal(document)
+		if err != nil {
+			return err
+		}
+		entry := badger.NewEntry(key, payload).WithTTL(time.Duration(ttlSeconds) * time.Second)
 		return txn.SetEntry(entry)
 	})
 }

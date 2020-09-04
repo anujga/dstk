@@ -69,30 +69,28 @@ func runMany(c *Config) error {
 	for i := int64(0); i < c.Count; i++ {
 		beg := c.Start + (i * c.Size)
 		rnd := rand.NewSource(c.Seed)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			ps, err := CreateUsers(beg, c.Size, fn)
-			log := zap.S()
-			if err != nil {
-				log.Error("Error creating users", "err", err)
-				return
-			}
+		for j := 0; j < int(c.Copies); j++ {
+			wg.Add(1)
+			go func(copyId int) {
+				defer wg.Done()
+				ps, err := CreateUsers(beg, c.Size, copyId, fn)
+				log := zap.S()
+				if err != nil {
+					log.Error("Error creating users", "err", err)
+					return
+				}
+				stats := verify.RunProcess(&verify.SampledProcess{
+					Ps:  ps,
+					Rnd: rnd,
+				})
+				log.Infow("stats",
+					"beg", beg,
+					"stats", stats)
 
-			stats := verify.RunProcess(&verify.SampledProcess{
-				Ps:  ps,
-				Rnd: rnd,
-			})
-
-			log.Infow("stats",
-				"beg", beg,
-				"stats", stats)
-
-		}()
+			}(j)
+		}
 	}
-
 	wg.Wait()
-
 	return nil
 }
 

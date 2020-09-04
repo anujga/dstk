@@ -5,7 +5,9 @@ import (
 	"fmt"
 	dstk "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/bdb"
+	"github.com/anujga/dstk/pkg/core"
 	"github.com/anujga/dstk/pkg/ss/common"
+	"github.com/dgraph-io/badger/v2"
 	"go.uber.org/zap"
 )
 
@@ -14,6 +16,7 @@ type partitionConsumer struct {
 	p      *dstk.Partition
 	pc     *bdb.Wrapper
 	logger *zap.Logger
+	clock  core.DstkClock
 }
 
 func (m *partitionConsumer) GetSnapshot() common.AppState {
@@ -31,11 +34,23 @@ func (m *partitionConsumer) Meta() *dstk.Partition {
 
 // thread safe
 func (m *partitionConsumer) get(req *dstk.DcGetReq) (interface{}, error) {
-	return m.pc.Get(req.GetKey())
+	document, err := m.pc.Get(req.GetKey())
+	if err == badger.ErrKeyNotFound {
+		return nil, core.ErrKeyAbsent(req.GetKey()).Err()
+	}
+	return document, err
 }
 
 func (m *partitionConsumer) put(req *dstk.DcPutReq) (interface{}, error) {
-	return nil, m.pc.Put(req.GetKey(), req.GetValue(), req.GetTtlSeconds())
+	meta := &dstk.DcDocumentMeta{
+		Etag: req.GetEtag(),
+		LastUpdatedEpochSeconds: m.clock.Time(),
+	}
+	document := &dstk.DcDocument{
+		Value: req.GetValue(),
+		Meta: meta,
+	}
+	return nil, m.pc.Put(req.GetKey(), document, req.GetTtlSeconds())
 }
 
 func (m *partitionConsumer) remove(req *dstk.DcRemoveReq) (interface{}, error) {
