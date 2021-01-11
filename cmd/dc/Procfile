@@ -1,0 +1,4 @@
+# Use goreman to run `go get github.com/mattn/goreman`
+#se: go run ./cmd/se --conf=configs/small-local/se.yaml
+dc: go run ./cmd/dc --port=9999
+verify: sleep 2; go run ./cmd/disk-cache --mode=verify --conf=configs/small-local/verify.yaml

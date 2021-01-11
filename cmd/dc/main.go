@@ -17,7 +17,10 @@ func main() {
 	core.ZapGlobalLevel(zap.InfoLevel)
 	flag.Parse()
 
-	store := NewMemStore(20)
+	store, err := NewbadgerStore("")
+	if err != nil {
+		panic(err)
+	}
 	srv := io.GrpcServer()
 	pb.RegisterDcRpcServer(srv, store)
 
