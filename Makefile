@@ -30,4 +30,7 @@ fmt:
 bench:
 	~/go/bin/goreman -f cmd/dc/Procfile start
 
+builder-base:
+	docker build -f deploy/builder.do -t builder-base .
+
 .DEFAULT_GOAL := build

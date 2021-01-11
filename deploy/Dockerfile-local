@@ -1,3 +1,4 @@
 FROM ubuntu:20.04
 
 ADD bin /dstk
+ADD configs /configs

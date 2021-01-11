@@ -65,15 +65,19 @@ tasks:
     deps:
       - protos
     cmds:
-      - task: app
-        vars:
-          EXE: se
+    - task: app
+      vars:
+        EXE: se
 
-      - task: app
-        vars:
-          EXE: disk-cache
+    - task: app
+      vars:
+        EXE: disk-cache
 
-      - scripts/docker.sh deploy/Dockerfile-local
+    - task: app
+      vars:
+        EXE: dc
+
+    - scripts/docker.sh deploy/Dockerfile-local
 
   local-monitor:
     cmds:
@@ -85,7 +89,7 @@ tasks:
       GIT_COMMIT:
         sh: git log -n 1 --format=%h
     cmds:
-      - go build -o bin/{{.EXE}} -ldflags="-X main.Version={{.GIT_COMMIT}}" ./cmd/{{.EXE}}/
+    - CGO_ENABLED=0 go build -o bin/{{.EXE}} -ldflags="-X main.Version={{.GIT_COMMIT}}" ./cmd/{{.EXE}}/
 
   test:
     cmds:
