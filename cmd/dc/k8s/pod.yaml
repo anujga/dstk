@@ -1,21 +1,57 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: nvme-dc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 870Gi
+  storageClassName: local-nvme
+
+---
+
 apiVersion: v1
 kind: Pod
 metadata:
   name: nvme-dc
+  labels:
+    app: dc
 spec:
   volumes:
-  - name: data
-    configMap:
-      name: bench1-nvme
+  - name: nvme-dc
+    persistentVolumeClaim:
+      claimName: nvme-dc
+
 
   containers:
   - name: dc
     image: 004245605591.dkr.ecr.ap-south-1.amazonaws.com/dstk:latest
     command: [ "/dstk/dc" ]
+    args:
+    - "data=/data/"
     ports:
     - containerPort: 9999
-  tolerations:
-  - key: "feaster"
-    operator: "Equal"
-    value: "true"
-    effect: "NoSchedule"
+
+    volumeMounts:
+    - mountPath: "/data/"
+      name: nvme-dc
+
+#  tolerations:
+#  - key: "feaster"
+#    operator: "Equal"
+#    value: "true"
+#    effect: "NoSchedule"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nvme-dc
+spec:
+  selector:
+    app: dc
+  ports:
+  - port: 9999
+    targetPort: 9999

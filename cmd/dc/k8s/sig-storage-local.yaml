@@ -1,0 +1,6 @@
+common:
+  useNodeNameOnly: true
+classes:
+- name: local-nvme
+  hostDir: "/mnt/data"
+  storageClass: true

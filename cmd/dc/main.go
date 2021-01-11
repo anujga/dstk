@@ -14,10 +14,11 @@ import (
 
 func main() {
 	var port = flag.Int("port", 9999, "port")
+	var path = flag.String("data", "/data/", "data")
 	core.ZapGlobalLevel(zap.InfoLevel)
 	flag.Parse()
 
-	store, err := NewbadgerStore("")
+	store, err := NewbadgerStore(*path)
 	if err != nil {
 		panic(err)
 	}

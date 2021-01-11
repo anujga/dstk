@@ -5,16 +5,16 @@ metadata:
 data:
   verify.yaml: |
     Start: 0
-    Size: 10
-    Count: 10
+    Size: 100
+    Count: 100
     Seed: 1
-    Views: 100
+    Views: 1000
     Copies: 1
     SeUrl: "localhost:6001"
     ClientId: "c1"
 
     Mode: gateway
-    GatewayUrl: "192.168.9.232:9999"
+    GatewayUrl: "nvme-dc:9999"
 
 ---
 

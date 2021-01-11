@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
+	"go.uber.org/zap"
 
 	pb "github.com/anujga/dstk/pkg/api/proto"
 	"github.com/anujga/dstk/pkg/bdb"
@@ -32,6 +33,7 @@ func NewbadgerStore(path string) (*badgerStore, error) {
 		}
 	}
 
+	zap.S().Infow("Badger disk location", zap.String("path", path))
 	err = os.MkdirAll(path, 0755)
 	if err != nil {
 		return nil, err
@@ -39,7 +41,9 @@ func NewbadgerStore(path string) (*badgerStore, error) {
 
 	opt := badger.DefaultOptions(path).
 		WithTableLoadingMode(options.LoadToRAM).
-		WithValueLogLoadingMode(options.MemoryMap)
+		WithValueLogLoadingMode(options.MemoryMap).
+		WithSyncWrites(false)
+
 	db, err := badger.Open(opt)
 	if err != nil {
 		return nil, err
