@@ -13,7 +13,10 @@ type catchingUpActor struct {
 }
 
 func (fa *catchingUpActor) become() error {
-	fa.logger.Info("became", zap.Stringer("state", fa.getState()), zap.Int64("id", fa.id), zap.Int64("leader id", fa.leaderId))
+	fa.logger.Info("became",
+		zap.Stringer("state", fa.getState()),
+		zap.Int64("id", fa.id),
+		zap.Int64("leader id", fa.leaderId))
 	select {
 	case fa.leaderMailbox <- &FollowRequest{FollowerMailbox: fa.mailBox, FollowerId: fa.id}:
 	default:

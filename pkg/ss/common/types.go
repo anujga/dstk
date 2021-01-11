@@ -8,6 +8,7 @@ import (
 type Mailbox chan<- interface{}
 
 type Msg interface {
+	//todo: writing to this msg can fail. wrap that up
 	ResponseChannel() chan *control.Response
 }
 

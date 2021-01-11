@@ -15,6 +15,13 @@ func Failure(err *status.Status) *Response {
 	return &Response{Err: err}
 }
 
+func MaybeFailure(r interface{}, err *status.Status) *Response {
+	return &Response{
+		Res: r,
+		Err: err,
+	}
+}
+
 func FailureErr(err error) *Response {
 	return &Response{Err: status.Convert(err)}
 }

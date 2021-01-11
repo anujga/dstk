@@ -14,10 +14,7 @@ func handleClientMsg(ab *actorBase, cm common.ClientMsg) {
 	//ab.logger.Info("client msg handling", zap.Int64("part", ab.id), zap.String("key", hex.EncodeToString(cm.Key())))
 	res, err := ab.consumer.Process(cm)
 	select {
-	case cm.ResponseChannel() <- &control.Response{
-		Res: res,
-		Err: status.Convert(err),
-	}:
+	case cm.ResponseChannel() <- control.MaybeFailure(res, status.Convert(err)):
 	default:
 		// unlikely
 	}
