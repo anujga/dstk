@@ -10,4 +10,4 @@ SeUrl: "localhost:6001"
 ClientId: "c1"
 
 Mode: gateway
-GatewayUrl: "0.0.0.0:9999"
+GatewayUrl: "nvme-dc:9999"

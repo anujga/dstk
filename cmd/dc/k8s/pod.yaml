@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nvme-dc
+spec:
+  volumes:
+  - name: data
+    configMap:
+      name: bench1-nvme
+
+  containers:
+  - name: dc
+    image: 004245605591.dkr.ecr.ap-south-1.amazonaws.com/dstk:latest
+    command: [ "/dstk/dc" ]
+    ports:
+    - containerPort: 9999
+  tolerations:
+  - key: "feaster"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"

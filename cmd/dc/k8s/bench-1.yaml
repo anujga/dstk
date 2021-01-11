@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bench1-nvme
+data:
+  verify.yaml: |
+    Start: 0
+    Size: 10
+    Count: 10
+    Seed: 1
+    Views: 100
+    Copies: 1
+    SeUrl: "localhost:6001"
+    ClientId: "c1"
+
+    Mode: gateway
+    GatewayUrl: "192.168.9.232:9999"
+
+---
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bench1-nvme
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: dc
+        image: 004245605591.dkr.ecr.ap-south-1.amazonaws.com/dstk:latest
+        command: [ "/dstk/disk-cache" ]
+        args:
+        - --mode=verify
+        - --conf=/conf/verify.yaml
+        volumeMounts:
+        - name: config
+          mountPath: "/conf"
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: bench1-nvme
+
+  backoffLimit: 1
