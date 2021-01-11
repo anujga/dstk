@@ -27,4 +27,7 @@ clean:
 fmt:
 	go fmt ./...
 
+bench:
+	~/go/bin/goreman -f cmd/dc/Procfile start
+
 .DEFAULT_GOAL := build
