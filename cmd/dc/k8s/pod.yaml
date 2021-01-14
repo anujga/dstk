@@ -30,7 +30,7 @@ spec:
     image: 004245605591.dkr.ecr.ap-south-1.amazonaws.com/dstk:latest
     command: [ "/dstk/dc" ]
     args:
-    - "data=/data/"
+    - "--data=/data/d1"
     ports:
     - containerPort: 9999
 
